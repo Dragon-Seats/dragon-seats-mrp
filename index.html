@@ -104,6 +104,30 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
 .btn.subtle:hover{text-decoration:underline;background:transparent}
 .btn.subtle.danger{color:var(--red)}
 @media print{ .sidebar,.topbar,.toolbar,.no-print{display:none !important} .content{padding:0} }
+.loc-input{width:64px !important;min-width:64px;text-align:right}
+.loc-total{font-family:'JetBrains Mono',monospace;font-weight:600}
+.cal-toolbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.cal-toolbar select{min-width:220px}
+.cal-nav{display:flex;align-items:center;gap:8px;margin-left:auto}
+.cal-month-label{font-family:'Space Grotesk',system-ui,sans-serif;font-weight:600;font-size:15px;min-width:150px;text-align:center}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-dow{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--steel);text-align:center;padding:4px 0}
+.cal-cell{border:1px solid var(--line);border-radius:8px;min-height:64px;padding:6px 7px;background:#fff}
+.cal-cell.empty{background:transparent;border-color:transparent}
+.cal-cell.today{border-color:var(--red)}
+.cal-daynum{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--steel)}
+.cal-avail{font-size:12px;font-weight:700;margin-top:4px}
+.cal-avail.ok{color:var(--green)}
+.cal-avail.amber{color:var(--amber)}
+.cal-avail.red{color:var(--red)}
+.cal-out{font-size:10.5px;color:var(--steel);margin-top:1px}
+.cal-legend{display:flex;gap:16px;font-size:11.5px;color:var(--steel);margin-top:10px}
+.cal-legend span{display:inline-flex;align-items:center;gap:5px}
+.cal-legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.cal-legend .dot-ok{background:var(--green)}
+.cal-legend .dot-amber{background:var(--amber)}
+.cal-legend .dot-red{background:var(--red)}
+.booking-row{display:grid;grid-template-columns:1.6fr 1fr 1fr 0.7fr auto;gap:8px;align-items:center;margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -120,11 +144,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
       <button class="tab" data-tab="bom">BOM / Products <span class="count" id="cnt-products">0</span></button>
       <button class="tab" data-tab="links">Links <span class="count" id="cnt-links">0</span></button>
       <button class="tab" data-tab="suppliers">Suppliers <span class="count" id="cnt-suppliers">0</span></button>
+      <div class="sb-group-label">Equipment</div>
+      <button class="tab" data-tab="calendar">Availability Calendar <span class="count" id="cnt-bookings">0</span></button>
       <div class="sb-group-label">Planning</div>
       <button class="tab" data-tab="demand">Demand Plan <span class="count" id="cnt-demand">0</span></button>
       <button class="tab" data-tab="plan">Planned Orders <span class="count" id="cnt-plan">0</span></button>
       <button class="tab" data-tab="po">Purchase Orders <span class="count" id="cnt-po">0</span></button>
       <div class="sb-group-divider"></div>
+      <button class="tab" data-tab="feedback">Feedback <span class="count" id="cnt-feedback">0</span></button>
       <button class="tab" data-tab="settings">Settings</button>
     </div>
     <div class="sb-foot" id="savestamp">not saved yet</div>
@@ -139,9 +166,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
       <div class="panel hidden" id="panel-bom"></div>
       <div class="panel hidden" id="panel-links"></div>
       <div class="panel hidden" id="panel-suppliers"></div>
+      <div class="panel hidden" id="panel-calendar"></div>
       <div class="panel hidden" id="panel-demand"></div>
       <div class="panel hidden" id="panel-plan"></div>
       <div class="panel hidden" id="panel-po"></div>
+      <div class="panel hidden" id="panel-feedback"></div>
       <div class="panel hidden" id="panel-settings"></div>
     </div>
   </div>
@@ -643,7 +672,14 @@ function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/
 
 /* ---------------- data model v2 ---------------- */
 function mkItem(id,name,uom,opts){
-  return Object.assign({id,name,uom,onHand:0,leadTimeDays:'',safetyStock:0,minOrderQty:1,isProduct:false,lines:[],links:[],docs:[],notes:''}, opts||{});
+  return Object.assign({id,name,uom,onHand:0,leadTimeDays:'',safetyStock:0,minOrderQty:1,isProduct:false,category:'part',locations:null,lines:[],links:[],docs:[],notes:''}, opts||{});
+}
+const EQUIP_LOCATIONS=['CLE','JAX','KC','Patrick'];
+function locationsTotal(loc){ if(!loc) return 0; return EQUIP_LOCATIONS.reduce((s,k)=>s+(Number(loc[k])||0),0); }
+function syncItemOnHand(item){ if(item.locations) item.onHand=locationsTotal(item.locations); }
+function mkEquipment(id,name,uom,loc,opts){
+  const locations=Object.assign({CLE:0,JAX:0,KC:0,Patrick:0}, loc||{});
+  return mkItem(id,name,uom,Object.assign({category:'equipment',locations,onHand:locationsTotal(locations)}, opts||{}));
 }
 
 function sample(){
@@ -666,6 +702,21 @@ function sample(){
     mkItem('i-cap12','Cap 12"','ea',{onHand:26,leadTimeDays:0,safetyStock:10}),
     mkItem('i-cap6','Cap 6"','ea',{onHand:96,leadTimeDays:0,safetyStock:20}),
     mkItem('i-helmetbox','Helmet Boxes (Both Styles)','ea',{onHand:20,leadTimeDays:0,safetyStock:5}),
+    mkEquipment('eq-shaders','Shaders (Gen 1 & 2)','ea',{CLE:226,JAX:160,KC:42,Patrick:0},{
+      safetyStock:59, notes:'From 2026 Inventory Projection workbook — Total Allocated 487, Total Needed 59 (short). Covers Gen 1 & Gen 2 shaders across all conferences/NFL. Spare components (legs, feet, poles, tops) tracked separately below. See Availability Calendar tab for team-by-team bookings.'}),
+    mkEquipment('eq-shader-gen1-legs','Shader Legs — Gen 1','ea',{CLE:125},{notes:'Spare component. 21 Gen 1 legs noted at KC (7 Mizzou branded) — not split out by location here; confirm before relying on CLE-only figure.'}),
+    mkEquipment('eq-shader-gen2-legs','Shader Legs — Gen 2','ea',{CLE:200},{notes:'Spare component. 21 Gen 2 legs also noted at KC — confirm location split.'}),
+    mkEquipment('eq-shader-gen1-feet','Shader Feet — Gen 1','ea',{CLE:146},{notes:'Spare component from 2026 Inventory Projection workbook.'}),
+    mkEquipment('eq-shader-gen2-feet','Shader Feet — Gen 2','ea',{CLE:238},{notes:'Spare component from 2026 Inventory Projection workbook.'}),
+    mkEquipment('eq-shader-gen1-poles','Shader Poles — Gen 1','ea',{CLE:2},{notes:'Spare component from 2026 Inventory Projection workbook.'}),
+    mkEquipment('eq-shader-gen2-poles','Shader Poles — Gen 2','ea',{CLE:10},{notes:'Spare component from 2026 Inventory Projection workbook.'}),
+    mkEquipment('eq-ac','AC Units','ea',{CLE:179,KC:51},{
+      notes:'From 2026 Inventory Projection workbook — Total Allocated 172, currently 58 over target (surplus, not shortage).'}),
+    mkEquipment('eq-heaters','Heaters (170 & 350 series)','ea',{CLE:294,KC:64},{
+      safetyStock:26, notes:'From 2026 Inventory Projection workbook — Total Allocated 384, Total Needed 26. Includes 170-series (CLE 280, KC 64) and 350-series (CLE 14).'}),
+    mkEquipment('eq-nozzle-old','Nozzles — Old Style (CLE)','ea',{CLE:152},{notes:'From Nozzle Inventory (CLE) tab of the 2026 Inventory Projection workbook.'}),
+    mkEquipment('eq-nozzle-new','Nozzles — New Style (CLE)','ea',{CLE:160},{notes:'From Nozzle Inventory (CLE) tab. Old + New = 312 total nozzles.'}),
+    mkEquipment('eq-nozzle-ducted','Nozzles — With Ducts (CLE)','ea',{CLE:176},{notes:'Informational count from source workbook — this is an attribute of some old/new nozzles (which have ducts), not an additive separate stock. Total of all nozzles is 312 (old + new).'}),
     mkItem('b-standard','Standard Bench','ea',{isProduct:true,lines:[
       {childId:'i-diffuser',qtyPer:2},{childId:'i-wheelset',qtyPer:4},{childId:'i-hothat',qtyPer:1},
       {childId:'i-handles',qtyPer:2},{childId:'i-flange12',qtyPer:3},{childId:'i-flange6',qtyPer:3},
@@ -689,7 +740,13 @@ function sample(){
     {id:uid(), poNumber:'1468', supplierId:'s-mfg', orderDate:addDays(t,-90), expectedDate:addDays(t,-80), status:'Closed',
      lines:[{id:uid(), itemId:'i-wheelset', qty:12, unitPrice:225}], docs:[], notes:'Sample historical order — edit or delete.'}
   ];
-  return {items, suppliers, demandPlan, purchaseOrders, lists:{poStatus:['Open','Partially Received','Closed']}, horizonDays:90};
+  const bookings=[
+    {id:uid(), itemId:'eq-shaders', qty:12, startDate:'2026-08-14', endDate:'2026-08-21', label:'MetLife (Jets/Giants) — deliver Aug 14 (return date estimated, confirm)'},
+    {id:uid(), itemId:'eq-shaders', qty:12, startDate:'2026-08-10', endDate:'2026-08-17', label:'Chicago Bears — deliver Aug 10-11 (return date estimated, confirm)'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-09-24', endDate:'2026-10-01', label:'New Orleans Saints — must arrive by Oct 1 (start date estimated)'},
+    {id:uid(), itemId:'eq-shaders', qty:12, startDate:'2026-08-01', endDate:'2026-09-15', label:'Baltimore Ravens — preseason through home opener, pick up after (dates estimated)'}
+  ];
+  return {items, suppliers, demandPlan, purchaseOrders, bookings, lists:{poStatus:['Open','Partially Received','Closed']}, horizonDays:90};
 }
 
 let DB=null;
@@ -710,7 +767,7 @@ function migrateToV2(db){
   });
   return {
     items, suppliers:db.suppliers||[], demandPlan:db.demandPlan||[],
-    purchaseOrders:[], lists:{poStatus:['Open','Partially Received','Closed']},
+    purchaseOrders:[], bookings:db.bookings||[], lists:{poStatus:['Open','Partially Received','Closed']},
     horizonDays:db.horizonDays||90
   };
 }
@@ -720,6 +777,7 @@ function ensureShape(){
   if(!Array.isArray(DB.suppliers)) DB.suppliers=[];
   if(!Array.isArray(DB.demandPlan)) DB.demandPlan=[];
   if(!Array.isArray(DB.purchaseOrders)) DB.purchaseOrders=[];
+  if(!Array.isArray(DB.bookings)) DB.bookings=[];
   if(!DB.lists || typeof DB.lists!=='object') DB.lists={};
   if(!Array.isArray(DB.lists.poStatus) || !DB.lists.poStatus.length) DB.lists.poStatus=['Open','Partially Received','Closed'];
   if(!DB.horizonDays) DB.horizonDays=90;
@@ -735,12 +793,24 @@ function ensureShape(){
     if(!i.uom) i.uom='ea';
     if(typeof i.isProduct!=='boolean') i.isProduct=false;
     if(typeof i.notes!=='string') i.notes='';
+    if(!i.category) i.category=i.isProduct?'product':'part';
+    if(i.locations && typeof i.locations==='object'){
+      const loc={}; EQUIP_LOCATIONS.forEach(k=>{ loc[k]=Number(i.locations[k])||0; });
+      i.locations=loc; i.onHand=locationsTotal(loc);
+    } else { i.locations=null; }
   });
   DB.purchaseOrders.forEach(po=>{
     if(!Array.isArray(po.lines)) po.lines=[];
     if(!Array.isArray(po.docs)) po.docs=[];
     if(!po.status) po.status=DB.lists.poStatus[0];
     if(!po.poNumber) po.poNumber='';
+  });
+  DB.bookings.forEach(b=>{
+    if(!b.id) b.id=uid();
+    if(typeof b.qty!=='number') b.qty=Number(b.qty)||0;
+    if(!b.startDate) b.startDate=todayISO();
+    if(!b.endDate) b.endDate=b.startDate;
+    if(typeof b.label!=='string') b.label='';
   });
 }
 
@@ -763,6 +833,15 @@ function itemById(id){ return DB.items.find(i=>i.id===id); }
 function supplierById(id){ return DB.suppliers.find(s=>s.id===id); }
 function poById(id){ return DB.purchaseOrders.find(p=>p.id===id); }
 function closedStatusName(){ return DB.lists.poStatus.includes('Closed') ? 'Closed' : DB.lists.poStatus[DB.lists.poStatus.length-1]; }
+
+/* ---------------- bookings / equipment availability ---------------- */
+function bookingsForItem(itemId){ return DB.bookings.filter(b=>b.itemId===itemId).sort((a,b)=>a.startDate<b.startDate?-1:1); }
+function bookedQtyOnDate(itemId, iso){
+  return DB.bookings.reduce((s,b)=> (b.itemId===itemId && b.startDate<=iso && iso<=b.endDate) ? s+(Number(b.qty)||0) : s, 0);
+}
+function equipmentTotal(item){ return item.locations ? locationsTotal(item.locations) : (Number(item.onHand)||0); }
+function availableOnDate(item, iso){ return equipmentTotal(item) - bookedQtyOnDate(item.id, iso); }
+function equipmentItems(){ return DB.items.filter(i=>i.category==='equipment'); }
 
 /* ---------------- modal helper ---------------- */
 function openModal(title, bodyHtml){
@@ -986,9 +1065,11 @@ const TAB_LABELS={
   bom:['BOM / Products','Products broken down by section'],
   links:['Links','Supplier links per item — multiple allowed'],
   suppliers:['Suppliers','Vendor reference'],
+  calendar:['Availability Calendar','Equipment on-hand vs. booked, by day'],
   demand:['Demand Plan','Planned builds driving requirements'],
   plan:['Planned Orders','What to order, and when'],
   po:['Purchase Orders','Open/close orders, price history, file import'],
+  feedback:['Feedback','Report bugs & suggest ideas'],
   settings:['Settings','Data management & configurable lists']
 };
 
@@ -1013,6 +1094,8 @@ function renderCounts(){
   document.getElementById('cnt-plan').textContent=liveResults.filter(r=>r.plannedOrders.length).length;
   const closed=closedStatusName();
   document.getElementById('cnt-po').textContent=DB.purchaseOrders.filter(po=>po.status!==closed).length;
+  document.getElementById('cnt-bookings').textContent=DB.bookings.length;
+  document.getElementById('cnt-feedback').textContent=loadFeedbackList().filter(f=>!f.resolved).length;
 }
 
 function renderTab(which){
@@ -1021,9 +1104,11 @@ function renderTab(which){
   else if(which==='bom') renderBOM();
   else if(which==='links') renderLinks();
   else if(which==='suppliers') renderSuppliers();
+  else if(which==='calendar') renderCalendar();
   else if(which==='demand') renderDemand();
   else if(which==='plan') renderPlan();
   else if(which==='po') renderPO();
+  else if(which==='feedback') renderFeedback();
   else if(which==='settings') renderSettings();
 }
 
@@ -1059,6 +1144,35 @@ function renderDash(){
       '<table><colgroup><col style="width:35%"><col style="width:12%"><col style="width:18%"><col style="width:35%"></colgroup>'+
       '<thead><tr><th>Product</th><th class="num">Qty</th><th>Need By</th><th>Label</th></tr></thead>'+
       '<tbody>'+(upcoming.map(d=>{ const p=itemById(d.productId); return '<tr><td>'+(p?p.name:'?')+'</td><td class="num mono">'+d.qty+'</td><td class="mono">'+fmtDate(d.needDate)+'</td><td class="demand-src">'+(d.label||'')+'</td></tr>'; }).join('') || '<tr><td colspan="4" class="note">Nothing scheduled.</td></tr>')+'</tbody></table>'+
+    '</div></div>'+
+    renderEquipmentTodayDash();
+  el.querySelectorAll('.cal-jump').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      CAL_ITEM_ID=btn.dataset.item;
+      const d=new Date(); CAL_YEAR=d.getFullYear(); CAL_MONTH=d.getMonth();
+      currentTab='calendar'; setTab('calendar'); renderCounts();
+    });
+  });
+}
+
+function renderEquipmentTodayDash(){
+  const eq=equipmentItems();
+  if(!eq.length) return '';
+  const today=todayISO();
+  const rows=eq.map(it=>{
+    const total=equipmentTotal(it);
+    const out=bookedQtyOnDate(it.id, today);
+    const avail=total-out;
+    const status=availStatus(avail, total);
+    const badge = status==='red'?'<span class="badge late">Oversubscribed</span>':status==='amber'?'<span class="badge soon">Running low</span>':'<span class="badge ok">Available</span>';
+    return {it, total, out, avail, status, badge};
+  }).sort((a,b)=>{ const rank={red:0,amber:1,ok:2}; return rank[a.status]-rank[b.status]; });
+  return '<div class="dash-section-title">Equipment availability — today</div>'+
+    '<div class="card"><div class="card-body">'+
+    '<table><colgroup><col style="width:28%"><col style="width:14%"><col style="width:14%"><col style="width:14%"><col style="width:15%"><col style="width:15%"></colgroup>'+
+    '<thead><tr><th>Equipment</th><th class="num">Total</th><th class="num">Out Today</th><th class="num">Available</th><th>Status</th><th></th></tr></thead>'+
+    '<tbody>'+rows.map(r=>'<tr><td>'+escAttr(r.it.name)+'</td><td class="num mono">'+r.total+'</td><td class="num mono">'+r.out+'</td><td class="num mono">'+r.avail+'</td><td>'+r.badge+'</td><td class="col-actions no-print"><button class="btn sm cal-jump" data-item="'+r.it.id+'">View calendar</button></td></tr>').join('')+
+    '</tbody></table>'+
     '</div></div>';
 }
 
@@ -1077,18 +1191,32 @@ function rowPlan(r){
 }
 
 /* ---------------- Items tab ---------------- */
+function deleteItemEverywhere(id){
+  DB.items=DB.items.filter(x=>x.id!==id);
+  DB.items.forEach(x=>{ x.lines=(x.lines||[]).filter(l=>l.childId!==id); });
+  DB.demandPlan=DB.demandPlan.filter(d=>d.productId!==id);
+  DB.purchaseOrders.forEach(po=>{ po.lines=(po.lines||[]).filter(l=>l.itemId!==id); });
+  DB.bookings=DB.bookings.filter(b=>b.itemId!==id);
+}
 function renderItems(){
   const el=document.getElementById('panel-items');
   el.innerHTML=
-    '<div class="toolbar no-print"><button class="btn accent" id="add-item">+ New item</button><button class="btn" id="export-pdf-items">Export PDF</button></div>'+
+    '<div class="toolbar no-print"><button class="btn accent" id="add-item">+ New item</button><button class="btn accent" id="add-equipment">+ New equipment</button><button class="btn" id="export-pdf-items">Export PDF</button></div>'+
     '<p class="note">Components and raw materials only — products live on the <b>BOM / Products</b> tab instead, so they don\'t clutter this list.</p>'+
     '<div class="card"><div class="card-body">'+
     '<table><colgroup><col style="width:23%"><col style="width:6%"><col style="width:9%"><col style="width:11%"><col style="width:11%"><col style="width:17%"><col style="width:11%"><col style="width:6%"><col style="width:6%"></colgroup>'+
     '<thead><tr><th>Name</th><th>UoM</th><th class="num">On Hand</th><th>Lead Time</th><th class="num">Safety Stock</th><th>Notes</th><th>Files</th><th></th><th></th></tr></thead>'+
     '<tbody id="items-tbody"></tbody></table>'+
+    '</div></div>'+
+    '<div class="dash-section-title">Equipment Inventory</div>'+
+    '<p class="note">Shaders, AC units, heaters, nozzles, and similar bookable equipment — tracked by location. Use <b>Bookings</b> to reserve units for a team/event over a date range; see the <b>Availability Calendar</b> tab for the day-by-day picture.</p>'+
+    '<div class="card"><div class="card-body">'+
+    '<table><colgroup><col style="width:19%"><col style="width:5%"><col style="width:8%"><col style="width:8%"><col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:7%"><col style="width:16%"><col style="width:5%"><col style="width:9%"><col style="width:5%"></colgroup>'+
+    '<thead><tr><th>Name</th><th>UoM</th><th class="num">CLE</th><th class="num">JAX</th><th class="num">KC</th><th class="num">Patrick</th><th class="num">Total</th><th class="num">Needed</th><th>Notes</th><th>Files</th><th></th><th></th></tr></thead>'+
+    '<tbody id="equip-tbody"></tbody></table>'+
     '</div></div>';
   const tb=document.getElementById('items-tbody');
-  tb.innerHTML = DB.items.filter(it=>!it.isProduct).map(it=>
+  tb.innerHTML = DB.items.filter(it=>!it.isProduct && it.category!=='equipment').map(it=>
     '<tr data-id="'+it.id+'">'+
       '<td><input class="f-name" value="'+escAttr(it.name)+'"></td>'+
       '<td><input class="f-uom" value="'+escAttr(it.uom)+'"></td>'+
@@ -1121,10 +1249,7 @@ function renderItems(){
     });
     tr.querySelector('.del-item').addEventListener('click',()=>{
       if(!confirm('Delete '+it.name+'? This also removes it from any BOM lines, links, demand plan rows, and PO lines that reference it.')) return;
-      DB.items=DB.items.filter(x=>x.id!==id);
-      DB.items.forEach(x=>{ x.lines=(x.lines||[]).filter(l=>l.childId!==id); });
-      DB.demandPlan=DB.demandPlan.filter(d=>d.productId!==id);
-      DB.purchaseOrders.forEach(po=>{ po.lines=(po.lines||[]).filter(l=>l.itemId!==id); });
+      deleteItemEverywhere(id);
       save(); renderItems(); renderCounts();
     });
   });
@@ -1132,11 +1257,197 @@ function renderItems(){
     DB.items.push(mkItem(uid(),'New Item','ea',{}));
     save(); renderItems(); renderCounts();
   });
+  document.getElementById('add-equipment').addEventListener('click',()=>{
+    DB.items.push(mkEquipment(uid(),'New Equipment','ea',{}));
+    save(); renderItems(); renderCounts();
+  });
   document.getElementById('export-pdf-items').addEventListener('click',()=>{
     const head=['Name','UoM','On Hand','Lead Time','Safety Stock','Notes'];
     const body=DB.items.filter(it=>!it.isProduct).map(it=>[it.name, it.uom, it.onHand, it.leadTimeDays, it.safetyStock, it.notes||'']);
     exportTablePDF('Dragon Seats - Items Catalog', head, body);
   });
+  renderEquipmentTable();
+}
+
+function renderEquipmentTable(){
+  const tb=document.getElementById('equip-tbody');
+  if(!tb) return;
+  tb.innerHTML = equipmentItems().map(it=>{
+    const loc=it.locations||{CLE:0,JAX:0,KC:0,Patrick:0};
+    return '<tr data-id="'+it.id+'">'+
+      '<td><input class="f-name" value="'+escAttr(it.name)+'"></td>'+
+      '<td><input class="f-uom" value="'+escAttr(it.uom)+'"></td>'+
+      '<td class="num"><input class="loc-input num" data-loc="CLE" type="number" value="'+loc.CLE+'"></td>'+
+      '<td class="num"><input class="loc-input num" data-loc="JAX" type="number" value="'+loc.JAX+'"></td>'+
+      '<td class="num"><input class="loc-input num" data-loc="KC" type="number" value="'+loc.KC+'"></td>'+
+      '<td class="num"><input class="loc-input num" data-loc="Patrick" type="number" value="'+loc.Patrick+'"></td>'+
+      '<td class="num loc-total">'+locationsTotal(loc)+'</td>'+
+      '<td class="num"><input class="f-ss num" type="number" value="'+it.safetyStock+'"></td>'+
+      '<td><input class="f-notes" value="'+escAttr(it.notes||'')+'"></td>'+
+      '<td>'+docChips(it.docs)+'<label class="btn sm file-btn no-print">+ file<input type="file" class="f-file"></label></td>'+
+      '<td class="col-actions no-print"><button class="btn sm bookings-btn">Bookings ('+bookingsForItem(it.id).length+')</button></td>'+
+      '<td class="col-actions no-print"><button class="btn sm danger del-item">Delete</button></td>'+
+    '</tr>';
+  }).join('') || '<tr><td colspan="12" class="note">No equipment yet — add one above.</td></tr>';
+  tb.querySelectorAll('tr[data-id]').forEach(tr=>{
+    const id=tr.dataset.id; const it=itemById(id);
+    tr.querySelector('.f-name').addEventListener('change',e=>{it.name=e.target.value; save(); renderCounts();});
+    tr.querySelector('.f-uom').addEventListener('change',e=>{it.uom=e.target.value; save();});
+    tr.querySelectorAll('.loc-input').forEach(inp=>{
+      inp.addEventListener('change',e=>{
+        it.locations[inp.dataset.loc]=Number(e.target.value)||0;
+        syncItemOnHand(it);
+        tr.querySelector('.loc-total').textContent=it.onHand;
+        save(); renderCounts();
+      });
+    });
+    tr.querySelector('.f-ss').addEventListener('change',e=>{it.safetyStock=Number(e.target.value)||0; save();});
+    tr.querySelector('.f-notes').addEventListener('change',e=>{it.notes=e.target.value; save();});
+    tr.querySelector('.f-file').addEventListener('change', async e=>{
+      const f=e.target.files[0]; if(!f) return;
+      const dataUrl=await readFileAsDataURL(f);
+      it.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
+      save(); renderItems();
+    });
+    tr.querySelector('.bookings-btn').addEventListener('click',()=>{ openBookingsModal(it.id, ()=>{ renderEquipmentTable(); renderCounts(); }); });
+    tr.querySelector('.del-item').addEventListener('click',()=>{
+      if(!confirm('Delete '+it.name+'? This also removes any bookings for it.')) return;
+      deleteItemEverywhere(id);
+      save(); renderItems(); renderCounts();
+    });
+  });
+}
+
+/* ---------------- Bookings modal (shared by Items tab + Calendar tab) ---------------- */
+function openBookingsModal(itemId, onChange){
+  const item=itemById(itemId);
+  if(!item) return;
+  openModal('Bookings — '+item.name, renderBookingsModalBody(item));
+  wireBookingsModal(item, onChange, document.querySelector('#modal-root .modal-body'));
+}
+function renderBookingsModalBody(item){
+  const rows=bookingsForItem(item.id);
+  return '<p class="note">Total on hand: <b>'+equipmentTotal(item)+'</b> '+escAttr(item.uom)+' across all locations. Each booking below reserves a quantity for a date range (e.g. a team/event) — the Availability Calendar subtracts overlapping bookings from total stock.</p>'+
+    '<div class="bookings-list">'+
+    (rows.map(b=>renderBookingRow(b)).join('') || '<p class="note">No bookings yet.</p>')+
+    '</div>'+
+    '<button class="btn sm accent add-booking-btn">+ Add booking</button>';
+}
+function renderBookingRow(b){
+  return '<div class="booking-row" data-id="'+b.id+'">'+
+    '<input class="bk-label" placeholder="Team / event label" value="'+escAttr(b.label||'')+'">'+
+    '<input class="bk-start" type="date" value="'+(b.startDate||'')+'">'+
+    '<input class="bk-end" type="date" value="'+(b.endDate||'')+'">'+
+    '<input class="bk-qty num" type="number" value="'+b.qty+'">'+
+    '<button class="btn sm danger bk-del">Delete</button>'+
+  '</div>';
+}
+function wireBookingsModal(item, onChange, container){
+  container = container || document;
+  const list=container.querySelector('.bookings-list');
+  if(!list) return;
+  function refresh(){
+    list.innerHTML = bookingsForItem(item.id).map(b=>renderBookingRow(b)).join('') || '<p class="note">No bookings yet.</p>';
+    wireRows();
+    save(); renderCounts(); if(onChange) onChange();
+  }
+  function wireRows(){
+    list.querySelectorAll('.booking-row').forEach(row=>{
+      const id=row.dataset.id; const b=DB.bookings.find(x=>x.id===id);
+      row.querySelector('.bk-label').addEventListener('change',e=>{ b.label=e.target.value; save(); if(onChange) onChange(); });
+      row.querySelector('.bk-start').addEventListener('change',e=>{ b.startDate=e.target.value; save(); if(onChange) onChange(); });
+      row.querySelector('.bk-end').addEventListener('change',e=>{ b.endDate=e.target.value; save(); if(onChange) onChange(); });
+      row.querySelector('.bk-qty').addEventListener('change',e=>{ b.qty=Number(e.target.value)||0; save(); if(onChange) onChange(); });
+      row.querySelector('.bk-del').addEventListener('click',()=>{
+        DB.bookings=DB.bookings.filter(x=>x.id!==id);
+        refresh();
+      });
+    });
+  }
+  wireRows();
+  const addBtn=container.querySelector('.add-booking-btn');
+  if(addBtn) addBtn.addEventListener('click',()=>{
+    const t=todayISO();
+    DB.bookings.push({id:uid(), itemId:item.id, qty:1, startDate:t, endDate:t, label:''});
+    refresh();
+  });
+}
+
+/* ---------------- Calendar tab ---------------- */
+let CAL_ITEM_ID=null;
+let CAL_YEAR=null, CAL_MONTH=null; // CAL_MONTH is 0-indexed
+
+function calInitState(){
+  const eq=equipmentItems();
+  if(!CAL_ITEM_ID || !eq.find(i=>i.id===CAL_ITEM_ID)) CAL_ITEM_ID = eq.length? eq[0].id : null;
+  if(CAL_YEAR===null){ const d=new Date(); CAL_YEAR=d.getFullYear(); CAL_MONTH=d.getMonth(); }
+}
+function isoFor(y,m,d){ return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
+function availStatus(avail, total){
+  if(avail<0) return 'red';
+  if(total>0 && avail<=Math.ceil(total*0.15)) return 'amber';
+  return 'ok';
+}
+function renderCalendar(){
+  calInitState();
+  const el=document.getElementById('panel-calendar');
+  const eq=equipmentItems();
+  if(!eq.length){
+    el.innerHTML='<p class="note">No equipment items yet. Add some on the <b>Items</b> tab (Equipment Inventory section) first.</p>';
+    return;
+  }
+  const item=itemById(CAL_ITEM_ID);
+  const total=equipmentTotal(item);
+  const monthLabel=new Date(CAL_YEAR, CAL_MONTH, 1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  el.innerHTML=
+    '<div class="cal-toolbar">'+
+      '<select id="cal-item-select">'+eq.map(i=>'<option value="'+i.id+'" '+(i.id===CAL_ITEM_ID?'selected':'')+'>'+escAttr(i.name)+'</option>').join('')+'</select>'+
+      '<span class="note">Total on hand: <b class="mono">'+total+'</b> '+escAttr(item.uom)+'</span>'+
+      '<div class="cal-nav">'+
+        '<button class="btn sm" id="cal-prev">‹ Prev</button>'+
+        '<span class="cal-month-label">'+monthLabel+'</span>'+
+        '<button class="btn sm" id="cal-today">Today</button>'+
+        '<button class="btn sm" id="cal-next">Next ›</button>'+
+      '</div>'+
+    '</div>'+
+    '<div class="card"><div class="card-body">'+renderCalGrid(item, total)+
+      '<div class="cal-legend">'+
+        '<span><i class="dot-ok"></i> Plenty available</span>'+
+        '<span><i class="dot-amber"></i> Running low</span>'+
+        '<span><i class="dot-red"></i> Oversubscribed</span>'+
+      '</div>'+
+    '</div></div>'+
+    '<div class="dash-section-title">Bookings for '+escAttr(item.name)+'</div>'+
+    '<div class="card"><div class="card-body" id="cal-bookings-body">'+renderBookingsModalBody(item)+'</div></div>';
+
+  document.getElementById('cal-item-select').addEventListener('change',e=>{ CAL_ITEM_ID=e.target.value; renderCalendar(); });
+  document.getElementById('cal-prev').addEventListener('click',()=>{ CAL_MONTH--; if(CAL_MONTH<0){CAL_MONTH=11; CAL_YEAR--;} renderCalendar(); });
+  document.getElementById('cal-next').addEventListener('click',()=>{ CAL_MONTH++; if(CAL_MONTH>11){CAL_MONTH=0; CAL_YEAR++;} renderCalendar(); });
+  document.getElementById('cal-today').addEventListener('click',()=>{ const d=new Date(); CAL_YEAR=d.getFullYear(); CAL_MONTH=d.getMonth(); renderCalendar(); });
+  wireBookingsModal(item, ()=>renderCalendar(), document.getElementById('cal-bookings-body'));
+}
+function renderCalGrid(item, total){
+  const first=new Date(CAL_YEAR, CAL_MONTH, 1);
+  const startDow=first.getDay();
+  const daysInMonth=new Date(CAL_YEAR, CAL_MONTH+1, 0).getDate();
+  const todayIso=todayISO();
+  const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let html='<div class="cal-grid">'+dows.map(d=>'<div class="cal-dow">'+d+'</div>').join('');
+  for(let i=0;i<startDow;i++) html+='<div class="cal-cell empty"></div>';
+  for(let d=1; d<=daysInMonth; d++){
+    const iso=isoFor(CAL_YEAR, CAL_MONTH, d);
+    const out=bookedQtyOnDate(item.id, iso);
+    const avail=total-out;
+    const status=availStatus(avail, total);
+    const isToday=iso===todayIso;
+    html+='<div class="cal-cell'+(isToday?' today':'')+'">'+
+      '<div class="cal-daynum">'+d+'</div>'+
+      '<div class="cal-avail '+status+'">'+avail+' avail</div>'+
+      (out>0? '<div class="cal-out">'+out+' out</div>' : '')+
+    '</div>';
+  }
+  html+='</div>';
+  return html;
 }
 
 /* ---------------- BOM tab ---------------- */
@@ -1661,6 +1972,125 @@ function renderSettings(){
     const inp=document.getElementById('new-status-input');
     const v=inp.value.trim(); if(!v) return;
     DB.lists.poStatus.push(v); inp.value=''; save(); renderStatusList();
+  });
+}
+
+/* ---------------- Feedback tab ---------------- */
+/* Stored under its own localStorage key, separate from the main DB blob above,
+   and separate from the Materials Tracker app's storage. */
+const FEEDBACK_KEY='dragon-seats-mrp-feedback-v1';
+const FEEDBACK_SECTIONS=[
+  {id:'dash',label:'Dashboard'},
+  {id:'items',label:'Items'},
+  {id:'bom',label:'BOM / Products'},
+  {id:'links',label:'Links'},
+  {id:'suppliers',label:'Suppliers'},
+  {id:'calendar',label:'Availability Calendar'},
+  {id:'demand',label:'Demand Plan'},
+  {id:'plan',label:'Planned Orders'},
+  {id:'po',label:'Purchase Orders'},
+  {id:'settings',label:'Settings'},
+  {id:'other',label:'Other / General'}
+];
+function loadFeedbackList(){
+  try{ const raw=localStorage.getItem(FEEDBACK_KEY); return raw?JSON.parse(raw):[]; }catch(e){ return []; }
+}
+function saveFeedbackList(list){
+  try{ localStorage.setItem(FEEDBACK_KEY, JSON.stringify(list)); }catch(e){}
+}
+function feedbackSectionLabel(id){ const s=FEEDBACK_SECTIONS.find(x=>x.id===id); return s?s.label:(id||'Other / General'); }
+function fmtFeedbackTime(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  const mins=Math.round((Date.now()-d.getTime())/60000);
+  let rel;
+  if(mins<1) rel='just now';
+  else if(mins<60) rel=mins+'m ago';
+  else if(mins<1440) rel=Math.round(mins/60)+'h ago';
+  else rel=Math.round(mins/1440)+'d ago';
+  return rel+' · '+d.toLocaleString('en-US',{month:'short',day:'2-digit',year:'numeric',hour:'numeric',minute:'2-digit'});
+}
+function renderFeedback(){
+  const el=document.getElementById('panel-feedback');
+  const list=loadFeedbackList();
+  const open=list.filter(f=>!f.resolved).sort((a,b)=>a.createdAt<b.createdAt?1:-1);
+  const resolved=list.filter(f=>f.resolved).sort((a,b)=>a.createdAt<b.createdAt?1:-1);
+  el.innerHTML=
+    '<div class="card"><div class="card-head"><h3>Submit feedback</h3></div><div class="card-body">'+
+      '<div class="toolbar no-print" style="align-items:flex-start">'+
+        '<label class="note">Section<br>'+
+          '<select id="fb-section" style="width:220px;margin-top:4px">'+
+            FEEDBACK_SECTIONS.map(s=>'<option value="'+s.id+'">'+escAttr(s.label)+'</option>').join('')+
+          '</select>'+
+        '</label>'+
+        '<label class="note">Type<br>'+
+          '<span style="display:inline-flex;gap:10px;margin-top:6px">'+
+            '<label style="display:flex;gap:4px;align-items:center;cursor:pointer"><input type="radio" name="fb-type" value="bug" checked> Bug</label>'+
+            '<label style="display:flex;gap:4px;align-items:center;cursor:pointer"><input type="radio" name="fb-type" value="idea"> Idea</label>'+
+          '</span>'+
+        '</label>'+
+      '</div>'+
+      '<p class="note" style="margin:10px 0 4px"><b>Description</b> (required)</p>'+
+      '<textarea id="fb-desc" rows="4" style="width:100%" placeholder="Describe the bug or idea..."></textarea>'+
+      '<p class="note" style="margin:10px 0 4px"><b>Your name</b> (optional)</p>'+
+      '<input id="fb-name" style="width:260px" placeholder="Anonymous">'+
+      '<div style="margin-top:12px"><button class="btn accent" id="fb-submit">Submit feedback</button></div>'+
+    '</div></div>'+
+    '<div class="dash-section-title">Open feedback ('+open.length+')</div>'+
+    '<div id="fb-open-list">'+(open.length? open.map(f=>renderFeedbackRow(f)).join('') : '<p class="note">No open feedback yet.</p>')+'</div>'+
+    (resolved.length?
+      '<details class="card"><summary style="cursor:pointer;padding:12px 16px;font-weight:600">Resolved ('+resolved.length+')</summary>'+
+        '<div class="card-body" style="padding-top:0">'+resolved.map(f=>renderFeedbackRow(f)).join('')+'</div>'+
+      '</details>'
+      : '');
+  wireFeedback();
+}
+function renderFeedbackRow(f){
+  const typeBadge = f.type==='idea' ? '<span class="badge ok">Idea</span>' : '<span class="badge late">Bug</span>';
+  return '<div class="card fb-entry" data-id="'+f.id+'" style="'+(f.resolved?'opacity:.55':'')+'">'+
+    '<div class="card-body">'+
+      '<div class="row-actions no-print" style="justify-content:space-between;margin-bottom:6px">'+
+        '<div>'+typeBadge+' <span class="chip">'+escAttr(feedbackSectionLabel(f.section))+'</span></div>'+
+        '<div style="display:flex;gap:12px;align-items:center">'+
+          '<label class="note" style="display:flex;gap:4px;align-items:center;cursor:pointer"><input type="checkbox" class="fb-resolve-toggle" '+(f.resolved?'checked':'')+'> Mark resolved</label>'+
+          '<button class="btn sm subtle danger fb-delete">x</button>'+
+        '</div>'+
+      '</div>'+
+      '<p style="margin:6px 0;'+(f.resolved?'text-decoration:line-through':'')+'">'+escAttr(f.description).replace(/\n/g,'<br>')+'</p>'+
+      '<p class="note" style="margin:0">'+escAttr(f.name||'Anonymous')+' · '+fmtFeedbackTime(f.createdAt)+'</p>'+
+    '</div>'+
+  '</div>';
+}
+function wireFeedback(){
+  const submitBtn=document.getElementById('fb-submit');
+  if(submitBtn) submitBtn.addEventListener('click',()=>{
+    const descEl=document.getElementById('fb-desc');
+    const desc=descEl.value.trim();
+    if(!desc){ alert('Please enter a description before submitting.'); return; }
+    const type=(document.querySelector('input[name="fb-type"]:checked')||{}).value||'bug';
+    const section=document.getElementById('fb-section').value;
+    const name=document.getElementById('fb-name').value.trim();
+    const list=loadFeedbackList();
+    list.push({id:uid(), type, section, description:desc, name:name||null, createdAt:new Date().toISOString(), resolved:false});
+    saveFeedbackList(list);
+    renderFeedback();
+    renderCounts();
+  });
+  document.querySelectorAll('.fb-entry').forEach(card=>{
+    const id=card.dataset.id;
+    const del=card.querySelector('.fb-delete');
+    if(del) del.addEventListener('click',()=>{
+      if(!confirm('Delete this feedback entry?')) return;
+      saveFeedbackList(loadFeedbackList().filter(f=>f.id!==id));
+      renderFeedback();
+      renderCounts();
+    });
+    const toggle=card.querySelector('.fb-resolve-toggle');
+    if(toggle) toggle.addEventListener('change',e=>{
+      const list=loadFeedbackList();
+      const entry=list.find(f=>f.id===id);
+      if(entry){ entry.resolved=e.target.checked; saveFeedbackList(list); renderFeedback(); renderCounts(); }
+    });
   });
 }
 
