@@ -104,6 +104,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
 .btn.subtle{background:transparent;border-color:transparent;box-shadow:none;color:var(--steel);font-weight:500}
 .btn.subtle:hover{text-decoration:underline;background:transparent}
 .btn.subtle.danger{color:var(--red)}
+.link-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.link-row:last-child{border-bottom:none}
+.link-row .f-value{flex:1 1 220px;min-width:160px}
+.link-row .f-notes{flex:1 1 160px;min-width:120px}
+.link-row .supplier-select{width:auto;min-width:140px;flex:0 0 auto}
+.seg-toggle{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:0 0 auto}
+.seg-btn{all:unset;cursor:pointer;padding:6px 10px;font-size:12.5px;color:var(--steel);background:#fff}
+.seg-btn+.seg-btn{border-left:1px solid var(--line)}
+.seg-btn.active{background:var(--ink);color:#fff}
+.links-empty{padding:6px 0}
 @media print{ .sidebar,.topbar,.toolbar,.no-print{display:none !important} .content{padding:0} }
 .loc-input{width:64px !important;min-width:64px;text-align:right}
 .loc-total{font-family:'JetBrains Mono',monospace;font-weight:600}
@@ -1777,17 +1787,13 @@ function wireBOM(){
 /* ---------------- Links tab ---------------- */
 function itemSelectSimple(selId){ return '<select class="item-select">'+DB.items.map(i=>'<option value="'+i.id+'" '+(i.id===selId?'selected':'')+'>'+escAttr(i.name)+'</option>').join('')+'</select>'; }
 function supplierSelectSimple(selId){ return '<select class="supplier-select">'+DB.suppliers.map(s=>'<option value="'+s.id+'" '+(s.id===selId?'selected':'')+'>'+escAttr(s.name)+'</option>').join('')+'</select>'; }
+function supplierSelectOptional(selId){
+  return '<select class="supplier-select" title="Supplier (optional)"><option value="">No supplier</option>'+
+    DB.suppliers.map(s=>'<option value="'+s.id+'" '+(s.id===selId?'selected':'')+'>'+escAttr(s.name)+'</option>').join('')+
+    '</select>';
+}
 
 let LINKS_SELECTED=null;
-
-function linkStatusBadge(item){
-  if(!item || !item.links || !item.links.length) return '<span class="note">no link or phone set</span>';
-  return item.links.map(l=>{
-    const s=supplierById(l.supplierId); const sName=s?s.name:'?';
-    if(l.contactType==='phone') return '<span class="chip">☎ '+escAttr(sName)+(l.phone?' · '+escAttr(l.phone):'')+'</span>';
-    return '<span class="chip">🔗 '+escAttr(sName)+(l.url?' · has link':'')+'</span>';
-  }).join(' ');
-}
 
 function renderLinks(){
   const el=document.getElementById('panel-links');
@@ -1797,82 +1803,56 @@ function renderLinks(){
   }
   const item = itemById(LINKS_SELECTED);
   el.innerHTML=
+    '<p class="note" style="margin:0 0 12px">Search for a part, then add the links or phone numbers you use to order it.</p>'+
     '<div class="toolbar no-print">'+
       '<label class="note" style="margin-right:6px">Item</label>'+
-      '<select id="links-select" style="width:240px">'+
-        selectable.map(i=>'<option value="'+i.id+'" '+(i.id===LINKS_SELECTED?'selected':'')+'>'+escAttr(i.name)+'</option>').join('')+
-      '</select>'+
+      '<input list="links-item-datalist" id="links-search" placeholder="Search items…" style="width:280px" autocomplete="off" value="'+(item?escAttr(item.name):'')+'">'+
+      '<datalist id="links-item-datalist">'+selectable.map(i=>'<option value="'+escAttr(i.name)+'">').join('')+'</datalist>'+
     '</div>'+
-    '<div id="links-detail">'+(item? renderLinksDetail(item) : '<p class="note">No items yet.</p>')+'</div>';
+    '<div id="links-detail">'+(item? renderLinksDetail(item) : '<p class="note">No items yet — add one on the Items tab first.</p>')+'</div>';
 
-  document.getElementById('links-select').addEventListener('change',e=>{
-    LINKS_SELECTED=e.target.value;
-    renderLinks();
-  });
+  const searchInput=document.getElementById('links-search');
+  const pickByName=(name)=>{
+    const match=selectable.find(i=>i.name===name);
+    if(match && match.id!==LINKS_SELECTED){ LINKS_SELECTED=match.id; renderLinks(); }
+  };
+  searchInput.addEventListener('change',e=>pickByName(e.target.value));
+  searchInput.addEventListener('input',e=>{ if(selectable.some(i=>i.name===e.target.value)) pickByName(e.target.value); });
   wireLinksDetail();
 }
 
 function renderLinksDetail(item){
+  const links=item.links||[];
+  const rows = links.length
+    ? links.map(l=>renderLinkRow(item,l)).join('')
+    : '<p class="note links-empty">No links or phone numbers yet for '+escAttr(item.name)+'.</p>';
   return '<div class="card links-detail-card" data-id="'+item.id+'">'+
     '<div class="card-head">'+
-      '<h3>'+escAttr(item.name)+(item.isProduct?' <span class="chip">product</span>':'')+'</h3>'+
+      '<h3>'+escAttr(item.name)+'</h3>'+
       '<div class="row-actions no-print"><button class="btn sm subtle danger del-item-here" data-id="'+item.id+'">Delete this item</button></div>'+
     '</div>'+
     '<div class="card-body">'+
-      '<p class="note" style="margin-top:0"><b>Other pieces bundled with this</b> <span class="note">— parts that ship or get built together with '+escAttr(item.name)+'</span></p>'+
-      renderPiecesEditable(item)+
-      '<p class="note" style="margin-top:18px"><b>Supplier links</b></p>'+
-      renderLinksTableFor(item)+
-      '<button class="btn sm subtle add-link-here no-print" data-id="'+item.id+'" style="margin-top:6px">+ add supplier link</button>'+
+      '<div id="links-rows">'+rows+'</div>'+
+      '<button class="btn sm accent add-link-here no-print" data-id="'+item.id+'" style="margin-top:10px">+ Add link or phone</button>'+
     '</div>'+
   '</div>';
 }
 
-function renderPiecesEditable(item){
-  const lines = item.lines||[];
-  const rows = lines.map((line,i)=>{
-    const child=itemById(line.childId);
-    if(!child) return '';
-    return '<tr data-i="'+i+'">'+
-      '<td>'+escAttr(child.name)+'</td>'+
-      '<td class="num"><input class="piece-qty num" type="number" step="0.01" value="'+line.qtyPer+'"></td>'+
-      '<td>'+linkStatusBadge(child)+'</td>'+
-      '<td class="col-actions no-print"><button class="btn sm subtle danger piece-del">Remove</button></td>'+
-    '</tr>';
-  }).join('');
-  const addOptions = itemOptionsExcluding([item.id]);
-  return '<table><colgroup><col style="width:36%"><col style="width:14%"><col style="width:36%"><col style="width:14%"></colgroup>'+
-    '<thead><tr><th>Piece</th><th class="num">Qty per</th><th>Contact on file</th><th></th></tr></thead>'+
-    '<tbody>'+(rows||'<tr><td colspan="4" class="note">No extra pieces added yet.</td></tr>')+'</tbody></table>'+
-    '<div class="row-actions no-print" style="justify-content:flex-start;gap:6px;margin-top:8px">'+
-      (addOptions.length?
-        '<select class="piece-add-select">'+addOptions.map(i=>'<option value="'+i.id+'">'+escAttr(i.name)+'</option>').join('')+'</select>'+
-        '<input class="piece-add-qty num" type="number" step="0.01" value="1" style="width:70px" title="Qty per">'+
-        '<button class="btn sm subtle piece-add-btn" data-id="'+item.id+'">+ add piece</button>'
-        : '')+
-    '</div>';
-}
-
-function renderLinksTableFor(item){
-  const links=item.links||[];
-  if(!links.length) return '<p class="note">No supplier links yet for '+escAttr(item.name)+'.</p>';
-  return '<table><colgroup><col style="width:20%"><col style="width:10%"><col style="width:12%"><col style="width:26%"><col style="width:22%"><col style="width:10%"></colgroup>'+
-    '<thead><tr><th>Supplier</th><th class="num">Cost</th><th>Type</th><th>Link / Phone</th><th>Notes</th><th></th></tr></thead>'+
-    '<tbody>'+links.map(l=>renderLinkRow(item,l)).join('')+'</tbody></table>';
-}
-
 function renderLinkRow(item, link){
-  const contactField = link.contactType==='phone'
-    ? '<input class="f-phone" placeholder="Phone number" value="'+escAttr(link.phone||'')+'">'
-    : '<input class="f-url" placeholder="URL" value="'+escAttr(link.url||'')+'">';
-  return '<tr data-item="'+item.id+'" data-link="'+link.id+'">'+
-    '<td>'+supplierSelectSimple(link.supplierId)+'</td>'+
-    '<td class="num"><input class="f-cost num" type="number" step="0.01" value="'+(link.cost||0)+'"></td>'+
-    '<td><select class="f-type"><option value="link" '+(link.contactType==='link'?'selected':'')+'>Link</option><option value="phone" '+(link.contactType==='phone'?'selected':'')+'>Phone</option></select></td>'+
-    '<td>'+contactField+'</td>'+
-    '<td><input class="f-notes" value="'+escAttr(link.notes||'')+'"></td>'+
-    '<td class="col-actions no-print"><button class="btn sm subtle danger del-link">Delete</button></td>'+
-  '</tr>';
+  const type = link.contactType==='phone' ? 'phone' : 'link';
+  const contactField = type==='phone'
+    ? '<input class="f-value" placeholder="Phone number" value="'+escAttr(link.phone||'')+'">'
+    : '<input class="f-value" placeholder="https://…" value="'+escAttr(link.url||'')+'">';
+  return '<div class="link-row" data-item="'+item.id+'" data-link="'+link.id+'">'+
+    '<div class="seg-toggle">'+
+      '<button type="button" class="seg-btn'+(type==='link'?' active':'')+'" data-type="link">🔗 Link</button>'+
+      '<button type="button" class="seg-btn'+(type==='phone'?' active':'')+'" data-type="phone">☎ Phone</button>'+
+    '</div>'+
+    contactField+
+    supplierSelectOptional(link.supplierId)+
+    '<input class="f-notes" placeholder="Notes (optional)" value="'+escAttr(link.notes||'')+'">'+
+    '<button class="btn sm subtle danger del-link" title="Remove">Remove</button>'+
+  '</div>';
 }
 
 function wireLinksDetail(){
@@ -1884,7 +1864,7 @@ function wireLinksDetail(){
     const id=delItemBtn.dataset.id; const item=itemById(id);
     if(!item) return;
     const usedIn = DB.items.filter(x=>x.id!==id && (x.lines||[]).some(l=>l.childId===id)).map(x=>x.name);
-    let msg = 'Delete '+item.name+'? This removes its supplier links and, if it\'s a component, its entry in any BOM recipe';
+    let msg = 'Delete '+item.name+'? This removes its links and, if it\'s a component, its entry in any BOM recipe';
     if(usedIn.length) msg += ' (currently used in: '+usedIn.join(', ')+')';
     msg += '. This cannot be undone.';
     if(!confirm(msg)) return;
@@ -1900,39 +1880,32 @@ function wireLinksDetail(){
   if(addLinkBtn) addLinkBtn.addEventListener('click',()=>{
     const item=itemById(addLinkBtn.dataset.id);
     item.links=item.links||[];
-    item.links.push({id:uid(), supplierId:(DB.suppliers[0]||{}).id||'', cost:0, url:'', phone:'', contactType:'link', notes:''});
+    item.links.push({id:uid(), supplierId:'', cost:0, url:'', phone:'', contactType:'link', notes:''});
     save(); renderLinks(); renderCounts();
+    const valueInputs=root.querySelectorAll('.link-row .f-value');
+    const last=valueInputs[valueInputs.length-1];
+    if(last) last.focus();
   });
 
-  root.querySelectorAll('tr[data-i]').forEach(tr=>{
-    const card=root.querySelector('.links-detail-card'); const ownerId=card.dataset.id; const owner=itemById(ownerId);
-    const i=Number(tr.dataset.i);
-    if(!owner || !owner.lines || !owner.lines[i]) return;
-    tr.querySelector('.piece-qty').addEventListener('change',e=>{ owner.lines[i].qtyPer=Number(e.target.value)||0; save(); });
-    tr.querySelector('.piece-del').addEventListener('click',()=>{ owner.lines.splice(i,1); save(); renderLinks(); });
-  });
-
-  const pieceAddBtn=root.querySelector('.piece-add-btn');
-  if(pieceAddBtn) pieceAddBtn.addEventListener('click',()=>{
-    const owner=itemById(pieceAddBtn.dataset.id);
-    const sel=root.querySelector('.piece-add-select'); const qtyInp=root.querySelector('.piece-add-qty');
-    if(!sel || !sel.value) return;
-    owner.lines=owner.lines||[];
-    owner.lines.push({childId:sel.value, qtyPer:Number(qtyInp.value)||1});
-    save(); renderLinks(); renderCounts();
-  });
-
-  root.querySelectorAll('tr[data-item][data-link]').forEach(tr=>{
-    const itemId=tr.dataset.item; const linkId=tr.dataset.link;
+  root.querySelectorAll('.link-row').forEach(row=>{
+    const itemId=row.dataset.item; const linkId=row.dataset.link;
     const item=itemById(itemId); const link=item?(item.links||[]).find(l=>l.id===linkId):null;
     if(!item||!link) return;
-    tr.querySelector('.supplier-select').addEventListener('change',e=>{ link.supplierId=e.target.value; save(); renderLinks(); });
-    tr.querySelector('.f-cost').addEventListener('change',e=>{ link.cost=Number(e.target.value)||0; save(); });
-    tr.querySelector('.f-type').addEventListener('change',e=>{ link.contactType=e.target.value; save(); renderLinks(); });
-    const urlF=tr.querySelector('.f-url'); if(urlF) urlF.addEventListener('change',e=>{ link.url=e.target.value; save(); });
-    const phoneF=tr.querySelector('.f-phone'); if(phoneF) phoneF.addEventListener('change',e=>{ link.phone=e.target.value; save(); });
-    tr.querySelector('.f-notes').addEventListener('change',e=>{ link.notes=e.target.value; save(); });
-    tr.querySelector('.del-link').addEventListener('click',()=>{ item.links=item.links.filter(l=>l.id!==linkId); save(); renderLinks(); renderCounts(); });
+
+    row.querySelectorAll('.seg-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        if(link.contactType===btn.dataset.type) return;
+        link.contactType=btn.dataset.type;
+        save(); renderLinks();
+      });
+    });
+    row.querySelector('.f-value').addEventListener('change',e=>{
+      if(link.contactType==='phone') link.phone=e.target.value; else link.url=e.target.value;
+      save();
+    });
+    row.querySelector('.supplier-select').addEventListener('change',e=>{ link.supplierId=e.target.value; save(); });
+    row.querySelector('.f-notes').addEventListener('change',e=>{ link.notes=e.target.value; save(); });
+    row.querySelector('.del-link').addEventListener('click',()=>{ item.links=item.links.filter(l=>l.id!==linkId); save(); renderLinks(); renderCounts(); });
   });
 }
 
