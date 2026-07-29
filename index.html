@@ -1803,21 +1803,19 @@ function renderLinks(){
   }
   const item = itemById(LINKS_SELECTED);
   el.innerHTML=
-    '<p class="note" style="margin:0 0 12px">Search for a part, then add the links or phone numbers you use to order it.</p>'+
+    '<p class="note" style="margin:0 0 12px">Pick a part, then add the links or phone numbers you use to order it.</p>'+
     '<div class="toolbar no-print">'+
       '<label class="note" style="margin-right:6px">Item</label>'+
-      '<input list="links-item-datalist" id="links-search" placeholder="Search items…" style="width:280px" autocomplete="off" value="'+(item?escAttr(item.name):'')+'">'+
-      '<datalist id="links-item-datalist">'+selectable.map(i=>'<option value="'+escAttr(i.name)+'">').join('')+'</datalist>'+
+      '<select id="links-select" style="width:280px">'+
+        selectable.map(i=>'<option value="'+i.id+'" '+(i.id===LINKS_SELECTED?'selected':'')+'>'+escAttr(i.name)+'</option>').join('')+
+      '</select>'+
     '</div>'+
     '<div id="links-detail">'+(item? renderLinksDetail(item) : '<p class="note">No items yet — add one on the Items tab first.</p>')+'</div>';
 
-  const searchInput=document.getElementById('links-search');
-  const pickByName=(name)=>{
-    const match=selectable.find(i=>i.name===name);
-    if(match && match.id!==LINKS_SELECTED){ LINKS_SELECTED=match.id; renderLinks(); }
-  };
-  searchInput.addEventListener('change',e=>pickByName(e.target.value));
-  searchInput.addEventListener('input',e=>{ if(selectable.some(i=>i.name===e.target.value)) pickByName(e.target.value); });
+  document.getElementById('links-select').addEventListener('change',e=>{
+    LINKS_SELECTED=e.target.value;
+    renderLinks();
+  });
   wireLinksDetail();
 }
 
