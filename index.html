@@ -70,6 +70,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
 .btn.danger{color:var(--red)}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
 .note{font-size:12px;color:var(--steel);line-height:1.5}
+.note.warn{color:var(--red-dark);background:#fbe4e3;padding:6px 10px;border-radius:6px}
 .callout{background:#fdf3dc;border:1px solid #eadfb8;color:#6b5410;border-radius:10px;padding:10px 14px;font-size:12.5px;margin-bottom:16px}
 .callout.red{background:#fbe4e3;border-color:#f0c4c2;color:#7d0101}
 .row-actions{display:flex;gap:6px;justify-content:center}
@@ -703,7 +704,7 @@ function sample(){
     mkItem('i-cap6','Cap 6"','ea',{onHand:96,leadTimeDays:0,safetyStock:20}),
     mkItem('i-helmetbox','Helmet Boxes (Both Styles)','ea',{onHand:20,leadTimeDays:0,safetyStock:5}),
     mkEquipment('eq-shaders','Shaders (Gen 1 & 2)','ea',{CLE:226,JAX:160,KC:42,Patrick:0},{
-      safetyStock:59, notes:'From 2026 Inventory Projection workbook — Total Allocated 487, Total Needed 59 (short). Covers Gen 1 & Gen 2 shaders across all conferences/NFL. Spare components (legs, feet, poles, tops) tracked separately below. See Availability Calendar tab for team-by-team bookings.'}),
+      safetyStock:59, notes:'From 2026 Inventory Projection workbook — currently have 428 (CLE 226 + JAX 160 + KC 42 + Patrick 0), need 487 to cover all conferences/NFL commitments, short by 59 (tracked via Safety Stock so MRP flags the gap). Covers Gen 1 & Gen 2 shaders. Spare components (legs, feet, poles, tops) tracked separately below. See Availability Calendar tab for team-by-team bookings.'}),
     mkEquipment('eq-shader-gen1-legs','Shader Legs — Gen 1','ea',{CLE:125},{notes:'Spare component. 21 Gen 1 legs noted at KC (7 Mizzou branded) — not split out by location here; confirm before relying on CLE-only figure.'}),
     mkEquipment('eq-shader-gen2-legs','Shader Legs — Gen 2','ea',{CLE:200},{notes:'Spare component. 21 Gen 2 legs also noted at KC — confirm location split.'}),
     mkEquipment('eq-shader-gen1-feet','Shader Feet — Gen 1','ea',{CLE:146},{notes:'Spare component from 2026 Inventory Projection workbook.'}),
@@ -741,12 +742,91 @@ function sample(){
      lines:[{id:uid(), itemId:'i-wheelset', qty:12, unitPrice:225}], docs:[], notes:'Sample historical order — edit or delete.'}
   ];
   const bookings=[
-    {id:uid(), itemId:'eq-shaders', qty:12, startDate:'2026-08-14', endDate:'2026-08-21', label:'MetLife (Jets/Giants) — deliver Aug 14 (return date estimated, confirm)'},
-    {id:uid(), itemId:'eq-shaders', qty:12, startDate:'2026-08-10', endDate:'2026-08-17', label:'Chicago Bears — deliver Aug 10-11 (return date estimated, confirm)'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-09-24', endDate:'2026-10-01', label:'New Orleans Saints — must arrive by Oct 1 (start date estimated)'},
-    {id:uid(), itemId:'eq-shaders', qty:12, startDate:'2026-08-01', endDate:'2026-09-15', label:'Baltimore Ravens — preseason through home opener, pick up after (dates estimated)'}
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Alabama (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:1, startDate:'2026-08-01', endDate:'2027-01-31', label:'Alabama (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Arkansas (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Arkansas (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:2, startDate:'2026-08-01', endDate:'2027-01-31', label:'Auburn — *****5 visiting onsite, branding onsite (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:1, startDate:'2026-08-01', endDate:'2027-01-31', label:'Auburn — *****5 visiting onsite, branding onsite (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Florida (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:1, startDate:'2026-08-01', endDate:'2027-01-31', label:'Florida (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Georgia (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Georgia (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Kentucky (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Kentucky (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'LSU (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'LSU (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Ole Miss (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:9, startDate:'2026-08-01', endDate:'2027-01-31', label:'Ole Miss (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'MS. State (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:1, startDate:'2026-08-01', endDate:'2027-01-31', label:'MS. State (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Mizzou (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:5, startDate:'2026-08-01', endDate:'2027-01-31', label:'Mizzou (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Oklahoma (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:1, startDate:'2026-08-01', endDate:'2027-01-31', label:'Oklahoma (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'South Carolina (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'South Carolina (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Tennessee (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:1, startDate:'2026-08-01', endDate:'2027-01-31', label:'Tennessee (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Texas (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:9, startDate:'2026-08-01', endDate:'2027-01-31', label:'Texas (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Texas A&M (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Texas A&M (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Vanderbilt (date TBD)', location:'', conference:'SEC', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Vanderbilt (date TBD)', location:'', conference:'SEC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Illinois (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Illinois (date TBD)', location:'', conference:'BIG10', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Iowa (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Maryland — contracted for 12 shaders this season (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Maryland — contracted for 12 shaders this season (date TBD)', location:'', conference:'BIG10', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Michigan (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Michigan State (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Nebraska (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Nebraska (date TBD)', location:'', conference:'BIG10', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Northwestern (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Ohio State (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Ohio State (date TBD)', location:'', conference:'BIG10', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Purdue (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'UCLA (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'USC (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'USC (date TBD)', location:'', conference:'BIG10', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Washington (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:4, startDate:'2026-08-01', endDate:'2027-01-31', label:'UNM — Just need (4) 16\' ShadERS for the whole season (date TBD)', location:'', conference:'MW', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Philadelphia Eagles (date TBD)', location:'', conference:'NFL', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Philadelphia Eagles (date TBD)', location:'', conference:'NFL', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Tennessee Titans (date TBD)', location:'', conference:'NFL', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Tennessee Titans (date TBD)', location:'', conference:'NFL', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Tampa Bay Buccaneers (date TBD)', location:'', conference:'NFL', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Tampa Bay Buccaneers (date TBD)', location:'', conference:'NFL', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Indianapolis Colts (date TBD)', location:'', conference:'NFL', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Indianapolis Colts (date TBD)', location:'', conference:'NFL', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Cleveland Browns (date TBD)', location:'', conference:'NFL', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Cleveland Browns (date TBD)', location:'', conference:'NFL', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Kansas City Chiefs (date TBD)', location:'', conference:'NFL', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Kansas City Chiefs (date TBD)', location:'', conference:'NFL', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Jacksonville Jaguars (date TBD)', location:'', conference:'NFL', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Jacksonville Jaguars (date TBD)', location:'', conference:'NFL', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Carolina Panthers (date TBD)', location:'', conference:'NFL', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Carolina Panthers (date TBD)', location:'', conference:'NFL', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-14', endDate:'2026-08-21', label:'MetLlife (Jets/Giants) — deliver Aug 14th', location:'', conference:'NFL', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-14', endDate:'2026-08-21', label:'MetLlife (Jets/Giants) — deliver Aug 14th', location:'', conference:'NFL', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-10', endDate:'2026-08-17', label:'Chicago Bears — deliver August 10th or 11th', location:'', conference:'NFL', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-10', endDate:'2026-08-17', label:'Chicago Bears — deliver August 10th or 11th', location:'', conference:'NFL', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Seattle Seahawks (date TBD)', location:'', conference:'NFL', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Seattle Seahawks (date TBD)', location:'', conference:'NFL', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Denver Broncos (date TBD)', location:'', conference:'NFL', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Denver Broncos (date TBD)', location:'', conference:'NFL', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-09-24', endDate:'2026-10-01', label:'New Orleans Saints — just need to be to them by Oct.1st', location:'', conference:'NFL', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2026-09-15', label:'Baltimore Ravens — For Preseason & Home Opener // Pick up after', location:'', conference:'NFL', type:'Visiting'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2026-09-15', label:'Baltimore Ravens — For Preseason & Home Opener // Pick up after', location:'', conference:'NFL', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Clemson (date TBD)', location:'', conference:'ACC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:8, startDate:'2026-08-01', endDate:'2027-01-31', label:'SMU (date TBD)', location:'', conference:'ACC', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Iowa State (date TBD)', location:'', conference:'BIG12', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'TCU (date TBD)', location:'', conference:'BIG12', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Houston (date TBD)', location:'', conference:'BIG12', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:2, startDate:'2026-08-01', endDate:'2027-01-31', label:'Central Oklahoma (date TBD)', location:'', conference:'IND.', type:'Home'}
   ];
-  return {items, suppliers, demandPlan, purchaseOrders, bookings, lists:{poStatus:['Open','Partially Received','Closed']}, horizonDays:90};
+  return {items, suppliers, demandPlan, purchaseOrders, bookings, lists:{poStatus:['Open','Partially Received','Closed'], conferences:['SEC','BIG10','MW','NFL','ACC','BIG12','IND.']}, horizonDays:90};
 }
 
 let DB=null;
@@ -780,6 +860,7 @@ function ensureShape(){
   if(!Array.isArray(DB.bookings)) DB.bookings=[];
   if(!DB.lists || typeof DB.lists!=='object') DB.lists={};
   if(!Array.isArray(DB.lists.poStatus) || !DB.lists.poStatus.length) DB.lists.poStatus=['Open','Partially Received','Closed'];
+  if(!Array.isArray(DB.lists.conferences) || !DB.lists.conferences.length) DB.lists.conferences=['SEC','BIG10','MW','NFL','ACC','BIG12','IND.'];
   if(!DB.horizonDays) DB.horizonDays=90;
   DB.items.forEach(i=>{
     if(i.leadTimeDays===undefined || i.leadTimeDays===null) i.leadTimeDays='';
@@ -811,6 +892,9 @@ function ensureShape(){
     if(!b.startDate) b.startDate=todayISO();
     if(!b.endDate) b.endDate=b.startDate;
     if(typeof b.label!=='string') b.label='';
+    if(typeof b.location!=='string') b.location='';
+    if(typeof b.conference!=='string') b.conference='';
+    if(b.type!=='Home' && b.type!=='Visiting') b.type='';
   });
 }
 
@@ -836,12 +920,21 @@ function closedStatusName(){ return DB.lists.poStatus.includes('Closed') ? 'Clos
 
 /* ---------------- bookings / equipment availability ---------------- */
 function bookingsForItem(itemId){ return DB.bookings.filter(b=>b.itemId===itemId).sort((a,b)=>a.startDate<b.startDate?-1:1); }
-function bookedQtyOnDate(itemId, iso){
-  return DB.bookings.reduce((s,b)=> (b.itemId===itemId && b.startDate<=iso && iso<=b.endDate) ? s+(Number(b.qty)||0) : s, 0);
+function bookedQtyOnDate(itemId, iso, location){
+  return DB.bookings.reduce((s,b)=>{
+    if(b.itemId!==itemId || !(b.startDate<=iso && iso<=b.endDate)) return s;
+    if(location && location!=='all' && b.location!==location) return s;
+    return s+(Number(b.qty)||0);
+  }, 0);
 }
 function equipmentTotal(item){ return item.locations ? locationsTotal(item.locations) : (Number(item.onHand)||0); }
 function availableOnDate(item, iso){ return equipmentTotal(item) - bookedQtyOnDate(item.id, iso); }
 function equipmentItems(){ return DB.items.filter(i=>i.category==='equipment'); }
+function unassignedBookingsFor(itemId){
+  const item=itemById(itemId);
+  if(!item || !item.locations) return [];
+  return DB.bookings.filter(b=>b.itemId===itemId && !b.location);
+}
 
 /* ---------------- modal helper ---------------- */
 function openModal(title, bodyHtml){
@@ -1327,15 +1420,37 @@ function openBookingsModal(itemId, onChange){
 }
 function renderBookingsModalBody(item){
   const rows=bookingsForItem(item.id);
-  return '<p class="note">Total on hand: <b>'+equipmentTotal(item)+'</b> '+escAttr(item.uom)+' across all locations. Each booking below reserves a quantity for a date range (e.g. a team/event) — the Availability Calendar subtracts overlapping bookings from total stock.</p>'+
+  const unassigned=unassignedBookingsFor(item.id);
+  return '<p class="note">Total on hand: <b>'+equipmentTotal(item)+'</b> '+escAttr(item.uom)+' across all locations. Each booking below reserves a quantity for a date range (e.g. a team/event) — the Availability Calendar subtracts overlapping bookings from total stock.'+
+    (item.locations? ' Set a <b>ship-from location</b> on each booking so per-location availability is accurate.' : '')+'</p>'+
+    (unassigned.length? '<p class="note warn">⚠ '+unassigned.length+' booking(s) for this item have no ship-from location set and will not be reflected in per-location availability — set one below.</p>' : '')+
     '<div class="bookings-list">'+
-    (rows.map(b=>renderBookingRow(b)).join('') || '<p class="note">No bookings yet.</p>')+
+    (rows.map(b=>renderBookingRow(b,item)).join('') || '<p class="note">No bookings yet.</p>')+
     '</div>'+
     '<button class="btn sm accent add-booking-btn">+ Add booking</button>';
 }
-function renderBookingRow(b){
+function renderBookingRow(b,item){
+  const needsLoc = item && item.locations;
+  const locSelect = needsLoc ?
+    '<select class="bk-loc">'+
+      '<option value="" '+(!b.location?'selected':'')+'>Location? (unset)</option>'+
+      EQUIP_LOCATIONS.map(k=>'<option value="'+k+'" '+(b.location===k?'selected':'')+'>'+k+'</option>').join('')+
+    '</select>' : '';
+  const confs=(DB.lists && DB.lists.conferences) || [];
+  const confSelect='<select class="bk-conf">'+
+      '<option value="" '+(!b.conference?'selected':'')+'>Conference? (unset)</option>'+
+      confs.map(c=>'<option value="'+escAttr(c)+'" '+(b.conference===c?'selected':'')+'>'+escAttr(c)+'</option>').join('')+
+    '</select>';
+  const typeSelect='<select class="bk-type">'+
+      '<option value="" '+(!b.type?'selected':'')+'>Home/Visiting?</option>'+
+      '<option value="Home" '+(b.type==='Home'?'selected':'')+'>Home</option>'+
+      '<option value="Visiting" '+(b.type==='Visiting'?'selected':'')+'>Visiting</option>'+
+    '</select>';
   return '<div class="booking-row" data-id="'+b.id+'">'+
     '<input class="bk-label" placeholder="Team / event label" value="'+escAttr(b.label||'')+'">'+
+    confSelect+
+    typeSelect+
+    locSelect+
     '<input class="bk-start" type="date" value="'+(b.startDate||'')+'">'+
     '<input class="bk-end" type="date" value="'+(b.endDate||'')+'">'+
     '<input class="bk-qty num" type="number" value="'+b.qty+'">'+
@@ -1347,7 +1462,7 @@ function wireBookingsModal(item, onChange, container){
   const list=container.querySelector('.bookings-list');
   if(!list) return;
   function refresh(){
-    list.innerHTML = bookingsForItem(item.id).map(b=>renderBookingRow(b)).join('') || '<p class="note">No bookings yet.</p>';
+    list.innerHTML = bookingsForItem(item.id).map(b=>renderBookingRow(b,item)).join('') || '<p class="note">No bookings yet.</p>';
     wireRows();
     save(); renderCounts(); if(onChange) onChange();
   }
@@ -1358,6 +1473,12 @@ function wireBookingsModal(item, onChange, container){
       row.querySelector('.bk-start').addEventListener('change',e=>{ b.startDate=e.target.value; save(); if(onChange) onChange(); });
       row.querySelector('.bk-end').addEventListener('change',e=>{ b.endDate=e.target.value; save(); if(onChange) onChange(); });
       row.querySelector('.bk-qty').addEventListener('change',e=>{ b.qty=Number(e.target.value)||0; save(); if(onChange) onChange(); });
+      const locEl=row.querySelector('.bk-loc');
+      if(locEl) locEl.addEventListener('change',e=>{ b.location=e.target.value; save(); if(onChange) onChange(); });
+      const confEl=row.querySelector('.bk-conf');
+      if(confEl) confEl.addEventListener('change',e=>{ b.conference=e.target.value; save(); if(onChange) onChange(); });
+      const typeEl=row.querySelector('.bk-type');
+      if(typeEl) typeEl.addEventListener('change',e=>{ b.type=e.target.value; save(); if(onChange) onChange(); });
       row.querySelector('.bk-del').addEventListener('click',()=>{
         DB.bookings=DB.bookings.filter(x=>x.id!==id);
         refresh();
@@ -1368,7 +1489,7 @@ function wireBookingsModal(item, onChange, container){
   const addBtn=container.querySelector('.add-booking-btn');
   if(addBtn) addBtn.addEventListener('click',()=>{
     const t=todayISO();
-    DB.bookings.push({id:uid(), itemId:item.id, qty:1, startDate:t, endDate:t, label:''});
+    DB.bookings.push({id:uid(), itemId:item.id, qty:1, startDate:t, endDate:t, label:'', location:'', conference:'', type:''});
     refresh();
   });
 }
@@ -1376,6 +1497,7 @@ function wireBookingsModal(item, onChange, container){
 /* ---------------- Calendar tab ---------------- */
 let CAL_ITEM_ID=null;
 let CAL_YEAR=null, CAL_MONTH=null; // CAL_MONTH is 0-indexed
+let CAL_LOCATION='all';
 
 function calInitState(){
   const eq=equipmentItems();
@@ -1397,12 +1519,23 @@ function renderCalendar(){
     return;
   }
   const item=itemById(CAL_ITEM_ID);
-  const total=equipmentTotal(item);
+  if(!item.locations && CAL_LOCATION!=='all') CAL_LOCATION='all';
+  const usingLoc = item.locations && CAL_LOCATION!=='all';
+  const total = usingLoc ? (Number(item.locations[CAL_LOCATION])||0) : equipmentTotal(item);
   const monthLabel=new Date(CAL_YEAR, CAL_MONTH, 1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const locSelect = item.locations ?
+    '<select id="cal-loc-select">'+
+      '<option value="all" '+(CAL_LOCATION==='all'?'selected':'')+'>All locations (combined)</option>'+
+      EQUIP_LOCATIONS.map(k=>'<option value="'+k+'" '+(CAL_LOCATION===k?'selected':'')+'>'+k+' only</option>').join('')+
+    '</select>' : '';
+  const unassigned=unassignedBookingsFor(item.id);
+  const unassignedWarning = (usingLoc && unassigned.length) ?
+    '<p class="note warn">⚠ '+unassigned.length+' booking(s) for this item have no ship-from location and are excluded from this '+CAL_LOCATION+'-only view — see Bookings below.</p>' : '';
   el.innerHTML=
     '<div class="cal-toolbar">'+
       '<select id="cal-item-select">'+eq.map(i=>'<option value="'+i.id+'" '+(i.id===CAL_ITEM_ID?'selected':'')+'>'+escAttr(i.name)+'</option>').join('')+'</select>'+
-      '<span class="note">Total on hand: <b class="mono">'+total+'</b> '+escAttr(item.uom)+'</span>'+
+      locSelect+
+      '<span class="note">'+(usingLoc?('On hand at '+CAL_LOCATION+': '):'Total on hand: ')+'<b class="mono">'+total+'</b> '+escAttr(item.uom)+'</span>'+
       '<div class="cal-nav">'+
         '<button class="btn sm" id="cal-prev">‹ Prev</button>'+
         '<span class="cal-month-label">'+monthLabel+'</span>'+
@@ -1410,23 +1543,64 @@ function renderCalendar(){
         '<button class="btn sm" id="cal-next">Next ›</button>'+
       '</div>'+
     '</div>'+
-    '<div class="card"><div class="card-body">'+renderCalGrid(item, total)+
+    unassignedWarning+
+    '<div class="card"><div class="card-body">'+renderCalGrid(item, total, usingLoc?CAL_LOCATION:'all')+
       '<div class="cal-legend">'+
         '<span><i class="dot-ok"></i> Plenty available</span>'+
         '<span><i class="dot-amber"></i> Running low</span>'+
         '<span><i class="dot-red"></i> Oversubscribed</span>'+
       '</div>'+
     '</div></div>'+
+    '<div class="dash-section-title">Team Allocation — '+escAttr(item.name)+'</div>'+
+    '<div class="card"><div class="card-body">'+renderAllocationSummary(item)+'</div></div>'+
     '<div class="dash-section-title">Bookings for '+escAttr(item.name)+'</div>'+
     '<div class="card"><div class="card-body" id="cal-bookings-body">'+renderBookingsModalBody(item)+'</div></div>';
 
-  document.getElementById('cal-item-select').addEventListener('change',e=>{ CAL_ITEM_ID=e.target.value; renderCalendar(); });
+  document.getElementById('cal-item-select').addEventListener('change',e=>{ CAL_ITEM_ID=e.target.value; CAL_LOCATION='all'; renderCalendar(); });
+  const locEl=document.getElementById('cal-loc-select');
+  if(locEl) locEl.addEventListener('change',e=>{ CAL_LOCATION=e.target.value; renderCalendar(); });
   document.getElementById('cal-prev').addEventListener('click',()=>{ CAL_MONTH--; if(CAL_MONTH<0){CAL_MONTH=11; CAL_YEAR--;} renderCalendar(); });
   document.getElementById('cal-next').addEventListener('click',()=>{ CAL_MONTH++; if(CAL_MONTH>11){CAL_MONTH=0; CAL_YEAR++;} renderCalendar(); });
   document.getElementById('cal-today').addEventListener('click',()=>{ const d=new Date(); CAL_YEAR=d.getFullYear(); CAL_MONTH=d.getMonth(); renderCalendar(); });
   wireBookingsModal(item, ()=>renderCalendar(), document.getElementById('cal-bookings-body'));
 }
-function renderCalGrid(item, total){
+function renderAllocationSummary(item){
+  const rows=bookingsForItem(item.id);
+  const onHand=equipmentTotal(item);
+  const totalAllocated=rows.reduce((s,b)=>s+(Number(b.qty)||0),0);
+  const remaining=onHand-totalAllocated;
+  const remClass = remaining<0 ? 'warn' : (onHand>0 && remaining<=Math.ceil(onHand*0.15) ? 'amber' : '');
+  let html='<p class="note">Season-level total — every team allocation counts against on-hand stock regardless of date, matching how the inventory workbook tracks it. The day-by-day calendar above is separate and shows overlap on specific dates.</p>'+
+    '<div class="kpi-strip">'+
+      '<div class="kpi"><b>'+onHand+'</b><span>On hand (all locations)</span></div>'+
+      '<div class="kpi"><b>'+totalAllocated+'</b><span>Total allocated to teams</span></div>'+
+      '<div class="kpi '+remClass+'"><b>'+remaining+'</b><span>Remaining to allocate</span></div>'+
+    '</div>';
+  if(!rows.length){
+    html+='<p class="note">No team allocations recorded yet for '+escAttr(item.name)+'. Add bookings below with a conference and team label to build this out.</p>';
+    return html;
+  }
+  const groups={};
+  rows.forEach(b=>{ const key=b.conference||'Unassigned conference'; (groups[key]=groups[key]||[]).push(b); });
+  const confOrder=Object.keys(groups).sort((a,b)=>{
+    if(a==='Unassigned conference') return 1;
+    if(b==='Unassigned conference') return -1;
+    return a.localeCompare(b);
+  });
+  confOrder.forEach(conf=>{
+    const list=groups[conf];
+    const subtotal=list.reduce((s,b)=>s+(Number(b.qty)||0),0);
+    const homeSub=list.filter(b=>b.type==='Home').reduce((s,b)=>s+(Number(b.qty)||0),0);
+    const visSub=list.filter(b=>b.type==='Visiting').reduce((s,b)=>s+(Number(b.qty)||0),0);
+    html+='<div class="dash-section-title" style="margin-top:14px">'+escAttr(conf)+' — '+subtotal+' '+escAttr(item.uom)+' (Home '+homeSub+' / Visiting '+visSub+')</div>'+
+      '<table><colgroup><col style="width:32%"><col style="width:13%"><col style="width:13%"><col style="width:14%"><col style="width:14%"><col style="width:14%"></colgroup>'+
+      '<thead><tr><th>Team / label</th><th>Home/Visiting</th><th>Location</th><th>Start</th><th>End</th><th class="num">Qty</th></tr></thead><tbody>'+
+      list.map(b=>'<tr><td>'+escAttr(b.label||'(no label)')+'</td><td>'+escAttr(b.type||'—')+'</td><td>'+escAttr(b.location||'—')+'</td><td>'+escAttr(b.startDate||'')+'</td><td>'+escAttr(b.endDate||'')+'</td><td class="num">'+b.qty+'</td></tr>').join('')+
+      '</tbody></table>';
+  });
+  return html;
+}
+function renderCalGrid(item, total, location){
   const first=new Date(CAL_YEAR, CAL_MONTH, 1);
   const startDow=first.getDay();
   const daysInMonth=new Date(CAL_YEAR, CAL_MONTH+1, 0).getDate();
@@ -1436,7 +1610,7 @@ function renderCalGrid(item, total){
   for(let i=0;i<startDow;i++) html+='<div class="cal-cell empty"></div>';
   for(let d=1; d<=daysInMonth; d++){
     const iso=isoFor(CAL_YEAR, CAL_MONTH, d);
-    const out=bookedQtyOnDate(item.id, iso);
+    const out=bookedQtyOnDate(item.id, iso, location);
     const avail=total-out;
     const status=availStatus(avail, total);
     const isToday=iso===todayIso;
@@ -1932,6 +2106,15 @@ function renderStatusList(){
     DB.lists.poStatus.splice(Number(b.dataset.i),1); save(); renderStatusList();
   }));
 }
+function renderConferenceList(){
+  const el=document.getElementById('conference-list');
+  if(!el) return;
+  el.innerHTML = DB.lists.conferences.map((c,i)=>'<span class="chip">'+escAttr(c)+' <button class="btn sm danger conf-remove" data-i="'+i+'" style="padding:1px 6px;margin-left:4px">x</button></span>').join(' ');
+  el.querySelectorAll('.conf-remove').forEach(b=>b.addEventListener('click',()=>{
+    if(DB.lists.conferences.length<=1){ alert('Keep at least one conference.'); return; }
+    DB.lists.conferences.splice(Number(b.dataset.i),1); save(); renderConferenceList();
+  }));
+}
 function renderSettings(){
   const el=document.getElementById('panel-settings');
   const bigSize = JSON.stringify(DB).length >= 4000000;
@@ -1950,6 +2133,11 @@ function renderSettings(){
       '<p class="note">These are the status options available on each Purchase Order. The <b>last one in this list</b> is treated as "received / closed" — hitting "Receive" on a PO sets it to that status and adds its quantities to stock.</p>'+
       '<div id="po-status-list"></div>'+
       '<div class="toolbar no-print"><input id="new-status-input" placeholder="New status name" style="width:220px"><button class="btn sm" id="add-status-btn">+ Add</button></div>'+
+    '</div></div>'+
+    '<div class="card"><div class="card-head"><h3>Conferences</h3></div><div class="card-body">'+
+      '<p class="note">These are the conference options available on each equipment booking (e.g. NFL AFC, NFL NFC, SEC, ACC). Used to group the Team Allocation summary on the Availability Calendar tab.</p>'+
+      '<div id="conference-list"></div>'+
+      '<div class="toolbar no-print"><input id="new-conf-input" placeholder="New conference name" style="width:220px"><button class="btn sm" id="add-conf-btn">+ Add</button></div>'+
     '</div></div>';
   document.getElementById('export-data').addEventListener('click',()=>{
     const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
@@ -1972,6 +2160,13 @@ function renderSettings(){
     const inp=document.getElementById('new-status-input');
     const v=inp.value.trim(); if(!v) return;
     DB.lists.poStatus.push(v); inp.value=''; save(); renderStatusList();
+  });
+  renderConferenceList();
+  document.getElementById('add-conf-btn').addEventListener('click',()=>{
+    const inp=document.getElementById('new-conf-input');
+    const v=inp.value.trim(); if(!v) return;
+    if(!DB.lists.conferences.includes(v)) DB.lists.conferences.push(v);
+    inp.value=''; save(); renderConferenceList();
   });
 }
 
