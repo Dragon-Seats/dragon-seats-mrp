@@ -705,12 +705,23 @@ function sample(){
     mkItem('i-helmetbox','Helmet Boxes (Both Styles)','ea',{onHand:20,leadTimeDays:0,safetyStock:5}),
     mkEquipment('eq-shaders','Shaders (Gen 1 & 2)','ea',{CLE:226,JAX:160,KC:42,Patrick:0},{
       safetyStock:59, notes:'From 2026 Inventory Projection workbook — currently have 428 (CLE 226 + JAX 160 + KC 42 + Patrick 0), need 487 to cover all conferences/NFL commitments, short by 59 (tracked via Safety Stock so MRP flags the gap). Covers Gen 1 & Gen 2 shaders. Spare components (legs, feet, poles, tops) tracked separately below. See Availability Calendar tab for team-by-team bookings.'}),
-    mkEquipment('eq-shader-gen1-legs','Shader Legs — Gen 1','ea',{CLE:125},{notes:'Spare component. 21 Gen 1 legs noted at KC (7 Mizzou branded) — not split out by location here; confirm before relying on CLE-only figure.'}),
-    mkEquipment('eq-shader-gen2-legs','Shader Legs — Gen 2','ea',{CLE:200},{notes:'Spare component. 21 Gen 2 legs also noted at KC — confirm location split.'}),
+    mkEquipment('eq-shader-gen1-legs','Shader Legs — Gen 1','ea',{CLE:125,KC:21},{notes:'Spare component. 21 Gen 1 legs at KC (7 of those are Mizzou branded) — from 2026 Inventory Projection workbook.'}),
+    mkEquipment('eq-shader-gen2-legs','Shader Legs — Gen 2','ea',{CLE:200,KC:21},{notes:'Spare component. 21 Gen 2 legs at KC — from 2026 Inventory Projection workbook.'}),
     mkEquipment('eq-shader-gen1-feet','Shader Feet — Gen 1','ea',{CLE:146},{notes:'Spare component from 2026 Inventory Projection workbook.'}),
     mkEquipment('eq-shader-gen2-feet','Shader Feet — Gen 2','ea',{CLE:238},{notes:'Spare component from 2026 Inventory Projection workbook.'}),
     mkEquipment('eq-shader-gen1-poles','Shader Poles — Gen 1','ea',{CLE:2},{notes:'Spare component from 2026 Inventory Projection workbook.'}),
     mkEquipment('eq-shader-gen2-poles','Shader Poles — Gen 2','ea',{CLE:10},{notes:'Spare component from 2026 Inventory Projection workbook.'}),
+    mkEquipment('eq-shader-gen1-complete-poles','Gen 1 Shaders w/ Poles & Spreader Bars','ea',{CLE:47},{notes:'From 2026 Inventory Projection workbook, "Items" table.'}),
+    mkEquipment('eq-shader-gen2-complete-poles','Gen 2 Shaders w/ Poles & Spreader Bars','ea',{CLE:69},{notes:'From 2026 Inventory Projection workbook, "Items" table.'}),
+    mkEquipment('eq-shader-gen1-complete','COMPLETE Gen 1 Shaders','ea',{CLE:63},{notes:'From 2026 Inventory Projection workbook, "Items" table.'}),
+    mkEquipment('eq-shader-gen2-complete','COMPLETE Gen 2 Shaders','ea',{CLE:72},{notes:'From 2026 Inventory Projection workbook, "Items" table.'}),
+    mkEquipment('eq-shader-bigten-graphic','Gen 1 Big Ten Graphic Shader w/ Poles & Spreader Bar','ea',{CLE:4},{notes:'Branded top, from 2026 Inventory Projection workbook.'}),
+    mkEquipment('eq-shader-usc-graphic','Gen 1 USC Graphic Shader w/ Poles & Spreader Bar','ea',{CLE:6},{notes:'Branded top, from 2026 Inventory Projection workbook.'}),
+    mkEquipment('eq-shader-spectrum-graphic','Gen 1 Spectrum Graphic Shader w/ Poles & Spreader Bar','ea',{CLE:6},{notes:'Branded top, from 2026 Inventory Projection workbook.'}),
+    mkEquipment('eq-shader-gen2-graphic','Gen 2 Graphic Shader w/ Poles & Spreader Bar','ea',{CLE:3},{notes:'Branded top, from 2026 Inventory Projection workbook.'}),
+    mkEquipment('eq-shader-backs','Shader Backs','ea',{CLE:4},{notes:'Spare component, from 2026 Inventory Projection workbook.'}),
+    mkEquipment('eq-shader-sides','Shader Sides','ea',{CLE:5},{notes:'Spare component, from 2026 Inventory Projection workbook.'}),
+    mkEquipment('eq-shader-blank-tops','Blank Shader Tops','ea',{CLE:25},{notes:'Spare component, from 2026 Inventory Projection workbook.'}),
     mkEquipment('eq-ac','AC Units','ea',{CLE:179,KC:51},{
       notes:'From 2026 Inventory Projection workbook — Total Allocated 172, currently 58 over target (surplus, not shortage).'}),
     mkEquipment('eq-heaters','Heaters (170 & 350 series)','ea',{CLE:294,KC:64},{
@@ -824,7 +835,15 @@ function sample(){
     {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Iowa State (date TBD)', location:'', conference:'BIG12', type:'Home'},
     {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'TCU (date TBD)', location:'', conference:'BIG12', type:'Home'},
     {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Houston (date TBD)', location:'', conference:'BIG12', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:2, startDate:'2026-08-01', endDate:'2027-01-31', label:'Central Oklahoma (date TBD)', location:'', conference:'IND.', type:'Home'}
+    {id:uid(), itemId:'eq-shaders', qty:2, startDate:'2026-08-01', endDate:'2027-01-31', label:'Central Oklahoma (date TBD)', location:'', conference:'IND.', type:'Home'},
+    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Indiana — already have shaders, 0 needed (date TBD)', location:'', conference:'BIG10', type:''},
+    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Minnesota — already have shaders (date TBD)', location:'', conference:'BIG10', type:''},
+    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Oregon — already have shaders, 0 needed (date TBD)', location:'', conference:'BIG10', type:''},
+    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Penn State — already have shaders (date TBD)', location:'', conference:'BIG10', type:''},
+    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Rutgers — already have shaders, 0 needed (date TBD)', location:'', conference:'BIG10', type:''},
+    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Wisconsin — no allocation entered yet (date TBD)', location:'', conference:'BIG10', type:''},
+    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'UCF — Brad has in separate count, 0 needed here (date TBD)', location:'', conference:'BIG12', type:''},
+    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Notre Dame — no allocation entered yet (date TBD)', location:'', conference:'IND.', type:''}
   ];
   return {items, suppliers, demandPlan, purchaseOrders, bookings, lists:{poStatus:['Open','Partially Received','Closed'], conferences:['SEC','BIG10','MW','NFL','ACC','BIG12','IND.']}, horizonDays:90};
 }
@@ -1552,9 +1571,7 @@ function renderCalendar(){
       '</div>'+
     '</div></div>'+
     '<div class="dash-section-title">Team Allocation — '+escAttr(item.name)+'</div>'+
-    '<div class="card"><div class="card-body">'+renderAllocationSummary(item)+'</div></div>'+
-    '<div class="dash-section-title">Bookings for '+escAttr(item.name)+'</div>'+
-    '<div class="card"><div class="card-body" id="cal-bookings-body">'+renderBookingsModalBody(item)+'</div></div>';
+    '<div class="card"><div class="card-body" id="cal-alloc-body">'+renderAllocationSummary(item)+'</div></div>';
 
   document.getElementById('cal-item-select').addEventListener('change',e=>{ CAL_ITEM_ID=e.target.value; CAL_LOCATION='all'; renderCalendar(); });
   const locEl=document.getElementById('cal-loc-select');
@@ -1562,7 +1579,7 @@ function renderCalendar(){
   document.getElementById('cal-prev').addEventListener('click',()=>{ CAL_MONTH--; if(CAL_MONTH<0){CAL_MONTH=11; CAL_YEAR--;} renderCalendar(); });
   document.getElementById('cal-next').addEventListener('click',()=>{ CAL_MONTH++; if(CAL_MONTH>11){CAL_MONTH=0; CAL_YEAR++;} renderCalendar(); });
   document.getElementById('cal-today').addEventListener('click',()=>{ const d=new Date(); CAL_YEAR=d.getFullYear(); CAL_MONTH=d.getMonth(); renderCalendar(); });
-  wireBookingsModal(item, ()=>renderCalendar(), document.getElementById('cal-bookings-body'));
+  wireAllocationSummary(item, document.getElementById('cal-alloc-body'));
 }
 function renderAllocationSummary(item){
   const rows=bookingsForItem(item.id);
@@ -1570,14 +1587,15 @@ function renderAllocationSummary(item){
   const totalAllocated=rows.reduce((s,b)=>s+(Number(b.qty)||0),0);
   const remaining=onHand-totalAllocated;
   const remClass = remaining<0 ? 'warn' : (onHand>0 && remaining<=Math.ceil(onHand*0.15) ? 'amber' : '');
-  let html='<p class="note">Season-level total — every team allocation counts against on-hand stock regardless of date, matching how the inventory workbook tracks it. The day-by-day calendar above is separate and shows overlap on specific dates.</p>'+
+  let html='<p class="note">Season-level total — every team allocation counts against on-hand stock regardless of date, matching how the inventory workbook tracks it. The day-by-day calendar above is separate and shows overlap on specific dates. Edit any field below directly — changes save immediately.</p>'+
     '<div class="kpi-strip">'+
       '<div class="kpi"><b>'+onHand+'</b><span>On hand (all locations)</span></div>'+
       '<div class="kpi"><b>'+totalAllocated+'</b><span>Total allocated to teams</span></div>'+
       '<div class="kpi '+remClass+'"><b>'+remaining+'</b><span>Remaining to allocate</span></div>'+
-    '</div>';
+    '</div>'+
+    '<div class="toolbar no-print" style="margin:10px 0"><button class="btn sm accent add-alloc-btn">+ Add team allocation</button></div>';
   if(!rows.length){
-    html+='<p class="note">No team allocations recorded yet for '+escAttr(item.name)+'. Add bookings below with a conference and team label to build this out.</p>';
+    html+='<p class="note">No team allocations recorded yet for '+escAttr(item.name)+'. Click "+ Add team allocation" to start.</p>';
     return html;
   }
   const groups={};
@@ -1587,18 +1605,74 @@ function renderAllocationSummary(item){
     if(b==='Unassigned conference') return -1;
     return a.localeCompare(b);
   });
+  const confs=(DB.lists && DB.lists.conferences) || [];
   confOrder.forEach(conf=>{
     const list=groups[conf];
     const subtotal=list.reduce((s,b)=>s+(Number(b.qty)||0),0);
     const homeSub=list.filter(b=>b.type==='Home').reduce((s,b)=>s+(Number(b.qty)||0),0);
     const visSub=list.filter(b=>b.type==='Visiting').reduce((s,b)=>s+(Number(b.qty)||0),0);
     html+='<div class="dash-section-title" style="margin-top:14px">'+escAttr(conf)+' — '+subtotal+' '+escAttr(item.uom)+' (Home '+homeSub+' / Visiting '+visSub+')</div>'+
-      '<table><colgroup><col style="width:32%"><col style="width:13%"><col style="width:13%"><col style="width:14%"><col style="width:14%"><col style="width:14%"></colgroup>'+
-      '<thead><tr><th>Team / label</th><th>Home/Visiting</th><th>Location</th><th>Start</th><th>End</th><th class="num">Qty</th></tr></thead><tbody>'+
-      list.map(b=>'<tr><td>'+escAttr(b.label||'(no label)')+'</td><td>'+escAttr(b.type||'—')+'</td><td>'+escAttr(b.location||'—')+'</td><td>'+escAttr(b.startDate||'')+'</td><td>'+escAttr(b.endDate||'')+'</td><td class="num">'+b.qty+'</td></tr>').join('')+
+      '<table class="alloc-table"><colgroup><col style="width:26%"><col style="width:11%"><col style="width:11%"><col style="width:10%"><col style="width:12%"><col style="width:12%"><col style="width:10%"><col style="width:4%"></colgroup>'+
+      '<thead><tr><th>Team / label</th><th>Conference</th><th>Home/Visiting</th><th>Location</th><th>Start</th><th>End</th><th class="num">Qty</th><th></th></tr></thead><tbody>'+
+      list.map(b=>renderAllocRow(b,item,confs)).join('')+
       '</tbody></table>';
   });
   return html;
+}
+function renderAllocRow(b,item,confs){
+  const confSelect='<select class="bk-conf">'+
+      '<option value="" '+(!b.conference?'selected':'')+'>(unset)</option>'+
+      confs.map(c=>'<option value="'+escAttr(c)+'" '+(b.conference===c?'selected':'')+'>'+escAttr(c)+'</option>').join('')+
+    '</select>';
+  const typeSelect='<select class="bk-type">'+
+      '<option value="" '+(!b.type?'selected':'')+'>?</option>'+
+      '<option value="Home" '+(b.type==='Home'?'selected':'')+'>Home</option>'+
+      '<option value="Visiting" '+(b.type==='Visiting'?'selected':'')+'>Visiting</option>'+
+    '</select>';
+  const locSelect = item.locations ?
+    '<select class="bk-loc">'+
+      '<option value="" '+(!b.location?'selected':'')+'>(unset)</option>'+
+      EQUIP_LOCATIONS.map(k=>'<option value="'+k+'" '+(b.location===k?'selected':'')+'>'+k+'</option>').join('')+
+    '</select>' : '<span class="note">n/a</span>';
+  return '<tr data-id="'+b.id+'">'+
+    '<td><input class="bk-label" value="'+escAttr(b.label||'')+'"></td>'+
+    '<td>'+confSelect+'</td>'+
+    '<td>'+typeSelect+'</td>'+
+    '<td>'+locSelect+'</td>'+
+    '<td><input class="bk-start" type="date" value="'+(b.startDate||'')+'"></td>'+
+    '<td><input class="bk-end" type="date" value="'+(b.endDate||'')+'"></td>'+
+    '<td class="num"><input class="bk-qty num" type="number" value="'+b.qty+'"></td>'+
+    '<td><button class="btn sm danger bk-del" title="Delete">×</button></td>'+
+  '</tr>';
+}
+function wireAllocationSummary(item, container){
+  container = container || document;
+  container.querySelectorAll('.alloc-table tr[data-id]').forEach(row=>{
+    const id=row.dataset.id; const b=DB.bookings.find(x=>x.id===id);
+    if(!b) return;
+    const bind=(sel,field,cast)=>{
+      const el=row.querySelector(sel);
+      if(el) el.addEventListener('change',e=>{ b[field]=cast?cast(e.target.value):e.target.value; save(); renderCalendar(); });
+    };
+    bind('.bk-label','label');
+    bind('.bk-conf','conference');
+    bind('.bk-type','type');
+    bind('.bk-loc','location');
+    bind('.bk-start','startDate');
+    bind('.bk-end','endDate');
+    bind('.bk-qty','qty',v=>Number(v)||0);
+    const delBtn=row.querySelector('.bk-del');
+    if(delBtn) delBtn.addEventListener('click',()=>{
+      if(!confirm('Delete this team allocation?')) return;
+      DB.bookings=DB.bookings.filter(x=>x.id!==id); save(); renderCalendar();
+    });
+  });
+  const addBtn=container.querySelector('.add-alloc-btn');
+  if(addBtn) addBtn.addEventListener('click',()=>{
+    const t=todayISO();
+    DB.bookings.push({id:uid(), itemId:item.id, qty:1, startDate:t, endDate:t, label:'', location:'', conference:'', type:''});
+    save(); renderCalendar();
+  });
 }
 function renderCalGrid(item, total, location){
   const first=new Date(CAL_YEAR, CAL_MONTH, 1);
