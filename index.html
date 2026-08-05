@@ -1174,29 +1174,57 @@ function addDocGuessFn(type){
 function openAddDocumentModal(){
   const bodyHtml=
     '<div class="po-meta">'+
-      '<div><label>File</label><br><input type="file" id="add-doc-file" accept=".pdf,.docx,.txt,.csv"></div>'+
       '<div><label>Document type</label><select id="add-doc-type"><option value="po">Purchase Order</option><option value="quote">Quote</option><option value="receipt">Receipt</option></select></div>'+
       '<div><label>Supplier</label><div id="add-doc-supplier-wrap">'+supplierSelectSimple((DB.suppliers[0]||{}).id||'')+'</div></div>'+
     '</div>'+
-    '<p class="note" id="add-doc-status">Choose a file — we\'ll guess the document type\'s fields and supplier from its contents, but you can change the type or supplier below before saving. Manual entry from each tab\'s "+ New blank" button still works even if a file can\'t be read.</p>'+
+    '<div class="doc-subnav no-print" id="add-doc-source-toggle" style="margin:12px 0">'+
+      '<button type="button" class="subtab active" data-source="file">Upload file</button>'+
+      '<button type="button" class="subtab" data-source="paste">Paste text</button>'+
+    '</div>'+
+    '<div id="add-doc-file-wrap"><label>File</label><br><input type="file" id="add-doc-file" accept=".pdf,.docx,.txt,.csv"></div>'+
+    '<div id="add-doc-paste-wrap" class="hidden"><label>Paste the email or document text</label><br>'+
+      '<textarea id="add-doc-paste" rows="8" style="width:100%;font:inherit;box-sizing:border-box" placeholder="Paste the body of the email here — we\'ll try to pull the doc number, date, supplier, and line items from it as you paste."></textarea>'+
+    '</div>'+
+    '<p class="note" id="add-doc-status">Choose a file, or switch to "Paste text" and paste an email in directly — either way we\'ll guess the document\'s fields and supplier from its contents, but you can change the type or supplier below before saving. Manual entry from each tab\'s "+ New blank" button still works even if nothing can be read automatically.</p>'+
     '<div class="toolbar" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="add-doc-cancel">Cancel</button><button class="btn accent" id="add-doc-save" disabled>Save</button></div>';
   openModal('Add Document', bodyHtml);
 
-  let pendingFile=null, pendingText='', pendingDataUrl='';
+  let source='file';
+  let pendingName='', pendingText='', pendingDataUrl='';
   const fileInput=document.getElementById('add-doc-file');
+  const pasteInput=document.getElementById('add-doc-paste');
+  const fileWrap=document.getElementById('add-doc-file-wrap');
+  const pasteWrap=document.getElementById('add-doc-paste-wrap');
   const typeSelect=document.getElementById('add-doc-type');
   const statusEl=document.getElementById('add-doc-status');
   const saveBtn=document.getElementById('add-doc-save');
   const supplierWrap=document.getElementById('add-doc-supplier-wrap');
+  const sourceBtns=document.querySelectorAll('#add-doc-source-toggle .subtab');
+
+  function resetPending(){
+    pendingName=''; pendingText=''; pendingDataUrl=''; saveBtn.disabled=true;
+  }
+  function setSource(s){
+    source=s;
+    sourceBtns.forEach(b=>b.classList.toggle('active', b.dataset.source===s));
+    fileWrap.classList.toggle('hidden', s!=='file');
+    pasteWrap.classList.toggle('hidden', s!=='paste');
+    resetPending();
+    fileInput.value=''; pasteInput.value='';
+    statusEl.textContent = s==='file'
+      ? 'Choose a file — we\'ll guess the document\'s fields and supplier from its contents.'
+      : 'Paste the email text below — we\'ll guess the document\'s fields and supplier from it as you paste.';
+  }
+  sourceBtns.forEach(b=>b.addEventListener('click',()=>setSource(b.dataset.source)));
 
   function refreshSupplierGuess(){
-    if(!pendingFile) return;
+    if(!pendingText) return;
     const guess=addDocGuessFn(typeSelect.value)(pendingText);
     supplierWrap.innerHTML=supplierSelectSimple(guess.supplierId||(DB.suppliers[0]||{}).id||'');
   }
   fileInput.addEventListener('change', async e=>{
     const f=e.target.files[0]; if(!f) return;
-    pendingFile=f; pendingText=''; pendingDataUrl='';
+    pendingName=f.name; pendingText=''; pendingDataUrl='';
     saveBtn.disabled=true;
     statusEl.textContent='Reading '+f.name+'…';
     pendingText=await extractTextFromFile(f);
@@ -1205,16 +1233,30 @@ function openAddDocumentModal(){
     statusEl.textContent = pendingText? ('Auto-filled from '+f.name+' — please verify every field.') : ('Could not read this file automatically — attached for reference; please enter details manually.');
     saveBtn.disabled=false;
   });
+  let pasteDebounce=null;
+  pasteInput.addEventListener('input', ()=>{
+    clearTimeout(pasteDebounce);
+    pasteDebounce=setTimeout(()=>{
+      const text=pasteInput.value.trim();
+      if(!text){ resetPending(); statusEl.textContent='Paste the email text below — we\'ll guess the document\'s fields and supplier from it as you paste.'; return; }
+      pendingText=text;
+      pendingName='Pasted text — '+todayISO()+'.txt';
+      pendingDataUrl='data:text/plain;charset=utf-8,'+encodeURIComponent(text);
+      refreshSupplierGuess();
+      statusEl.textContent='Auto-filled from pasted text — please verify every field.';
+      saveBtn.disabled=false;
+    }, 400);
+  });
   typeSelect.addEventListener('change', refreshSupplierGuess);
   document.getElementById('add-doc-cancel').addEventListener('click', closeModal);
   saveBtn.addEventListener('click',()=>{
-    if(!pendingFile) return;
+    if(!pendingName) return;
     const type=typeSelect.value;
     const supplierSel=supplierWrap.querySelector('.supplier-select');
     const guess=addDocGuessFn(type)(pendingText);
     const chosenSupplierId=(supplierSel?supplierSel.value:'')||guess.supplierId||(DB.suppliers[0]||{}).id||'';
-    const notes= pendingText? ('Auto-filled from '+pendingFile.name+' — please verify every field.') : ('Could not read this file automatically — attached for reference; please enter details manually.');
-    const docs=[{id:uid(), name:pendingFile.name, dataUrl:pendingDataUrl, uploadedAt:todayISO()}];
+    const notes= pendingText? ('Auto-filled from '+pendingName+' — please verify every field.') : ('Could not read this file automatically — attached for reference; please enter details manually.');
+    const docs=pendingDataUrl?[{id:uid(), name:pendingName, dataUrl:pendingDataUrl, uploadedAt:todayISO()}]:[];
     const lines=guess.lines.length?guess.lines.map(l=>({id:uid(), itemId:l.itemId, qty:l.qty, unitPrice:l.unitPrice})):[];
     if(type==='quote'){
       const q={
