@@ -127,6 +127,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
 .doc-chip:hover{border-color:var(--graphite)}
 .file-btn{position:relative;overflow:hidden;display:inline-block}
 .file-btn input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.file-btn.drag-over{border-color:var(--red);color:var(--red);box-shadow:0 0 0 3px rgba(170,2,1,.12)}
+.dropzone{border:1.5px dashed var(--line);border-radius:8px;padding:14px;text-align:center;transition:.15s}
+.dropzone.drag-over{border-color:var(--red);background:var(--red-tint)}
 .bom-lines{margin:4px 0}
 .bom-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .bom-row select{min-width:170px;width:auto}
@@ -1077,6 +1080,24 @@ function alertModal(message, opts){
 
 /* ---------------- docs / file helpers ---------------- */
 function readFileAsDataURL(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(r.error); r.readAsDataURL(file); }); }
+/* Makes dropEl accept drag-and-drop of one or more files, feeding them into fileInput's normal
+   'change' handler (so every existing upload path — items, equipment, PO/quote/receipt, Add
+   Document — gets drag-and-drop for free without duplicating its logic). */
+function enableFileDrop(dropEl, fileInput){
+  if(!dropEl || !fileInput) return;
+  const stop=e=>{ e.preventDefault(); e.stopPropagation(); };
+  ['dragenter','dragover'].forEach(evt=>dropEl.addEventListener(evt, e=>{ stop(e); dropEl.classList.add('drag-over'); }));
+  ['dragleave','dragend'].forEach(evt=>dropEl.addEventListener(evt, e=>{ stop(e); dropEl.classList.remove('drag-over'); }));
+  dropEl.addEventListener('drop', e=>{
+    stop(e);
+    dropEl.classList.remove('drag-over');
+    const dt=e.dataTransfer;
+    if(dt && dt.files && dt.files.length){
+      fileInput.files=dt.files;
+      fileInput.dispatchEvent(new Event('change', {bubbles:true}));
+    }
+  });
+}
 function readFileAsArrayBuffer(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(r.error); r.readAsArrayBuffer(file); }); }
 function docChips(docs){
   if(!docs || !docs.length) return '<span class="note">no files</span>';
@@ -1181,7 +1202,7 @@ function openAddDocumentModal(){
       '<button type="button" class="subtab active" data-source="file">Upload file</button>'+
       '<button type="button" class="subtab" data-source="paste">Paste text</button>'+
     '</div>'+
-    '<div id="add-doc-file-wrap"><label>File</label><br><input type="file" id="add-doc-file" accept=".pdf,.docx,.txt,.csv"></div>'+
+    '<div id="add-doc-file-wrap" class="dropzone"><label>File</label><br><input type="file" id="add-doc-file" accept=".pdf,.docx,.txt,.csv"><div class="note" style="margin-top:6px">Drag &amp; drop a file here, or click to browse.</div></div>'+
     '<div id="add-doc-paste-wrap" class="hidden"><label>Paste the email or document text</label><br>'+
       '<textarea id="add-doc-paste" rows="8" style="width:100%;font:inherit;box-sizing:border-box" placeholder="Paste the body of the email here — we\'ll try to pull the doc number, date, supplier, and line items from it as you paste."></textarea>'+
     '</div>'+
@@ -1200,6 +1221,7 @@ function openAddDocumentModal(){
   const saveBtn=document.getElementById('add-doc-save');
   const supplierWrap=document.getElementById('add-doc-supplier-wrap');
   const sourceBtns=document.querySelectorAll('#add-doc-source-toggle .subtab');
+  enableFileDrop(fileWrap, fileInput);
 
   function resetPending(){
     pendingName=''; pendingText=''; pendingDataUrl=''; saveBtn.disabled=true;
@@ -1703,6 +1725,7 @@ function renderItems(){
     tr.querySelector('.f-lead').addEventListener('change',e=>{it.leadTimeDays=e.target.value; save();});
     tr.querySelector('.f-ss').addEventListener('change',e=>{it.safetyStock=Number(e.target.value)||0; save();});
     tr.querySelector('.f-notes').addEventListener('change',e=>{it.notes=e.target.value; save();});
+    enableFileDrop(tr.querySelector('.file-btn'), tr.querySelector('.f-file'));
     tr.querySelector('.f-file').addEventListener('change', async e=>{
       const f=e.target.files[0]; if(!f) return;
       const dataUrl=await readFileAsDataURL(f);
@@ -1771,6 +1794,7 @@ function renderEquipmentTable(){
     });
     tr.querySelector('.f-ss').addEventListener('change',e=>{it.safetyStock=Number(e.target.value)||0; save();});
     tr.querySelector('.f-notes').addEventListener('change',e=>{it.notes=e.target.value; save();});
+    enableFileDrop(tr.querySelector('.file-btn'), tr.querySelector('.f-file'));
     tr.querySelector('.f-file').addEventListener('change', async e=>{
       const f=e.target.files[0]; if(!f) return;
       const dataUrl=await readFileAsDataURL(f);
@@ -2532,6 +2556,7 @@ function wirePO(){
       const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ po.lines[i].unitPrice=Number(e.target.value)||0; save(); });
       const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ po.lines.splice(i,1); save(); renderPO(); });
     });
+    enableFileDrop(card.querySelector('.file-btn'), card.querySelector('.po-file'));
     card.querySelector('.po-file').addEventListener('change', async e=>{
       const f=e.target.files[0]; if(!f) return;
       const dataUrl=await readFileAsDataURL(f);
@@ -2625,6 +2650,7 @@ function wireQuotes(){
       const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ q.lines[i].unitPrice=Number(e.target.value)||0; save(); });
       const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ q.lines.splice(i,1); save(); renderQuotes(); });
     });
+    enableFileDrop(card.querySelector('.file-btn'), card.querySelector('.po-file'));
     card.querySelector('.po-file').addEventListener('change', async e=>{
       const f=e.target.files[0]; if(!f) return;
       const dataUrl=await readFileAsDataURL(f);
@@ -2702,6 +2728,7 @@ function wireReceipts(){
       const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ r.lines[i].unitPrice=Number(e.target.value)||0; save(); });
       const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ r.lines.splice(i,1); save(); renderReceipts(); });
     });
+    enableFileDrop(card.querySelector('.file-btn'), card.querySelector('.po-file'));
     card.querySelector('.po-file').addEventListener('change', async e=>{
       const f=e.target.files[0]; if(!f) return;
       const dataUrl=await readFileAsDataURL(f);
