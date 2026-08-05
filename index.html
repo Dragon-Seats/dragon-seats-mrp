@@ -11,6 +11,9 @@
   --red:#AA0201; --red-dark:#7d0101; --graphite:#4B4E53; --ink:#17181A;
   --steel:#6b6f76; --steel-soft:#eef0f2; --paper:#f7f6f4; --card:#ffffff;
   --line:#e3e1dd; --amber:#b8860b; --green:#1f7a3d; --sidebar-w:230px;
+  --amber-tint:#fdf3dc; --amber-tint-border:#eadfb8; --amber-tint-text:#6b5410;
+  --red-tint:#fbe4e3; --red-tint-border:#f0c4c2;
+  --green-tint:#e4f3e8;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-size:14px}
@@ -29,6 +32,13 @@ h1,h2,h3,.brand,.tab,.dash-section-title{font-family:'Space Grotesk',system-ui,s
 .tab.active{background:#232427;color:#fff;border-left-color:var(--red)}
 .tab .count{font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a8d93;background:#2a2b2e;border-radius:8px;padding:1px 7px}
 .sb-group-divider{margin-top:auto}
+.doc-subnav{display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--line);padding-bottom:0}
+.subtab{all:unset;cursor:pointer;padding:8px 14px;font-size:13.5px;font-weight:600;color:var(--steel);border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px}
+.subtab:hover{color:var(--ink)}
+.subtab.active{color:var(--red);border-bottom-color:var(--red)}
+.subtab .count{font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a8d93;background:#f3f1ee;border-radius:8px;padding:1px 7px}
+.subtab.active .count{color:var(--red)}
+.doc-subpanel.hidden{display:none}
 .sb-foot{padding:12px 18px;font-size:10.5px;color:#6f7176;border-top:1px solid #2a2b2e;margin-top:8px}
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
 .topbar{padding:14px 26px;border-bottom:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:space-between}
@@ -56,9 +66,9 @@ table input,table select,table textarea{width:100%;min-width:0;box-sizing:border
 table input.num{text-align:right}
 td.col-actions{text-align:center}
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
-.badge.ok{background:#e4f3e8;color:var(--green)}
-.badge.soon{background:#fdf3dc;color:var(--amber)}
-.badge.late{background:#fbe4e3;color:var(--red)}
+.badge.ok{background:var(--green-tint);color:var(--green)}
+.badge.soon{background:var(--amber-tint);color:var(--amber)}
+.badge.late{background:var(--red-tint);color:var(--red)}
 .badge.review{background:#eee;color:var(--steel)}
 input,select,textarea{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 3px rgba(170,2,1,.08)}
@@ -70,9 +80,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
 .btn.danger{color:var(--red)}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
 .note{font-size:12px;color:var(--steel);line-height:1.5}
-.note.warn{color:var(--red-dark);background:#fbe4e3;padding:6px 10px;border-radius:6px}
-.callout{background:#fdf3dc;border:1px solid #eadfb8;color:#6b5410;border-radius:10px;padding:10px 14px;font-size:12.5px;margin-bottom:16px}
-.callout.red{background:#fbe4e3;border-color:#f0c4c2;color:#7d0101}
+.note.warn{color:var(--red-dark);background:var(--red-tint);padding:6px 10px;border-radius:6px}
+.callout{background:var(--amber-tint);border:1px solid var(--amber-tint-border);color:var(--amber-tint-text);border-radius:10px;padding:10px 14px;font-size:12.5px;margin-bottom:16px}
+.callout.red{background:var(--red-tint);border-color:var(--red-tint-border);color:var(--red-dark)}
 .row-actions{display:flex;gap:6px;justify-content:center}
 .hidden{display:none !important}
 .demand-src{font-size:11.5px;color:var(--steel)}
@@ -83,7 +93,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
 .modal-head h3{margin:0;font-size:15px}
 .modal-body{padding:16px 18px}
 .chip{display:inline-block;background:#f3f1ee;border:1px solid var(--line);border-radius:14px;padding:2px 9px;font-size:11.5px;margin:0 4px 4px 0}
-.doc-chip{display:inline-flex;align-items:center;gap:4px;background:#eef0f2;border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:11.5px;margin:0 4px 4px 0;color:var(--ink);text-decoration:none}
+.doc-chip{display:inline-flex;align-items:center;gap:4px;background:var(--steel-soft);border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:11.5px;margin:0 4px 4px 0;color:var(--ink);text-decoration:none}
 .doc-chip:hover{border-color:var(--graphite)}
 .file-btn{position:relative;overflow:hidden;display:inline-block}
 .file-btn input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
@@ -99,14 +109,22 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
 .po-meta label{font-size:11px;color:var(--steel);display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:.04em}
 .po-meta select,.po-meta input{width:auto}
 .status-badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:#eee;color:var(--steel);margin-left:8px;vertical-align:middle}
-.status-badge.open{background:#fdf3dc;color:var(--amber)}
-.status-badge.closed{background:#e4f3e8;color:var(--green)}
+.status-badge.open{background:var(--amber-tint);color:var(--amber)}
+.status-badge.closed{background:var(--green-tint);color:var(--green)}
+.sup-docs-details{border-top:1px dashed var(--line)}
+.sup-docs-details summary{list-style:none}
+.sup-docs-details summary::-webkit-details-marker{display:none}
+.doc-highlight{outline:3px solid var(--red);outline-offset:2px;transition:outline-color .3s}
 .btn.subtle{background:transparent;border-color:transparent;box-shadow:none;color:var(--steel);font-weight:500}
 .btn.subtle:hover{text-decoration:underline;background:transparent}
 .btn.subtle.danger{color:var(--red)}
 .link-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .link-row:last-child{border-bottom:none}
-.link-row .f-value{flex:1 1 220px;min-width:160px}
+.link-row .f-value-wrap{flex:1 1 220px;min-width:160px;display:flex;gap:6px;align-items:center}
+.link-row .f-value-wrap .f-value{flex:1 1 auto;min-width:0}
+.link-go{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--steel);flex:0 0 auto;font-size:14px}
+.link-go:hover{border-color:var(--red);color:var(--red)}
+.link-go.is-disabled{opacity:.35;pointer-events:none;cursor:default}
 .link-row .f-notes{flex:1 1 160px;min-width:120px}
 .link-row .supplier-select{width:auto;min-width:140px;flex:0 0 auto}
 .seg-toggle{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:0 0 auto}
@@ -160,7 +178,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
       <div class="sb-group-label">Planning</div>
       <button class="tab" data-tab="demand">Demand Plan <span class="count" id="cnt-demand">0</span></button>
       <button class="tab" data-tab="plan">Planned Orders <span class="count" id="cnt-plan">0</span></button>
-      <button class="tab" data-tab="po">Purchase Orders <span class="count" id="cnt-po">0</span></button>
+      <button class="tab" data-tab="docs">Documents <span class="count" id="cnt-docs">0</span></button>
       <div class="sb-group-divider"></div>
       <button class="tab" data-tab="feedback">Feedback <span class="count" id="cnt-feedback">0</span></button>
       <button class="tab" data-tab="settings">Settings</button>
@@ -170,6 +188,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
   <div class="main">
     <div class="topbar">
       <div><h1 id="pagetitle">Dashboard</h1><div class="sub" id="pagesub">MRP overview</div></div>
+      <div class="no-print"><button class="btn accent" id="add-doc-btn">+ Add Document</button></div>
     </div>
     <div class="content">
       <div class="panel" id="panel-dash"></div>
@@ -180,7 +199,16 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
       <div class="panel hidden" id="panel-calendar"></div>
       <div class="panel hidden" id="panel-demand"></div>
       <div class="panel hidden" id="panel-plan"></div>
-      <div class="panel hidden" id="panel-po"></div>
+      <div class="panel hidden" id="panel-docs">
+        <div class="doc-subnav no-print">
+          <button class="subtab" data-subtab="po">Purchase Orders <span class="count" id="cnt-po">0</span></button>
+          <button class="subtab" data-subtab="quotes">Quotes <span class="count" id="cnt-quotes">0</span></button>
+          <button class="subtab" data-subtab="receipts">Receipts <span class="count" id="cnt-receipts">0</span></button>
+        </div>
+        <div class="doc-subpanel hidden" id="panel-po"></div>
+        <div class="doc-subpanel hidden" id="panel-quotes"></div>
+        <div class="doc-subpanel hidden" id="panel-receipts"></div>
+      </div>
       <div class="panel hidden" id="panel-feedback"></div>
       <div class="panel hidden" id="panel-settings"></div>
     </div>
@@ -855,7 +883,7 @@ function sample(){
     {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'UCF — Brad has in separate count, 0 needed here (date TBD)', location:'', conference:'BIG12', type:''},
     {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Notre Dame — no allocation entered yet (date TBD)', location:'', conference:'IND.', type:''}
   ];
-  return {items, suppliers, demandPlan, purchaseOrders, bookings, lists:{poStatus:['Open','Partially Received','Closed'], conferences:['SEC','BIG10','MW','NFL','ACC','BIG12','IND.']}, horizonDays:90};
+  return {items, suppliers, demandPlan, purchaseOrders, quotes:[], receipts:[], bookings, lists:{poStatus:['Open','Partially Received','Closed'], quoteStatus:['Open','Expired','Converted to PO'], conferences:['SEC','BIG10','MW','NFL','ACC','BIG12','IND.']}, horizonDays:90};
 }
 
 let DB=null;
@@ -876,7 +904,7 @@ function migrateToV2(db){
   });
   return {
     items, suppliers:db.suppliers||[], demandPlan:db.demandPlan||[],
-    purchaseOrders:[], bookings:db.bookings||[], lists:{poStatus:['Open','Partially Received','Closed']},
+    purchaseOrders:[], quotes:[], receipts:[], bookings:db.bookings||[], lists:{poStatus:['Open','Partially Received','Closed'], quoteStatus:['Open','Expired','Converted to PO']},
     horizonDays:db.horizonDays||90
   };
 }
@@ -886,9 +914,12 @@ function ensureShape(){
   if(!Array.isArray(DB.suppliers)) DB.suppliers=[];
   if(!Array.isArray(DB.demandPlan)) DB.demandPlan=[];
   if(!Array.isArray(DB.purchaseOrders)) DB.purchaseOrders=[];
+  if(!Array.isArray(DB.quotes)) DB.quotes=[];
+  if(!Array.isArray(DB.receipts)) DB.receipts=[];
   if(!Array.isArray(DB.bookings)) DB.bookings=[];
   if(!DB.lists || typeof DB.lists!=='object') DB.lists={};
   if(!Array.isArray(DB.lists.poStatus) || !DB.lists.poStatus.length) DB.lists.poStatus=['Open','Partially Received','Closed'];
+  if(!Array.isArray(DB.lists.quoteStatus) || !DB.lists.quoteStatus.length) DB.lists.quoteStatus=['Open','Expired','Converted to PO'];
   if(!Array.isArray(DB.lists.conferences) || !DB.lists.conferences.length) DB.lists.conferences=['SEC','BIG10','MW','NFL','ACC','BIG12','IND.'];
   if(!DB.horizonDays) DB.horizonDays=90;
   DB.items.forEach(i=>{
@@ -914,6 +945,20 @@ function ensureShape(){
     if(!Array.isArray(po.docs)) po.docs=[];
     if(!po.status) po.status=DB.lists.poStatus[0];
     if(!po.poNumber) po.poNumber='';
+  });
+  DB.quotes.forEach(q=>{
+    if(!Array.isArray(q.lines)) q.lines=[];
+    if(!Array.isArray(q.docs)) q.docs=[];
+    if(!q.status) q.status=DB.lists.quoteStatus[0];
+    if(!q.quoteNumber) q.quoteNumber='';
+    if(!q.notes) q.notes='';
+  });
+  DB.receipts.forEach(r=>{
+    if(!Array.isArray(r.lines)) r.lines=[];
+    if(!Array.isArray(r.docs)) r.docs=[];
+    if(!r.receiptNumber) r.receiptNumber='';
+    if(r.poId===undefined) r.poId='';
+    if(!r.notes) r.notes='';
   });
   DB.bookings.forEach(b=>{
     if(!b.id) b.id=uid();
@@ -945,6 +990,8 @@ async function save(){
 function itemById(id){ return DB.items.find(i=>i.id===id); }
 function supplierById(id){ return DB.suppliers.find(s=>s.id===id); }
 function poById(id){ return DB.purchaseOrders.find(p=>p.id===id); }
+function quoteById(id){ return DB.quotes.find(q=>q.id===id); }
+function receiptById(id){ return DB.receipts.find(r=>r.id===id); }
 function closedStatusName(){ return DB.lists.poStatus.includes('Closed') ? 'Closed' : DB.lists.poStatus[DB.lists.poStatus.length-1]; }
 
 /* ---------------- bookings / equipment availability ---------------- */
@@ -974,6 +1021,29 @@ function openModal(title, bodyHtml){
   m.querySelector('.modal-backdrop').addEventListener('click',e=>{ if(e.target.classList.contains('modal-backdrop')) closeModal(); });
 }
 function closeModal(){ const m=document.getElementById('modal-root'); if(m) m.innerHTML=''; }
+function confirmModal(message, onConfirm, opts){
+  opts=opts||{};
+  let m=document.getElementById('modal-root');
+  if(!m){ m=document.createElement('div'); m.id='modal-root'; document.body.appendChild(m); }
+  m.innerHTML='<div class="modal-backdrop"><div class="modal-box" style="max-width:440px"><div class="modal-head"><h3>'+escAttr(opts.title||'Please confirm')+'</h3><button class="btn sm" id="confirm-cancel-x">Cancel</button></div>'+
+    '<div class="modal-body"><p class="note" style="font-size:13.5px;color:var(--ink);line-height:1.5">'+escAttr(message)+'</p>'+
+    '<div class="toolbar" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="confirm-cancel">Cancel</button><button class="btn accent" id="confirm-ok">'+escAttr(opts.okLabel||'Delete')+'</button></div></div></div></div>';
+  const cleanup=()=>closeModal();
+  document.getElementById('confirm-cancel').addEventListener('click',cleanup);
+  document.getElementById('confirm-cancel-x').addEventListener('click',cleanup);
+  document.getElementById('confirm-ok').addEventListener('click',()=>{ cleanup(); onConfirm(); });
+  m.querySelector('.modal-backdrop').addEventListener('click',e=>{ if(e.target.classList.contains('modal-backdrop')) cleanup(); });
+}
+function alertModal(message, opts){
+  opts=opts||{};
+  let m=document.getElementById('modal-root');
+  if(!m){ m=document.createElement('div'); m.id='modal-root'; document.body.appendChild(m); }
+  m.innerHTML='<div class="modal-backdrop"><div class="modal-box" style="max-width:440px"><div class="modal-head"><h3>'+escAttr(opts.title||'Notice')+'</h3></div>'+
+    '<div class="modal-body"><p class="note" style="font-size:13.5px;color:var(--ink);line-height:1.5">'+escAttr(message)+'</p>'+
+    '<div class="toolbar" style="justify-content:flex-end;margin-top:16px"><button class="btn accent" id="alert-ok">OK</button></div></div></div></div>';
+  document.getElementById('alert-ok').addEventListener('click',closeModal);
+  m.querySelector('.modal-backdrop').addEventListener('click',e=>{ if(e.target.classList.contains('modal-backdrop')) closeModal(); });
+}
 
 /* ---------------- docs / file helpers ---------------- */
 function readFileAsDataURL(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(r.error); r.readAsDataURL(file); }); }
@@ -1010,18 +1080,20 @@ async function extractTextFromFile(file){
   return '';
 }
 
-function guessPOFieldsFromText(text){
-  const guess={poNumber:'', supplierId:'', orderDate:'', lines:[]};
+/* Shared best-effort field guesser used by POs, Quotes and Receipts intake.
+   docNumberRegex: regex whose capture group 1 is the document number (PO#/Quote#/Receipt#/etc). */
+function guessDocFieldsFromText(text, docNumberRegex){
+  const guess={docNumber:'', supplierId:'', docDate:'', lines:[]};
   if(!text) return guess;
-  const poMatch=text.match(/PO\s*#?\s*[:\-]?\s*([A-Za-z0-9\-]{2,})/i);
-  if(poMatch) guess.poNumber=poMatch[1];
+  const numMatch=text.match(docNumberRegex);
+  if(numMatch) guess.docNumber=numMatch[1];
   const dateMatch=text.match(/\b(20\d{2}[-\/]\d{1,2}[-\/]\d{1,2}|\d{1,2}[\/\-]\d{1,2}[\/\-]20\d{2})\b/);
   if(dateMatch){
     const raw=dateMatch[1];
     let iso='';
     if(/^20\d{2}/.test(raw)){ iso=raw.replace(/\//g,'-'); }
     else{ const parts=raw.split(/[\/\-]/); iso=parts[2]+'-'+String(parts[0]).padStart(2,'0')+'-'+String(parts[1]).padStart(2,'0'); }
-    guess.orderDate=iso;
+    guess.docDate=iso;
   }
   DB.suppliers.forEach(s=>{
     if(s.name && text.toLowerCase().indexOf(s.name.toLowerCase())!==-1) guess.supplierId=guess.supplierId||s.id;
@@ -1036,32 +1108,148 @@ function guessPOFieldsFromText(text){
     if(overlaps) return;
     consumed.push([idx, idx+nameLower.length]);
     const tail=text.slice(idx, idx+120);
-    const numMatch=tail.match(/(\d+(?:\.\d+)?)/g);
-    if(numMatch && numMatch.length){
-      const qty=Number(numMatch[0])||1;
+    const numsInTail=tail.match(/(\d+(?:\.\d+)?)/g);
+    if(numsInTail && numsInTail.length){
+      const qty=Number(numsInTail[0])||1;
       const priceMatch=tail.match(/\$\s?(\d+(?:\.\d{1,2})?)/);
       guess.lines.push({itemId:it.id, qty, unitPrice: priceMatch?Number(priceMatch[1]):0});
     }
   });
   return guess;
 }
+const PO_NUMBER_REGEX=/PO\s*#?\s*[:\-]?\s*([A-Za-z0-9\-]{2,})/i;
+const QUOTE_NUMBER_REGEX=/(?:Quote|Estimate)\s*#?\s*[:\-]?\s*([A-Za-z0-9\-]{2,})/i;
+const RECEIPT_NUMBER_REGEX=/(?:Receipt|Order\s*#|Invoice|Confirmation)\s*#?\s*[:\-]?\s*([A-Za-z0-9\-]{2,})/i;
+
+/* Back-compat wrapper — same regex/behavior/output shape as before. */
+function guessPOFieldsFromText(text){
+  const g=guessDocFieldsFromText(text, PO_NUMBER_REGEX);
+  return {poNumber:g.docNumber, supplierId:g.supplierId, orderDate:g.docDate, lines:g.lines};
+}
+function guessQuoteFieldsFromText(text){
+  const g=guessDocFieldsFromText(text, QUOTE_NUMBER_REGEX);
+  return {quoteNumber:g.docNumber, supplierId:g.supplierId, quoteDate:g.docDate, lines:g.lines};
+}
+function guessReceiptFieldsFromText(text){
+  const g=guessDocFieldsFromText(text, RECEIPT_NUMBER_REGEX);
+  return {receiptNumber:g.docNumber, supplierId:g.supplierId, receiptDate:g.docDate, lines:g.lines};
+}
+
+/* ---------------- shared "Add Document" entry point (PO / Quote / Receipt upload, unified) ---------------- */
+function addDocGuessFn(type){
+  if(type==='quote') return guessQuoteFieldsFromText;
+  if(type==='receipt') return guessReceiptFieldsFromText;
+  return guessPOFieldsFromText;
+}
+function openAddDocumentModal(){
+  const bodyHtml=
+    '<div class="po-meta">'+
+      '<div><label>File</label><br><input type="file" id="add-doc-file" accept=".pdf,.docx,.txt,.csv"></div>'+
+      '<div><label>Document type</label><select id="add-doc-type"><option value="po">Purchase Order</option><option value="quote">Quote</option><option value="receipt">Receipt</option></select></div>'+
+      '<div><label>Supplier</label><div id="add-doc-supplier-wrap">'+supplierSelectSimple((DB.suppliers[0]||{}).id||'')+'</div></div>'+
+    '</div>'+
+    '<p class="note" id="add-doc-status">Choose a file — we\'ll guess the document type\'s fields and supplier from its contents, but you can change the type or supplier below before saving. Manual entry from each tab\'s "+ New blank" button still works even if a file can\'t be read.</p>'+
+    '<div class="toolbar" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="add-doc-cancel">Cancel</button><button class="btn accent" id="add-doc-save" disabled>Save</button></div>';
+  openModal('Add Document', bodyHtml);
+
+  let pendingFile=null, pendingText='', pendingDataUrl='';
+  const fileInput=document.getElementById('add-doc-file');
+  const typeSelect=document.getElementById('add-doc-type');
+  const statusEl=document.getElementById('add-doc-status');
+  const saveBtn=document.getElementById('add-doc-save');
+  const supplierWrap=document.getElementById('add-doc-supplier-wrap');
+
+  function refreshSupplierGuess(){
+    if(!pendingFile) return;
+    const guess=addDocGuessFn(typeSelect.value)(pendingText);
+    supplierWrap.innerHTML=supplierSelectSimple(guess.supplierId||(DB.suppliers[0]||{}).id||'');
+  }
+  fileInput.addEventListener('change', async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    pendingFile=f; pendingText=''; pendingDataUrl='';
+    saveBtn.disabled=true;
+    statusEl.textContent='Reading '+f.name+'…';
+    pendingText=await extractTextFromFile(f);
+    pendingDataUrl=await readFileAsDataURL(f);
+    refreshSupplierGuess();
+    statusEl.textContent = pendingText? ('Auto-filled from '+f.name+' — please verify every field.') : ('Could not read this file automatically — attached for reference; please enter details manually.');
+    saveBtn.disabled=false;
+  });
+  typeSelect.addEventListener('change', refreshSupplierGuess);
+  document.getElementById('add-doc-cancel').addEventListener('click', closeModal);
+  saveBtn.addEventListener('click',()=>{
+    if(!pendingFile) return;
+    const type=typeSelect.value;
+    const supplierSel=supplierWrap.querySelector('.supplier-select');
+    const guess=addDocGuessFn(type)(pendingText);
+    const chosenSupplierId=(supplierSel?supplierSel.value:'')||guess.supplierId||(DB.suppliers[0]||{}).id||'';
+    const notes= pendingText? ('Auto-filled from '+pendingFile.name+' — please verify every field.') : ('Could not read this file automatically — attached for reference; please enter details manually.');
+    const docs=[{id:uid(), name:pendingFile.name, dataUrl:pendingDataUrl, uploadedAt:todayISO()}];
+    const lines=guess.lines.length?guess.lines.map(l=>({id:uid(), itemId:l.itemId, qty:l.qty, unitPrice:l.unitPrice})):[];
+    if(type==='quote'){
+      const q={
+        id:uid(), quoteNumber:guess.quoteNumber||'', supplierId:chosenSupplierId,
+        quoteDate:guess.quoteDate||todayISO(), validUntil:addDays(guess.quoteDate||todayISO(),30),
+        status:DB.lists.quoteStatus[0], lines:lines, docs:docs, notes:notes
+      };
+      DB.quotes.unshift(q);
+      save(); closeModal(); currentTab='quotes'; setTab('quotes'); renderCounts();
+    } else if(type==='receipt'){
+      const r={
+        id:uid(), receiptNumber:guess.receiptNumber||'', supplierId:chosenSupplierId,
+        receiptDate:guess.receiptDate||todayISO(), poId:'',
+        lines:lines, docs:docs, notes:notes
+      };
+      DB.receipts.unshift(r);
+      save(); closeModal(); currentTab='receipts'; setTab('receipts'); renderCounts();
+    } else {
+      const po={
+        id:uid(), poNumber:guess.poNumber||'', supplierId:chosenSupplierId,
+        orderDate:guess.orderDate||todayISO(), expectedDate:addDays(guess.orderDate||todayISO(),14),
+        status:DB.lists.poStatus[0], lines:lines, docs:docs, notes:notes
+      };
+      DB.purchaseOrders.unshift(po);
+      save(); closeModal(); currentTab='po'; setTab('po'); renderCounts();
+    }
+  });
+}
 
 /* ---------------- price history ---------------- */
+/* Quotes/Receipts are kept as historical records for now and do NOT feed price history yet
+   (by user's request — they want them purely as reference/archive for this pass).
+   Flip this to true once you're ready to have Quotes/Receipts contribute to price history. */
+const INCLUDE_QUOTES_RECEIPTS_IN_PRICE_HISTORY = false;
 function priceHistoryFor(itemId){
   const rows=[];
   DB.purchaseOrders.forEach(po=>{
     (po.lines||[]).forEach(l=>{
       if(l.itemId===itemId && Number(l.unitPrice)>0){
-        rows.push({date:po.orderDate, supplier:(supplierById(po.supplierId)||{}).name||'—', qty:l.qty, unitPrice:l.unitPrice, poNumber:po.poNumber});
+        rows.push({date:po.orderDate, supplier:(supplierById(po.supplierId)||{}).name||'—', qty:l.qty, unitPrice:l.unitPrice, poNumber:po.poNumber, source:'PO', reliability:2});
       }
     });
   });
-  rows.sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  if(INCLUDE_QUOTES_RECEIPTS_IN_PRICE_HISTORY){
+    DB.quotes.forEach(q=>{
+      (q.lines||[]).forEach(l=>{
+        if(l.itemId===itemId && Number(l.unitPrice)>0){
+          rows.push({date:q.quoteDate, supplier:(supplierById(q.supplierId)||{}).name||'—', qty:l.qty, unitPrice:l.unitPrice, poNumber:q.quoteNumber, source:'Quote', reliability:1});
+        }
+      });
+    });
+    DB.receipts.forEach(r=>{
+      (r.lines||[]).forEach(l=>{
+        if(l.itemId===itemId && Number(l.unitPrice)>0){
+          rows.push({date:r.receiptDate, supplier:(supplierById(r.supplierId)||{}).name||'—', qty:l.qty, unitPrice:l.unitPrice, poNumber:r.receiptNumber, source:'Receipt', reliability:3});
+        }
+      });
+    });
+  }
+  rows.sort((a,b)=> (b.reliability-a.reliability) || (b.date||'').localeCompare(a.date||''));
   return rows;
 }
 function renderHistoryTable(rows){
-  return '<table><thead><tr><th>Date</th><th>Supplier</th><th class="num">Qty</th><th class="num">Unit Price</th><th>PO #</th></tr></thead><tbody>'+
-    rows.map(r=>'<tr><td class="mono">'+fmtDate(r.date)+'</td><td>'+r.supplier+'</td><td class="num mono">'+r.qty+'</td><td class="num mono">$'+Number(r.unitPrice).toFixed(2)+'</td><td class="mono">'+(r.poNumber||'')+'</td></tr>').join('')
+  return '<table><thead><tr><th>Date</th><th>Supplier</th><th class="num">Qty</th><th class="num">Unit Price</th><th>Source</th><th>PO #</th></tr></thead><tbody>'+
+    rows.map(r=>'<tr><td class="mono">'+fmtDate(r.date)+'</td><td>'+r.supplier+'</td><td class="num mono">'+r.qty+'</td><td class="num mono">$'+Number(r.unitPrice).toFixed(2)+'</td><td class="mono">'+(r.source||'PO')+'</td><td class="mono">'+(r.poNumber||'')+'</td></tr>').join('')
     +'</tbody></table>';
 }
 
@@ -1190,12 +1378,24 @@ const TAB_LABELS={
   calendar:['Availability Calendar','Equipment on-hand vs. booked, by day'],
   demand:['Demand Plan','Planned builds driving requirements'],
   plan:['Planned Orders','What to order, and when'],
-  po:['Purchase Orders','Open/close orders, price history, file import'],
+  docs:['Documents','Purchase orders, quotes & receipts — one place for all supplier paperwork'],
   feedback:['Feedback','Report bugs & suggest ideas'],
   settings:['Settings','Data management & configurable lists']
 };
+/* Sub-tab labels for the merged Purchase Orders / Quotes / Receipts page. */
+const DOC_SUBTAB_LABELS={
+  po:'Purchase Orders — open/close orders, price history, file import',
+  quotes:'Quotes — supplier quotes & estimates, pricing signal before you commit',
+  receipts:'Receipts — what was actually paid, most trustworthy price history'
+};
+let docSubTab='po';
 
 function setTab(which){
+  /* Back-compat: callers may still pass 'po'/'quotes'/'receipts' directly (e.g. jumping
+     to a specific record from Suppliers, or after saving via Add Document). Route those
+     into the merged docs page and select the right sub-tab. */
+  let sub=null;
+  if(which==='po'||which==='quotes'||which==='receipts'){ sub=which; which='docs'; }
   Object.keys(TAB_LABELS).forEach(t=>{
     document.getElementById('panel-'+t).classList.toggle('hidden', t!==which);
     const btn=document.querySelector('.tab[data-tab="'+t+'"]');
@@ -1203,7 +1403,19 @@ function setTab(which){
   });
   document.getElementById('pagetitle').textContent=TAB_LABELS[which][0];
   document.getElementById('pagesub').textContent=TAB_LABELS[which][1];
-  renderTab(which);
+  if(which==='docs') setDocSubTab(sub||docSubTab);
+  else renderTab(which);
+}
+
+function setDocSubTab(sub){
+  docSubTab=sub;
+  document.getElementById('pagesub').textContent=DOC_SUBTAB_LABELS[sub];
+  ['po','quotes','receipts'].forEach(t=>{
+    document.getElementById('panel-'+t).classList.toggle('hidden', t!==sub);
+    const btn=document.querySelector('.subtab[data-subtab="'+t+'"]');
+    if(btn) btn.classList.toggle('active', t===sub);
+  });
+  renderTab(sub);
 }
 
 function renderCounts(){
@@ -1215,7 +1427,12 @@ function renderCounts(){
   document.getElementById('cnt-demand').textContent=DB.demandPlan.length;
   document.getElementById('cnt-plan').textContent=liveResults.filter(r=>r.plannedOrders.length).length;
   const closed=closedStatusName();
-  document.getElementById('cnt-po').textContent=DB.purchaseOrders.filter(po=>po.status!==closed).length;
+  const openPoCount=DB.purchaseOrders.filter(po=>po.status!==closed).length;
+  const openQuoteCount=DB.quotes.filter(q=>q.status==='Open').length;
+  document.getElementById('cnt-po').textContent=openPoCount;
+  document.getElementById('cnt-quotes').textContent=openQuoteCount;
+  document.getElementById('cnt-receipts').textContent=DB.receipts.length;
+  document.getElementById('cnt-docs').textContent=openPoCount+openQuoteCount;
   document.getElementById('cnt-bookings').textContent=DB.bookings.length;
   document.getElementById('cnt-feedback').textContent=loadFeedbackList().filter(f=>!f.resolved).length;
 }
@@ -1230,6 +1447,8 @@ function renderTab(which){
   else if(which==='demand') renderDemand();
   else if(which==='plan') renderPlan();
   else if(which==='po') renderPO();
+  else if(which==='quotes') renderQuotes();
+  else if(which==='receipts') renderReceipts();
   else if(which==='feedback') renderFeedback();
   else if(which==='settings') renderSettings();
 }
@@ -1242,6 +1461,7 @@ function renderDash(){
   const needsReview=DB.items.filter(i=>!i.isProduct && !i.leadTimeDays).length;
   const closed=closedStatusName();
   const openPOs=DB.purchaseOrders.filter(po=>po.status!==closed).length;
+  const openQuotes=DB.quotes.filter(q=>q.status==='Open').length;
   const missingLinks=DB.items.filter(i=>!i.isProduct && (!i.links||!i.links.length)).length;
   const today=todayISO();
   const upcoming=DB.demandPlan.filter(d=>d.needDate>=today).slice().sort((a,b)=>a.needDate<b.needDate?-1:1).slice(0,5);
@@ -1251,6 +1471,7 @@ function renderDash(){
       '<div class="kpi '+(late?'warn':'')+'"><b>'+late+'</b><span>Parts past due to order</span></div>'+
       '<div class="kpi '+(soon?'amber':'')+'"><b>'+soon+'</b><span>Order within 14 days</span></div>'+
       '<div class="kpi"><b>'+openPOs+'</b><span>Open purchase orders</span></div>'+
+      '<div class="kpi"><b>'+openQuotes+'</b><span>Open quotes</span></div>'+
       '<div class="kpi"><b>'+DB.demandPlan.length+'</b><span>Planned builds</span></div>'+
       '<div class="kpi '+(missingLinks?'amber':'')+'"><b>'+missingLinks+'</b><span>Items with no supplier link</span></div>'+
     '</div>'+
@@ -1370,9 +1591,10 @@ function renderItems(){
       openModal('Price history — '+it.name, body);
     });
     tr.querySelector('.del-item').addEventListener('click',()=>{
-      if(!confirm('Delete '+it.name+'? This also removes it from any BOM lines, links, demand plan rows, and PO lines that reference it.')) return;
-      deleteItemEverywhere(id);
-      save(); renderItems(); renderCounts();
+      confirmModal('Delete '+it.name+'? This also removes it from any BOM lines, links, demand plan rows, and PO lines that reference it.', ()=>{
+        deleteItemEverywhere(id);
+        save(); renderItems(); renderCounts();
+      });
     });
   });
   document.getElementById('add-item').addEventListener('click',()=>{
@@ -1433,9 +1655,10 @@ function renderEquipmentTable(){
     });
     tr.querySelector('.bookings-btn').addEventListener('click',()=>{ openBookingsModal(it.id, ()=>{ renderEquipmentTable(); renderCounts(); }); });
     tr.querySelector('.del-item').addEventListener('click',()=>{
-      if(!confirm('Delete '+it.name+'? This also removes any bookings for it.')) return;
-      deleteItemEverywhere(id);
-      save(); renderItems(); renderCounts();
+      confirmModal('Delete '+it.name+'? This also removes any bookings for it.', ()=>{
+        deleteItemEverywhere(id);
+        save(); renderItems(); renderCounts();
+      });
     });
   });
 }
@@ -1673,8 +1896,9 @@ function wireAllocationSummary(item, container){
     bind('.bk-qty','qty',v=>Number(v)||0);
     const delBtn=row.querySelector('.bk-del');
     if(delBtn) delBtn.addEventListener('click',()=>{
-      if(!confirm('Delete this team allocation?')) return;
-      DB.bookings=DB.bookings.filter(x=>x.id!==id); save(); renderCalendar();
+      confirmModal('Delete this team allocation?', ()=>{
+        DB.bookings=DB.bookings.filter(x=>x.id!==id); save(); renderCalendar();
+      });
     });
   });
   const addBtn=container.querySelector('.add-alloc-btn');
@@ -1759,10 +1983,11 @@ function wireBOM(){
     const id=card.dataset.id; const pr=itemById(id);
     card.querySelector('.f-pname').addEventListener('change',e=>{pr.name=e.target.value; save(); renderCounts();});
     card.querySelector('.del-product').addEventListener('click',()=>{
-      if(!confirm('Delete '+pr.name+'?')) return;
-      DB.items=DB.items.filter(x=>x.id!==id);
-      DB.demandPlan=DB.demandPlan.filter(d=>d.productId!==id);
-      save(); renderBOM(); renderCounts();
+      confirmModal('Delete '+pr.name+'?', ()=>{
+        DB.items=DB.items.filter(x=>x.id!==id);
+        DB.demandPlan=DB.demandPlan.filter(d=>d.productId!==id);
+        save(); renderBOM(); renderCounts();
+      });
     });
   });
   list.querySelectorAll('.bom-row').forEach(row=>{
@@ -1836,11 +2061,19 @@ function renderLinksDetail(item){
   '</div>';
 }
 
+function telHref(v){ const digits=(v||'').trim().replace(/[^\d+]/g,''); return digits?('tel:'+digits):''; }
+function orderLinkHref(v){ let u=(v||'').trim(); if(!u) return ''; if(!/^[a-z][a-z0-9+.-]*:/i.test(u)) u='https://'+u; return u; }
 function renderLinkRow(item, link){
   const type = link.contactType==='phone' ? 'phone' : 'link';
-  const contactField = type==='phone'
-    ? '<input class="f-value" placeholder="Phone number" value="'+escAttr(link.phone||'')+'">'
-    : '<input class="f-value" placeholder="https://…" value="'+escAttr(link.url||'')+'">';
+  const rawVal = type==='phone' ? (link.phone||'') : (link.url||'');
+  const href = type==='phone' ? telHref(rawVal) : orderLinkHref(rawVal);
+  const goTitle = type==='phone' ? 'Call this number' : 'Open this link';
+  const goIcon = type==='phone' ? '☎' : '↗';
+  const contactField =
+    '<div class="f-value-wrap">'+
+      '<input class="f-value" placeholder="'+(type==='phone'?'Phone number':'https://…')+'" value="'+escAttr(rawVal)+'">'+
+      '<a class="link-go'+(href?'':' is-disabled')+'" href="'+escAttr(href||'#')+'" target="_blank" rel="noopener noreferrer" title="'+goTitle+'" tabindex="'+(href?'0':'-1')+'" aria-disabled="'+(href?'false':'true')+'">'+goIcon+'</a>'+
+    '</div>';
   return '<div class="link-row" data-item="'+item.id+'" data-link="'+link.id+'">'+
     '<div class="seg-toggle">'+
       '<button type="button" class="seg-btn'+(type==='link'?' active':'')+'" data-type="link">🔗 Link</button>'+
@@ -1865,13 +2098,14 @@ function wireLinksDetail(){
     let msg = 'Delete '+item.name+'? This removes its links and, if it\'s a component, its entry in any BOM recipe';
     if(usedIn.length) msg += ' (currently used in: '+usedIn.join(', ')+')';
     msg += '. This cannot be undone.';
-    if(!confirm(msg)) return;
-    DB.items = DB.items.filter(x=>x.id!==id);
-    DB.items.forEach(x=>{ x.lines=(x.lines||[]).filter(l=>l.childId!==id); });
-    DB.demandPlan = DB.demandPlan.filter(d=>d.productId!==id);
-    DB.purchaseOrders.forEach(po=>{ po.lines=(po.lines||[]).filter(l=>l.itemId!==id); });
-    LINKS_SELECTED=null;
-    save(); renderLinks(); renderCounts();
+    confirmModal(msg, ()=>{
+      DB.items = DB.items.filter(x=>x.id!==id);
+      DB.items.forEach(x=>{ x.lines=(x.lines||[]).filter(l=>l.childId!==id); });
+      DB.demandPlan = DB.demandPlan.filter(d=>d.productId!==id);
+      DB.purchaseOrders.forEach(po=>{ po.lines=(po.lines||[]).filter(l=>l.itemId!==id); });
+      LINKS_SELECTED=null;
+      save(); renderLinks(); renderCounts();
+    });
   });
 
   const addLinkBtn=root.querySelector('.add-link-here');
@@ -1897,7 +2131,16 @@ function wireLinksDetail(){
         save(); renderLinks();
       });
     });
-    row.querySelector('.f-value').addEventListener('change',e=>{
+    const valueInput=row.querySelector('.f-value');
+    const goLink=row.querySelector('.link-go');
+    const syncGoLink=v=>{
+      if(!goLink) return;
+      const href = link.contactType==='phone' ? telHref(v) : orderLinkHref(v);
+      if(href){ goLink.href=href; goLink.classList.remove('is-disabled'); goLink.tabIndex=0; goLink.setAttribute('aria-disabled','false'); }
+      else{ goLink.href='#'; goLink.classList.add('is-disabled'); goLink.tabIndex=-1; goLink.setAttribute('aria-disabled','true'); }
+    };
+    valueInput.addEventListener('input',e=>syncGoLink(e.target.value));
+    valueInput.addEventListener('change',e=>{
       if(link.contactType==='phone') link.phone=e.target.value; else link.url=e.target.value;
       save();
     });
@@ -1918,8 +2161,9 @@ function renderSuppliers(){
     '<tbody id="sup-tbody"></tbody></table>'+
     '</div></div>';
   const tb=document.getElementById('sup-tbody');
-  tb.innerHTML=DB.suppliers.map(s=>
-    '<tr data-id="'+s.id+'">'+
+  tb.innerHTML=DB.suppliers.map(s=>{
+    const docCount=supplierDocGroups(s).total;
+    return '<tr class="sup-row" data-id="'+s.id+'">'+
       '<td><input class="f-name" value="'+escAttr(s.name)+'"></td>'+
       '<td><input class="f-contact" value="'+escAttr(s.contact||'')+'"></td>'+
       '<td><input class="f-email" value="'+escAttr(s.email||'')+'"></td>'+
@@ -1927,8 +2171,14 @@ function renderSuppliers(){
       '<td><input class="f-spec" value="'+escAttr(s.specialty||'')+'"></td>'+
       '<td><input class="f-notes" value="'+escAttr(s.notes||'')+'"></td>'+
       '<td class="col-actions no-print"><button class="btn sm danger del-sup">Delete</button></td>'+
-    '</tr>').join('');
-  tb.querySelectorAll('tr').forEach(tr=>{
+    '</tr>'+
+    '<tr class="sup-docs-row" data-id="'+s.id+'"><td colspan="7" style="padding:0">'+
+      '<details class="sup-docs-details"><summary style="cursor:pointer;padding:8px 16px;font-size:12.5px;color:var(--steel)">📄 Documents on file ('+docCount+') — POs, quotes &amp; receipts for '+escAttr(s.name)+'</summary>'+
+      '<div style="padding:6px 16px 16px">'+renderSupplierDocsPanel(s)+'</div>'+
+      '</details>'+
+    '</td></tr>';
+  }).join('') || '<tr><td colspan="7" class="note">No suppliers yet — add one above.</td></tr>';
+  tb.querySelectorAll('tr.sup-row').forEach(tr=>{
     const id=tr.dataset.id; const s=supplierById(id);
     tr.querySelector('.f-name').addEventListener('change',e=>{s.name=e.target.value; save(); renderCounts();});
     tr.querySelector('.f-contact').addEventListener('change',e=>{s.contact=e.target.value; save();});
@@ -1936,12 +2186,66 @@ function renderSuppliers(){
     tr.querySelector('.f-phone').addEventListener('change',e=>{s.phone=e.target.value; save();});
     tr.querySelector('.f-spec').addEventListener('change',e=>{s.specialty=e.target.value; save();});
     tr.querySelector('.f-notes').addEventListener('change',e=>{s.notes=e.target.value; save();});
-    tr.querySelector('.del-sup').addEventListener('click',()=>{ if(confirm('Delete '+s.name+'?')){ DB.suppliers=DB.suppliers.filter(x=>x.id!==id); save(); renderSuppliers(); renderCounts(); } });
+    tr.querySelector('.del-sup').addEventListener('click',()=>{ confirmModal('Delete '+s.name+'?', ()=>{ DB.suppliers=DB.suppliers.filter(x=>x.id!==id); save(); renderSuppliers(); renderCounts(); }); });
+  });
+  tb.querySelectorAll('.view-sup-doc').forEach(btn=>{
+    btn.addEventListener('click',()=>{ jumpToSupplierDoc(btn.dataset.type, btn.dataset.id); });
   });
   document.getElementById('add-supplier').addEventListener('click',()=>{
     DB.suppliers.push({id:uid(),name:'New Supplier',contact:'',email:'',phone:'',specialty:'',notes:''});
     save(); renderSuppliers(); renderCounts();
   });
+}
+
+/* Gathers every PO/Quote/Receipt on file for a supplier, most-recent-first within each group. */
+function supplierDocGroups(s){
+  const po=DB.purchaseOrders.filter(p=>p.supplierId===s.id).slice().sort((a,b)=>(b.orderDate||'').localeCompare(a.orderDate||''));
+  const q=DB.quotes.filter(x=>x.supplierId===s.id).slice().sort((a,b)=>(b.quoteDate||'').localeCompare(a.quoteDate||''));
+  const r=DB.receipts.filter(x=>x.supplierId===s.id).slice().sort((a,b)=>(b.receiptDate||'').localeCompare(a.receiptDate||''));
+  return {po,q,r,total:po.length+q.length+r.length};
+}
+function supplierDocLineTotal(doc){ return (doc.lines||[]).reduce((sum,l)=>sum+Number(l.qty||0)*Number(l.unitPrice||0),0); }
+/* Renders one PO/Quote/Receipt summary row within the supplier documents panel. */
+function supplierDocRowHTML(type, doc){
+  let label, number, date, status;
+  if(type==='po'){ label='PO'; number=doc.poNumber; date=doc.orderDate; status=doc.status||''; }
+  else if(type==='quotes'){ label='Quote'; number=doc.quoteNumber; date=doc.quoteDate; status=doc.status||''; }
+  else{ label='Receipt'; number=doc.receiptNumber; date=doc.receiptDate; status=''; }
+  const total=supplierDocLineTotal(doc);
+  return '<div class="card sup-doc-row" style="margin-bottom:8px">'+
+    '<div class="card-head" style="padding:8px 12px">'+
+      '<h3 style="font-size:13px">'+label+' '+escAttr(number||'(no number)')+(status?' <span class="status-badge">'+escAttr(status)+'</span>':'')+'</h3>'+
+      '<div class="row-actions no-print"><button class="btn sm view-sup-doc" data-type="'+type+'" data-id="'+doc.id+'">View / edit →</button></div>'+
+    '</div>'+
+    '<div class="card-body" style="padding:8px 12px">'+
+      '<div class="note">'+fmtDate(date)+' &middot; Total $'+total.toFixed(2)+'</div>'+
+      '<div style="margin:6px 0">'+(doc.notes? escAttr(doc.notes) : '<span class="note">No notes on file.</span>')+'</div>'+
+      '<div>'+docChips(doc.docs)+'</div>'+
+    '</div></div>';
+}
+/* Builds the grouped Documents panel (PO / Quote / Receipt) for one supplier's expando row. */
+function renderSupplierDocsPanel(s){
+  const groups=supplierDocGroups(s);
+  if(!groups.total) return '<p class="note">No purchase orders, quotes, or receipts on file for this supplier yet.</p>';
+  function section(label, type, arr){
+    return '<div class="sup-doc-group" style="margin-bottom:14px">'+
+      '<div style="font-weight:600;font-size:12.5px;margin-bottom:6px">'+label+' <span class="chip">'+arr.length+'</span></div>'+
+      (arr.length? arr.map(d=>supplierDocRowHTML(type,d)).join('') : '<p class="note">None on file.</p>')+
+    '</div>';
+  }
+  return section('Purchase Orders','po',groups.po)+section('Quotes','quotes',groups.q)+section('Receipts','receipts',groups.r);
+}
+/* Switches to the record's home tab (reusing existing tab routing) and scrolls/highlights its card. */
+function jumpToSupplierDoc(type, id){
+  currentTab=type; setTab(type); renderCounts();
+  setTimeout(()=>{
+    const card=document.querySelector('.card[data-id="'+id+'"]');
+    if(card){
+      card.scrollIntoView({behavior:'smooth', block:'start'});
+      card.classList.add('doc-highlight');
+      setTimeout(()=>card.classList.remove('doc-highlight'), 2000);
+    }
+  }, 30);
 }
 
 /* ---------------- Demand Plan tab ---------------- */
@@ -2031,7 +2335,6 @@ function renderPO(){
   el.innerHTML=
     '<div class="toolbar no-print">'+
       '<button class="btn accent" id="add-po">+ New PO</button>'+
-      '<label class="btn file-btn" id="import-po-btn">Import PO from file<input type="file" id="import-po-file" accept=".pdf,.docx,.txt,.csv"></label>'+
       '<button class="btn" id="export-pdf-po">Export PDF</button>'+
     '</div>'+
     '<p class="note">Auto-fill from PDF/Word/text files is best-effort — it reads the file\'s text and guesses the PO #, date, supplier, and line items. Always double-check before saving; manual entry always works even if a file can\'t be read.</p>'+
@@ -2040,22 +2343,6 @@ function renderPO(){
   document.getElementById('add-po').addEventListener('click',()=>{
     DB.purchaseOrders.push({id:uid(), poNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', orderDate:todayISO(), expectedDate:addDays(todayISO(),14), status:DB.lists.poStatus[0], lines:[], docs:[], notes:''});
     save(); renderPO(); renderCounts();
-  });
-  document.getElementById('import-po-file').addEventListener('change', async e=>{
-    const f=e.target.files[0]; if(!f) return;
-    const text=await extractTextFromFile(f);
-    const guess=guessPOFieldsFromText(text);
-    const dataUrl=await readFileAsDataURL(f);
-    const po={
-      id:uid(), poNumber:guess.poNumber||'', supplierId:guess.supplierId||(DB.suppliers[0]||{}).id||'',
-      orderDate:guess.orderDate||todayISO(), expectedDate:addDays(guess.orderDate||todayISO(),14),
-      status:DB.lists.poStatus[0], lines: guess.lines.length?guess.lines.map(l=>({id:uid(), itemId:l.itemId, qty:l.qty, unitPrice:l.unitPrice})):[],
-      docs:[{id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()}],
-      notes: text? ('Auto-filled from '+f.name+' — please verify every field.') : ('Could not read this file automatically — attached for reference; please enter details manually.')
-    };
-    DB.purchaseOrders.unshift(po);
-    save(); renderPO(); renderCounts();
-    e.target.value='';
   });
   document.getElementById('export-pdf-po').addEventListener('click',()=>{
     const head=['PO #','Supplier','Status','Order Date','Expected Date','Total $'];
@@ -2105,12 +2392,13 @@ function wirePO(){
     card.querySelector('.f-ponotes').addEventListener('change',e=>{po.notes=e.target.value; save();});
     const recv=card.querySelector('.receive-po');
     if(recv) recv.addEventListener('click',()=>{
-      if(!confirm('Add all line-item quantities to on-hand stock and mark this PO '+closedStatusName()+'?')) return;
-      (po.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it) it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); });
-      po.status=closedStatusName();
-      save(); renderPO(); renderCounts(); runMRP();
+      confirmModal('Add all line-item quantities to on-hand stock and mark this PO '+closedStatusName()+'?', ()=>{
+        (po.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it) it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); });
+        po.status=closedStatusName();
+        save(); renderPO(); renderCounts(); runMRP();
+      }, {okLabel:'Receive'});
     });
-    card.querySelector('.del-po').addEventListener('click',()=>{ if(confirm('Delete this purchase order?')){ DB.purchaseOrders=DB.purchaseOrders.filter(x=>x.id!==id); save(); renderPO(); renderCounts(); } });
+    card.querySelector('.del-po').addEventListener('click',()=>{ confirmModal('Delete this purchase order?', ()=>{ DB.purchaseOrders=DB.purchaseOrders.filter(x=>x.id!==id); save(); renderPO(); renderCounts(); }); });
     card.querySelector('.po-add-line').addEventListener('click',()=>{ po.lines=po.lines||[]; po.lines.push({id:uid(), itemId:(DB.items[0]||{}).id||'', qty:1, unitPrice:0}); save(); renderPO(); });
     card.querySelectorAll('.po-lines-tbody tr').forEach(tr=>{
       const i=Number(tr.dataset.i);
@@ -2129,10 +2417,180 @@ function wirePO(){
   });
 }
 
+/* ---------------- Quotes tab ---------------- */
+function renderQuotes(){
+  const el=document.getElementById('panel-quotes');
+  el.innerHTML=
+    '<div class="toolbar no-print">'+
+      '<button class="btn accent" id="add-quote">+ New blank quote</button>'+
+      '<button class="btn" id="export-pdf-quotes">Export PDF</button>'+
+    '</div>'+
+    '<p class="note">Quotes capture what a supplier is willing to charge before you commit — useful pricing signal even for items never actually ordered yet. Auto-fill from PDF/Word/text files is best-effort; always double-check before saving.</p>'+
+    '<div id="quote-list">'+(DB.quotes.map(q=>renderQuoteCard(q)).join('') || '<p class="note">No quotes yet.</p>')+'</div>';
+  wireQuotes();
+  document.getElementById('add-quote').addEventListener('click',()=>{
+    DB.quotes.push({id:uid(), quoteNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', quoteDate:todayISO(), validUntil:addDays(todayISO(),30), status:DB.lists.quoteStatus[0], lines:[], docs:[], notes:''});
+    save(); renderQuotes(); renderCounts();
+  });
+  document.getElementById('export-pdf-quotes').addEventListener('click',()=>{
+    const head=['Quote #','Supplier','Status','Quote Date','Valid Until','Total $'];
+    const body=DB.quotes.map(q=>{
+      const total=(q.lines||[]).reduce((s,l)=>s+Number(l.qty||0)*Number(l.unitPrice||0),0);
+      return [q.quoteNumber||'', (supplierById(q.supplierId)||{}).name||'', q.status, fmtDate(q.quoteDate), fmtDate(q.validUntil), '$'+total.toFixed(2)];
+    });
+    exportTablePDF('Dragon Seats - Quotes', head, body);
+  });
+}
+function renderQuoteCard(q){
+  const converted=q.status==='Converted to PO';
+  return '<div class="card po-card" data-id="'+q.id+'">'+
+    '<div class="card-head"><h3>Quote '+escAttr(q.quoteNumber||'(no number)')+' <span class="status-badge '+(converted?'closed':(q.status===DB.lists.quoteStatus[0]?'open':''))+'">'+escAttr(q.status)+'</span></h3>'+
+    '<div class="row-actions no-print">'+(!converted?'<button class="btn sm accent convert-quote">Convert to PO</button>':'')+'<button class="btn sm danger del-quote">Delete quote</button></div></div>'+
+    '<div class="card-body">'+
+      '<div class="po-meta">'+
+        '<div><label>Quote #</label><input class="f-qnum" value="'+escAttr(q.quoteNumber||'')+'"></div>'+
+        '<div><label>Supplier</label>'+supplierSelectSimple(q.supplierId)+'</div>'+
+        '<div><label>Quote date</label><input class="f-qdate" type="date" value="'+(q.quoteDate||'')+'"></div>'+
+        '<div><label>Valid until</label><input class="f-vuntil" type="date" value="'+(q.validUntil||'')+'"></div>'+
+        '<div><label>Status</label><select class="f-status">'+DB.lists.quoteStatus.map(s=>'<option value="'+escAttr(s)+'" '+(s===q.status?'selected':'')+'>'+escAttr(s)+'</option>').join('')+'</select></div>'+
+      '</div>'+
+      '<table><colgroup><col style="width:45%"><col style="width:18%"><col style="width:20%"><col style="width:17%"></colgroup>'+
+      '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th></th></tr></thead>'+
+      '<tbody class="po-lines-tbody">'+((q.lines||[]).map((l,i)=>
+        '<tr data-i="'+i+'">'+
+          '<td>'+itemSelectSimple(l.itemId)+'</td>'+
+          '<td class="num"><input class="f-qty num" type="number" value="'+l.qty+'"></td>'+
+          '<td class="num"><input class="f-price num" type="number" step="0.01" value="'+(l.unitPrice||0)+'"></td>'+
+          '<td class="col-actions no-print"><button class="btn sm danger po-del-line">Remove</button></td>'+
+        '</tr>').join('') || '<tr><td colspan="4" class="note">No line items yet.</td></tr>')+'</tbody></table>'+
+      '<button class="btn sm po-add-line no-print">+ Add line item</button>'+
+      '<div><label class="note">Files</label><br>'+docChips(q.docs)+'<label class="btn sm file-btn no-print">+ file<input type="file" class="po-file"></label></div>'+
+      '<div><label class="note">Notes</label><br><input class="f-ponotes" style="width:100%" value="'+escAttr(q.notes||'')+'"></div>'+
+    '</div></div>';
+}
+function wireQuotes(){
+  const list=document.getElementById('quote-list');
+  list.querySelectorAll('.po-card').forEach(card=>{
+    const id=card.dataset.id; const q=quoteById(id);
+    card.querySelector('.f-qnum').addEventListener('change',e=>{q.quoteNumber=e.target.value; save(); renderQuotes();});
+    card.querySelector('.supplier-select').addEventListener('change',e=>{q.supplierId=e.target.value; save();});
+    card.querySelector('.f-qdate').addEventListener('change',e=>{q.quoteDate=e.target.value; save();});
+    card.querySelector('.f-vuntil').addEventListener('change',e=>{q.validUntil=e.target.value; save();});
+    card.querySelector('.f-status').addEventListener('change',e=>{q.status=e.target.value; save(); renderQuotes(); renderCounts();});
+    card.querySelector('.f-ponotes').addEventListener('change',e=>{q.notes=e.target.value; save();});
+    const conv=card.querySelector('.convert-quote');
+    if(conv) conv.addEventListener('click',()=>{
+      confirmModal('Create a new Purchase Order pre-filled from this quote? The quote will be kept as history and marked Converted to PO.', ()=>{
+        const po={
+          id:uid(), poNumber:'', supplierId:q.supplierId, orderDate:todayISO(), expectedDate:addDays(todayISO(),14),
+          status:DB.lists.poStatus[0], lines:(q.lines||[]).map(l=>({id:uid(), itemId:l.itemId, qty:l.qty, unitPrice:l.unitPrice})),
+          docs:[], notes:'Converted from quote '+(q.quoteNumber||q.id)
+        };
+        DB.purchaseOrders.unshift(po);
+        q.status='Converted to PO';
+        save(); renderQuotes(); renderCounts();
+      }, {okLabel:'Convert'});
+    });
+    card.querySelector('.del-quote').addEventListener('click',()=>{ confirmModal('Delete this quote?', ()=>{ DB.quotes=DB.quotes.filter(x=>x.id!==id); save(); renderQuotes(); renderCounts(); }); });
+    card.querySelector('.po-add-line').addEventListener('click',()=>{ q.lines=q.lines||[]; q.lines.push({id:uid(), itemId:(DB.items[0]||{}).id||'', qty:1, unitPrice:0}); save(); renderQuotes(); });
+    card.querySelectorAll('.po-lines-tbody tr').forEach(tr=>{
+      const i=Number(tr.dataset.i);
+      const isel=tr.querySelector('.item-select');
+      if(isel) isel.addEventListener('change',e=>{ q.lines[i].itemId=e.target.value; save(); });
+      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ q.lines[i].qty=Number(e.target.value)||0; save(); });
+      const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ q.lines[i].unitPrice=Number(e.target.value)||0; save(); });
+      const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ q.lines.splice(i,1); save(); renderQuotes(); });
+    });
+    card.querySelector('.po-file').addEventListener('change', async e=>{
+      const f=e.target.files[0]; if(!f) return;
+      const dataUrl=await readFileAsDataURL(f);
+      q.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
+      save(); renderQuotes();
+    });
+  });
+}
+
+/* ---------------- Receipts tab ---------------- */
+function renderReceipts(){
+  const el=document.getElementById('panel-receipts');
+  el.innerHTML=
+    '<div class="toolbar no-print">'+
+      '<button class="btn accent" id="add-receipt">+ New blank receipt</button>'+
+      '<button class="btn" id="export-pdf-receipts">Export PDF</button>'+
+    '</div>'+
+    '<p class="note">Receipts record what was actually paid — the most trustworthy real-cost source, since it can differ from the PO price due to shipping, tax, or partial-ship adjustments. Auto-fill from PDF/Word/text files is best-effort; always double-check before saving.</p>'+
+    '<div id="receipt-list">'+(DB.receipts.map(r=>renderReceiptCard(r)).join('') || '<p class="note">No receipts yet.</p>')+'</div>';
+  wireReceipts();
+  document.getElementById('add-receipt').addEventListener('click',()=>{
+    DB.receipts.push({id:uid(), receiptNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', receiptDate:todayISO(), poId:'', lines:[], docs:[], notes:''});
+    save(); renderReceipts(); renderCounts();
+  });
+  document.getElementById('export-pdf-receipts').addEventListener('click',()=>{
+    const head=['Receipt #','Supplier','Receipt Date','Linked PO','Total $'];
+    const body=DB.receipts.map(r=>{
+      const total=(r.lines||[]).reduce((s,l)=>s+Number(l.qty||0)*Number(l.unitPrice||0),0);
+      return [r.receiptNumber||'', (supplierById(r.supplierId)||{}).name||'', fmtDate(r.receiptDate), (poById(r.poId)||{}).poNumber||'', '$'+total.toFixed(2)];
+    });
+    exportTablePDF('Dragon Seats - Receipts', head, body);
+  });
+}
+function renderReceiptCard(r){
+  return '<div class="card po-card" data-id="'+r.id+'">'+
+    '<div class="card-head"><h3>Receipt '+escAttr(r.receiptNumber||'(no number)')+'</h3>'+
+    '<div class="row-actions no-print"><button class="btn sm danger del-receipt">Delete receipt</button></div></div>'+
+    '<div class="card-body">'+
+      '<div class="po-meta">'+
+        '<div><label>Receipt #</label><input class="f-rnum" value="'+escAttr(r.receiptNumber||'')+'"></div>'+
+        '<div><label>Supplier</label>'+supplierSelectSimple(r.supplierId)+'</div>'+
+        '<div><label>Receipt date</label><input class="f-rdate" type="date" value="'+(r.receiptDate||'')+'"></div>'+
+        '<div><label>Linked PO (optional)</label><select class="f-poid"><option value="">— none —</option>'+DB.purchaseOrders.map(po=>'<option value="'+po.id+'" '+(po.id===r.poId?'selected':'')+'>PO '+escAttr(po.poNumber||po.id)+'</option>').join('')+'</select></div>'+
+      '</div>'+
+      '<table><colgroup><col style="width:45%"><col style="width:18%"><col style="width:20%"><col style="width:17%"></colgroup>'+
+      '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th></th></tr></thead>'+
+      '<tbody class="po-lines-tbody">'+((r.lines||[]).map((l,i)=>
+        '<tr data-i="'+i+'">'+
+          '<td>'+itemSelectSimple(l.itemId)+'</td>'+
+          '<td class="num"><input class="f-qty num" type="number" value="'+l.qty+'"></td>'+
+          '<td class="num"><input class="f-price num" type="number" step="0.01" value="'+(l.unitPrice||0)+'"></td>'+
+          '<td class="col-actions no-print"><button class="btn sm danger po-del-line">Remove</button></td>'+
+        '</tr>').join('') || '<tr><td colspan="4" class="note">No line items yet.</td></tr>')+'</tbody></table>'+
+      '<button class="btn sm po-add-line no-print">+ Add line item</button>'+
+      '<div><label class="note">Files</label><br>'+docChips(r.docs)+'<label class="btn sm file-btn no-print">+ file<input type="file" class="po-file"></label></div>'+
+      '<div><label class="note">Notes</label><br><input class="f-ponotes" style="width:100%" value="'+escAttr(r.notes||'')+'"></div>'+
+    '</div></div>';
+}
+function wireReceipts(){
+  const list=document.getElementById('receipt-list');
+  list.querySelectorAll('.po-card').forEach(card=>{
+    const id=card.dataset.id; const r=receiptById(id);
+    card.querySelector('.f-rnum').addEventListener('change',e=>{r.receiptNumber=e.target.value; save(); renderReceipts();});
+    card.querySelector('.supplier-select').addEventListener('change',e=>{r.supplierId=e.target.value; save();});
+    card.querySelector('.f-rdate').addEventListener('change',e=>{r.receiptDate=e.target.value; save();});
+    card.querySelector('.f-poid').addEventListener('change',e=>{r.poId=e.target.value; save();});
+    card.querySelector('.f-ponotes').addEventListener('change',e=>{r.notes=e.target.value; save();});
+    card.querySelector('.del-receipt').addEventListener('click',()=>{ confirmModal('Delete this receipt?', ()=>{ DB.receipts=DB.receipts.filter(x=>x.id!==id); save(); renderReceipts(); renderCounts(); }); });
+    card.querySelector('.po-add-line').addEventListener('click',()=>{ r.lines=r.lines||[]; r.lines.push({id:uid(), itemId:(DB.items[0]||{}).id||'', qty:1, unitPrice:0}); save(); renderReceipts(); });
+    card.querySelectorAll('.po-lines-tbody tr').forEach(tr=>{
+      const i=Number(tr.dataset.i);
+      const isel=tr.querySelector('.item-select');
+      if(isel) isel.addEventListener('change',e=>{ r.lines[i].itemId=e.target.value; save(); });
+      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ r.lines[i].qty=Number(e.target.value)||0; save(); });
+      const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ r.lines[i].unitPrice=Number(e.target.value)||0; save(); });
+      const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ r.lines.splice(i,1); save(); renderReceipts(); });
+    });
+    card.querySelector('.po-file').addEventListener('change', async e=>{
+      const f=e.target.files[0]; if(!f) return;
+      const dataUrl=await readFileAsDataURL(f);
+      r.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
+      save(); renderReceipts();
+    });
+  });
+}
+
 /* ---------------- PDF export helper (jsPDF, bundled offline) ---------------- */
 function pdfAvailable(){ return !!(window.jspdf && window.jspdf.jsPDF); }
 function exportTablePDF(title, head, body){
-  if(!pdfAvailable()){ alert("PDF library didn't load — try Print instead."); return; }
+  if(!pdfAvailable()){ alertModal("PDF library didn't load — try Print instead."); return; }
   const jsPDFCtor = window.jspdf.jsPDF;
   const doc = new jsPDFCtor({orientation:'landscape'});
   doc.setFontSize(14); doc.text(title, 14, 16);
@@ -2147,7 +2605,7 @@ function renderStatusList(){
   if(!el) return;
   el.innerHTML = DB.lists.poStatus.map((s,i)=>'<span class="chip">'+escAttr(s)+' <button class="btn sm danger status-remove" data-i="'+i+'" style="padding:1px 6px;margin-left:4px">x</button></span>').join(' ');
   el.querySelectorAll('.status-remove').forEach(b=>b.addEventListener('click',()=>{
-    if(DB.lists.poStatus.length<=1){ alert('Keep at least one status.'); return; }
+    if(DB.lists.poStatus.length<=1){ alertModal('Keep at least one status.'); return; }
     DB.lists.poStatus.splice(Number(b.dataset.i),1); save(); renderStatusList();
   }));
 }
@@ -2156,7 +2614,7 @@ function renderConferenceList(){
   if(!el) return;
   el.innerHTML = DB.lists.conferences.map((c,i)=>'<span class="chip">'+escAttr(c)+' <button class="btn sm danger conf-remove" data-i="'+i+'" style="padding:1px 6px;margin-left:4px">x</button></span>').join(' ');
   el.querySelectorAll('.conf-remove').forEach(b=>b.addEventListener('click',()=>{
-    if(DB.lists.conferences.length<=1){ alert('Keep at least one conference.'); return; }
+    if(DB.lists.conferences.length<=1){ alertModal('Keep at least one conference.'); return; }
     DB.lists.conferences.splice(Number(b.dataset.i),1); save(); renderConferenceList();
   }));
 }
@@ -2192,13 +2650,13 @@ function renderSettings(){
   document.getElementById('import-file').addEventListener('change',e=>{
     const f=e.target.files[0]; if(!f) return;
     const reader=new FileReader();
-    reader.onload=()=>{ try{ DB=migrateToV2(JSON.parse(reader.result)); ensureShape(); save(); runMRP(); renderTab(currentTab); renderCounts(); alert('Import complete.'); }catch(err){ alert('Could not read that file as JSON.'); } };
+    reader.onload=()=>{ try{ DB=migrateToV2(JSON.parse(reader.result)); ensureShape(); save(); runMRP(); renderTab(currentTab); renderCounts(); alertModal('Import complete.'); }catch(err){ alertModal('Could not read that file as JSON.'); } };
     reader.readAsText(f);
   });
   document.getElementById('reset-sample').addEventListener('click',()=>{
-    if(confirm('Reset all MRP data to the sample starting point? This cannot be undone.')){
+    confirmModal('Reset all MRP data to the sample starting point? This cannot be undone.', ()=>{
       DB=sample(); ensureShape(); save(); runMRP(); renderTab(currentTab); renderCounts();
-    }
+    }, {okLabel:'Reset'});
   });
   renderStatusList();
   document.getElementById('add-status-btn').addEventListener('click',()=>{
@@ -2306,7 +2764,7 @@ function wireFeedback(){
   if(submitBtn) submitBtn.addEventListener('click',()=>{
     const descEl=document.getElementById('fb-desc');
     const desc=descEl.value.trim();
-    if(!desc){ alert('Please enter a description before submitting.'); return; }
+    if(!desc){ alertModal('Please enter a description before submitting.'); return; }
     const type=(document.querySelector('input[name="fb-type"]:checked')||{}).value||'bug';
     const section=document.getElementById('fb-section').value;
     const name=document.getElementById('fb-name').value.trim();
@@ -2320,10 +2778,11 @@ function wireFeedback(){
     const id=card.dataset.id;
     const del=card.querySelector('.fb-delete');
     if(del) del.addEventListener('click',()=>{
-      if(!confirm('Delete this feedback entry?')) return;
-      saveFeedbackList(loadFeedbackList().filter(f=>f.id!==id));
-      renderFeedback();
-      renderCounts();
+      confirmModal('Delete this feedback entry?', ()=>{
+        saveFeedbackList(loadFeedbackList().filter(f=>f.id!==id));
+        renderFeedback();
+        renderCounts();
+      });
     });
     const toggle=card.querySelector('.fb-resolve-toggle');
     if(toggle) toggle.addEventListener('change',e=>{
@@ -2352,6 +2811,10 @@ async function init(){
   document.querySelectorAll('.tab[data-tab]').forEach(btn=>{
     btn.addEventListener('click',()=>{ currentTab=btn.dataset.tab; setTab(currentTab); renderCounts(); });
   });
+  document.querySelectorAll('.subtab[data-subtab]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ setDocSubTab(btn.dataset.subtab); renderCounts(); });
+  });
+  document.getElementById('add-doc-btn').addEventListener('click', openAddDocumentModal);
   setTab('dash');
 }
 init();
