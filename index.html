@@ -109,6 +109,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
 .btn.sm{padding:4px 9px;font-size:12px}
 .btn.danger{color:var(--red)}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.filter-dropdown{position:relative;display:inline-block}
+.filter-dropdown summary{cursor:pointer;list-style:none;padding:6px 12px;border:1px solid var(--line);border-radius:6px;font-size:13px;color:var(--ink);background:var(--card)}
+.filter-dropdown summary::-webkit-details-marker{display:none}
+.filter-dropdown[open] summary{border-color:var(--steel)}
+.filter-options{position:absolute;top:calc(100% + 4px);left:0;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px;min-width:220px;max-height:280px;overflow:auto;z-index:50;box-shadow:0 6px 16px rgba(0,0,0,.12)}
+.filter-opt{display:flex;align-items:center;gap:6px;padding:5px 8px;white-space:nowrap;cursor:pointer;border-radius:5px;font-size:13px}
+.filter-opt:hover{background:var(--steel-soft)}
+.filter-opt-divider{border-top:1px solid var(--line);margin:4px 0}
 .note{font-size:12px;color:var(--steel);line-height:1.5}
 .note.warn{color:var(--red-dark);background:var(--red-tint);padding:6px 10px;border-radius:6px}
 .callout{background:var(--amber-tint);border:1px solid var(--amber-tint-border);color:var(--amber-tint-text);border-radius:10px;padding:10px 14px;font-size:12.5px;margin-bottom:16px}
@@ -221,7 +229,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
   <div class="main">
     <div class="topbar">
       <div><h1 id="pagetitle">Dashboard</h1><div class="sub" id="pagesub">MRP overview</div></div>
-      <div class="no-print"><button class="btn accent" id="add-doc-btn">+ Add Document</button></div>
+      <div class="no-print"><button class="btn accent hidden" id="add-doc-btn">+ Add Document</button></div>
     </div>
     <div class="content">
       <div class="panel" id="panel-dash"></div>
@@ -1483,6 +1491,49 @@ const DOC_SUBTAB_LABELS={
   receipts:'Receipts — what was actually paid, most trustworthy price history'
 };
 let docSubTab='po';
+/* Each value is an array of supplier IDs to include; an empty array means "all suppliers". */
+let docSupplierFilter={po:[], quotes:[], receipts:[]};
+function filterBySupplier(list, supplierIds, getSupplierId){
+  if(!supplierIds || supplierIds.length===0) return list.slice();
+  return list.filter(x=>supplierIds.includes(getSupplierId(x)));
+}
+function filterDropdownLabel(selectedIds){
+  if(!selectedIds || selectedIds.length===0) return 'All suppliers';
+  if(selectedIds.length===1) return (supplierById(selectedIds[0])||{}).name || '1 supplier';
+  return selectedIds.length+' suppliers';
+}
+function filterDropdownHtml(id, selectedIds){
+  const suppliers=DB.suppliers.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const allChecked=!selectedIds || selectedIds.length===0;
+  return '<details class="filter-dropdown" id="'+id+'">'+
+    '<summary>Filter: '+escAttr(filterDropdownLabel(selectedIds))+'</summary>'+
+    '<div class="filter-options">'+
+      '<label class="filter-opt"><input type="checkbox" class="filter-all-cb" '+(allChecked?'checked':'')+'> All suppliers</label>'+
+      '<div class="filter-opt-divider"></div>'+
+      (suppliers.length ? suppliers.map(s=>'<label class="filter-opt"><input type="checkbox" class="filter-opt-cb" value="'+escAttr(s.id)+'" '+(selectedIds&&selectedIds.includes(s.id)?'checked':'')+'> '+escAttr(s.name)+'</label>').join('') : '<div class="note" style="padding:5px 8px">No suppliers yet.</div>')+
+    '</div>'+
+  '</details>';
+}
+function wireFilterDropdown(id, key, renderFn){
+  const dd=document.getElementById(id);
+  if(!dd) return;
+  const allCb=dd.querySelector('.filter-all-cb');
+  const optCbs=dd.querySelectorAll('.filter-opt-cb');
+  function reapply(){
+    renderFn();
+    const nd=document.getElementById(id);
+    if(nd) nd.open=true;
+  }
+  if(allCb) allCb.addEventListener('change',e=>{
+    if(e.target.checked){ docSupplierFilter[key]=[]; reapply(); }
+    else if(optCbs.length===0){ e.target.checked=true; }
+  });
+  optCbs.forEach(cb=>cb.addEventListener('change',()=>{
+    const checked=[...dd.querySelectorAll('.filter-opt-cb:checked')].map(c=>c.value);
+    docSupplierFilter[key]=checked;
+    reapply();
+  }));
+}
 
 function setTab(which){
   /* Back-compat: callers may still pass 'po'/'quotes'/'receipts' directly (e.g. jumping
@@ -1497,6 +1548,8 @@ function setTab(which){
   });
   document.getElementById('pagetitle').textContent=TAB_LABELS[which][0];
   document.getElementById('pagesub').textContent=TAB_LABELS[which][1];
+  const addDocBtn=document.getElementById('add-doc-btn');
+  if(addDocBtn) addDocBtn.classList.toggle('hidden', which!=='docs');
   if(which==='docs') setDocSubTab(sub||docSubTab);
   else renderTab(which);
 }
@@ -2480,21 +2533,24 @@ function exportPlanCSV(res){
 /* ---------------- Purchase Orders tab ---------------- */
 function renderPO(){
   const el=document.getElementById('panel-po');
+  const filteredPOs=filterBySupplier(DB.purchaseOrders, docSupplierFilter.po, po=>po.supplierId);
   el.innerHTML=
     '<div class="toolbar no-print">'+
       '<button class="btn accent" id="add-po">+ New PO</button>'+
       '<button class="btn" id="export-pdf-po">Export PDF</button>'+
+      filterDropdownHtml('filter-po', docSupplierFilter.po)+
     '</div>'+
     '<p class="note">Auto-fill from PDF/Word/text files is best-effort — it reads the file\'s text and guesses the PO #, date, supplier, and line items. Always double-check before saving; manual entry always works even if a file can\'t be read.</p>'+
-    '<div id="po-list">'+(DB.purchaseOrders.map(po=>renderPoCard(po)).join('') || '<p class="note">No purchase orders yet.</p>')+'</div>';
+    '<div id="po-list">'+(filteredPOs.map(po=>renderPoCard(po)).join('') || '<p class="note">'+(DB.purchaseOrders.length?'No purchase orders match this filter.':'No purchase orders yet.')+'</p>')+'</div>';
   wirePO();
+  wireFilterDropdown('filter-po','po',renderPO);
   document.getElementById('add-po').addEventListener('click',()=>{
     DB.purchaseOrders.push({id:uid(), poNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', orderDate:todayISO(), expectedDate:addDays(todayISO(),14), status:DB.lists.poStatus[0], lines:[], docs:[], notes:''});
     save(); renderPO(); renderCounts();
   });
   document.getElementById('export-pdf-po').addEventListener('click',()=>{
     const head=['PO #','Supplier','Status','Order Date','Expected Date','Total $'];
-    const body=DB.purchaseOrders.map(po=>{
+    const body=filteredPOs.map(po=>{
       const total=(po.lines||[]).reduce((s,l)=>s+Number(l.qty||0)*Number(l.unitPrice||0),0);
       return [po.poNumber||'', (supplierById(po.supplierId)||{}).name||'', po.status, fmtDate(po.orderDate), fmtDate(po.expectedDate), '$'+total.toFixed(2)];
     });
@@ -2569,21 +2625,24 @@ function wirePO(){
 /* ---------------- Quotes tab ---------------- */
 function renderQuotes(){
   const el=document.getElementById('panel-quotes');
+  const filteredQuotes=filterBySupplier(DB.quotes, docSupplierFilter.quotes, q=>q.supplierId);
   el.innerHTML=
     '<div class="toolbar no-print">'+
       '<button class="btn accent" id="add-quote">+ New blank quote</button>'+
       '<button class="btn" id="export-pdf-quotes">Export PDF</button>'+
+      filterDropdownHtml('filter-quotes', docSupplierFilter.quotes)+
     '</div>'+
     '<p class="note">Quotes capture what a supplier is willing to charge before you commit — useful pricing signal even for items never actually ordered yet. Auto-fill from PDF/Word/text files is best-effort; always double-check before saving.</p>'+
-    '<div id="quote-list">'+(DB.quotes.map(q=>renderQuoteCard(q)).join('') || '<p class="note">No quotes yet.</p>')+'</div>';
+    '<div id="quote-list">'+(filteredQuotes.map(q=>renderQuoteCard(q)).join('') || '<p class="note">'+(DB.quotes.length?'No quotes match this filter.':'No quotes yet.')+'</p>')+'</div>';
   wireQuotes();
+  wireFilterDropdown('filter-quotes','quotes',renderQuotes);
   document.getElementById('add-quote').addEventListener('click',()=>{
     DB.quotes.push({id:uid(), quoteNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', quoteDate:todayISO(), validUntil:addDays(todayISO(),30), status:DB.lists.quoteStatus[0], lines:[], docs:[], notes:''});
     save(); renderQuotes(); renderCounts();
   });
   document.getElementById('export-pdf-quotes').addEventListener('click',()=>{
     const head=['Quote #','Supplier','Status','Quote Date','Valid Until','Total $'];
-    const body=DB.quotes.map(q=>{
+    const body=filteredQuotes.map(q=>{
       const total=(q.lines||[]).reduce((s,l)=>s+Number(l.qty||0)*Number(l.unitPrice||0),0);
       return [q.quoteNumber||'', (supplierById(q.supplierId)||{}).name||'', q.status, fmtDate(q.quoteDate), fmtDate(q.validUntil), '$'+total.toFixed(2)];
     });
@@ -2663,21 +2722,24 @@ function wireQuotes(){
 /* ---------------- Receipts tab ---------------- */
 function renderReceipts(){
   const el=document.getElementById('panel-receipts');
+  const filteredReceipts=filterBySupplier(DB.receipts, docSupplierFilter.receipts, r=>r.supplierId);
   el.innerHTML=
     '<div class="toolbar no-print">'+
       '<button class="btn accent" id="add-receipt">+ New blank receipt</button>'+
       '<button class="btn" id="export-pdf-receipts">Export PDF</button>'+
+      filterDropdownHtml('filter-receipts', docSupplierFilter.receipts)+
     '</div>'+
     '<p class="note">Receipts record what was actually paid — the most trustworthy real-cost source, since it can differ from the PO price due to shipping, tax, or partial-ship adjustments. Auto-fill from PDF/Word/text files is best-effort; always double-check before saving.</p>'+
-    '<div id="receipt-list">'+(DB.receipts.map(r=>renderReceiptCard(r)).join('') || '<p class="note">No receipts yet.</p>')+'</div>';
+    '<div id="receipt-list">'+(filteredReceipts.map(r=>renderReceiptCard(r)).join('') || '<p class="note">'+(DB.receipts.length?'No receipts match this filter.':'No receipts yet.')+'</p>')+'</div>';
   wireReceipts();
+  wireFilterDropdown('filter-receipts','receipts',renderReceipts);
   document.getElementById('add-receipt').addEventListener('click',()=>{
     DB.receipts.push({id:uid(), receiptNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', receiptDate:todayISO(), poId:'', lines:[], docs:[], notes:''});
     save(); renderReceipts(); renderCounts();
   });
   document.getElementById('export-pdf-receipts').addEventListener('click',()=>{
     const head=['Receipt #','Supplier','Receipt Date','Linked PO','Total $'];
-    const body=DB.receipts.map(r=>{
+    const body=filteredReceipts.map(r=>{
       const total=(r.lines||[]).reduce((s,l)=>s+Number(l.qty||0)*Number(l.unitPrice||0),0);
       return [r.receiptNumber||'', (supplierById(r.supplierId)||{}).name||'', fmtDate(r.receiptDate), (poById(r.poId)||{}).poNumber||'', '$'+total.toFixed(2)];
     });
@@ -2966,6 +3028,11 @@ async function init(){
     btn.addEventListener('click',()=>{ setDocSubTab(btn.dataset.subtab); renderCounts(); });
   });
   document.getElementById('add-doc-btn').addEventListener('click', openAddDocumentModal);
+  document.addEventListener('click', e=>{
+    document.querySelectorAll('.filter-dropdown[open]').forEach(dd=>{
+      if(!dd.contains(e.target)) dd.open=false;
+    });
+  });
   setTab('dash');
 }
 init();
