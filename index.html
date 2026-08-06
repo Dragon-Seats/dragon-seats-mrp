@@ -2357,34 +2357,50 @@ function renderSuppliers(){
   el.innerHTML=
     '<div class="toolbar no-print"><button class="btn accent" id="add-supplier">+ New supplier</button></div>'+
     '<div class="card"><div class="card-body">'+
-    '<table><colgroup><col style="width:14%"><col style="width:13%"><col style="width:20%"><col style="width:11%"><col style="width:15%"><col style="width:18%"><col style="width:9%"></colgroup>'+
-    '<thead><tr><th>Name</th><th>Contact</th><th>Email</th><th>Phone</th><th>Specialty</th><th>Notes</th><th></th></tr></thead>'+
+    '<table><colgroup><col style="width:13%"><col style="width:11%"><col style="width:16%"><col style="width:10%"><col style="width:15%"><col style="width:11%"><col style="width:15%"><col style="width:9%"></colgroup>'+
+    '<thead><tr><th>Name</th><th>Contact</th><th>Email</th><th>Phone</th><th>Website</th><th>Specialty</th><th>Notes</th><th></th></tr></thead>'+
     '<tbody id="sup-tbody"></tbody></table>'+
     '</div></div>';
   const tb=document.getElementById('sup-tbody');
   tb.innerHTML=DB.suppliers.map(s=>{
     const docCount=supplierDocGroups(s).total;
+    const site=s.website||'';
+    const siteHref=site && !/^https?:\/\//i.test(site) ? 'https://'+site : site;
+    const email=s.email||'';
+    const phone=s.phone||'';
+    const phoneHref=telHref(phone);
     return '<tr class="sup-row" data-id="'+s.id+'">'+
       '<td><input class="f-name" value="'+escAttr(s.name)+'"></td>'+
       '<td><input class="f-contact" value="'+escAttr(s.contact||'')+'"></td>'+
-      '<td><input class="f-email" value="'+escAttr(s.email||'')+'"></td>'+
-      '<td><input class="f-phone" value="'+escAttr(s.phone||'')+'"></td>'+
+      '<td><div style="display:flex;gap:4px;align-items:center">'+
+        '<input class="f-email" value="'+escAttr(email)+'" style="flex:1 1 auto;min-width:0">'+
+        (email ? '<a class="btn sm sup-email-link" href="mailto:'+escAttr(email)+'" title="Email '+escAttr(email)+'">✉</a>' : '')+
+      '</div></td>'+
+      '<td><div style="display:flex;gap:4px;align-items:center">'+
+        '<input class="f-phone" value="'+escAttr(phone)+'" style="flex:1 1 auto;min-width:0">'+
+        (phoneHref ? '<a class="btn sm sup-phone-link" href="'+escAttr(phoneHref)+'" title="Call '+escAttr(phone)+'">☎</a>' : '')+
+      '</div></td>'+
+      '<td><div style="display:flex;gap:4px;align-items:center">'+
+        '<input class="f-website" placeholder="e.g. supplier.com" value="'+escAttr(site)+'" style="flex:1 1 auto;min-width:0">'+
+        (site ? '<a class="btn sm sup-website-link" href="'+escAttr(siteHref)+'" target="_blank" rel="noopener noreferrer" title="Open '+escAttr(site)+'">Visit</a>' : '')+
+      '</div></td>'+
       '<td><input class="f-spec" value="'+escAttr(s.specialty||'')+'"></td>'+
       '<td><input class="f-notes" value="'+escAttr(s.notes||'')+'"></td>'+
       '<td class="col-actions no-print"><button class="btn sm danger del-sup">Delete</button></td>'+
     '</tr>'+
-    '<tr class="sup-docs-row" data-id="'+s.id+'"><td colspan="7" style="padding:0">'+
+    '<tr class="sup-docs-row" data-id="'+s.id+'"><td colspan="8" style="padding:0">'+
       '<details class="sup-docs-details"><summary style="cursor:pointer;padding:8px 16px;font-size:12.5px;color:var(--steel)">📄 Documents on file ('+docCount+') — POs, quotes &amp; receipts for '+escAttr(s.name)+'</summary>'+
       '<div style="padding:6px 16px 16px">'+renderSupplierDocsPanel(s)+'</div>'+
       '</details>'+
     '</td></tr>';
-  }).join('') || '<tr><td colspan="7" class="note">No suppliers yet — add one above.</td></tr>';
+  }).join('') || '<tr><td colspan="8" class="note">No suppliers yet — add one above.</td></tr>';
   tb.querySelectorAll('tr.sup-row').forEach(tr=>{
     const id=tr.dataset.id; const s=supplierById(id);
     tr.querySelector('.f-name').addEventListener('change',e=>{s.name=e.target.value; save(); renderCounts();});
     tr.querySelector('.f-contact').addEventListener('change',e=>{s.contact=e.target.value; save();});
-    tr.querySelector('.f-email').addEventListener('change',e=>{s.email=e.target.value; save();});
-    tr.querySelector('.f-phone').addEventListener('change',e=>{s.phone=e.target.value; save();});
+    tr.querySelector('.f-email').addEventListener('change',e=>{s.email=e.target.value.trim(); save(); renderSuppliers();});
+    tr.querySelector('.f-phone').addEventListener('change',e=>{s.phone=e.target.value.trim(); save(); renderSuppliers();});
+    tr.querySelector('.f-website').addEventListener('change',e=>{s.website=e.target.value.trim(); save(); renderSuppliers();});
     tr.querySelector('.f-spec').addEventListener('change',e=>{s.specialty=e.target.value; save();});
     tr.querySelector('.f-notes').addEventListener('change',e=>{s.notes=e.target.value; save();});
     tr.querySelector('.del-sup').addEventListener('click',()=>{ confirmModal('Delete '+s.name+'?', ()=>{ DB.suppliers=DB.suppliers.filter(x=>x.id!==id); save(); renderSuppliers(); renderCounts(); }); });
@@ -2393,7 +2409,7 @@ function renderSuppliers(){
     btn.addEventListener('click',()=>{ jumpToSupplierDoc(btn.dataset.type, btn.dataset.id); });
   });
   document.getElementById('add-supplier').addEventListener('click',()=>{
-    DB.suppliers.push({id:uid(),name:'New Supplier',contact:'',email:'',phone:'',specialty:'',notes:''});
+    DB.suppliers.push({id:uid(),name:'New Supplier',contact:'',email:'',phone:'',website:'',specialty:'',notes:''});
     save(); renderSuppliers(); renderCounts();
   });
 }
