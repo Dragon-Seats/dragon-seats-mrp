@@ -2357,50 +2357,34 @@ function renderSuppliers(){
   el.innerHTML=
     '<div class="toolbar no-print"><button class="btn accent" id="add-supplier">+ New supplier</button></div>'+
     '<div class="card"><div class="card-body">'+
-    '<table><colgroup><col style="width:13%"><col style="width:11%"><col style="width:16%"><col style="width:10%"><col style="width:15%"><col style="width:11%"><col style="width:15%"><col style="width:9%"></colgroup>'+
-    '<thead><tr><th>Name</th><th>Contact</th><th>Email</th><th>Phone</th><th>Website</th><th>Specialty</th><th>Notes</th><th></th></tr></thead>'+
+    '<table><colgroup><col style="width:14%"><col style="width:13%"><col style="width:20%"><col style="width:11%"><col style="width:15%"><col style="width:18%"><col style="width:9%"></colgroup>'+
+    '<thead><tr><th>Name</th><th>Contact</th><th>Email</th><th>Phone</th><th>Specialty</th><th>Notes</th><th></th></tr></thead>'+
     '<tbody id="sup-tbody"></tbody></table>'+
     '</div></div>';
   const tb=document.getElementById('sup-tbody');
   tb.innerHTML=DB.suppliers.map(s=>{
     const docCount=supplierDocGroups(s).total;
-    const site=s.website||'';
-    const siteHref=site && !/^https?:\/\//i.test(site) ? 'https://'+site : site;
-    const email=s.email||'';
-    const phone=s.phone||'';
-    const phoneHref=telHref(phone);
     return '<tr class="sup-row" data-id="'+s.id+'">'+
       '<td><input class="f-name" value="'+escAttr(s.name)+'"></td>'+
       '<td><input class="f-contact" value="'+escAttr(s.contact||'')+'"></td>'+
-      '<td><div style="display:flex;gap:4px;align-items:center">'+
-        '<input class="f-email" value="'+escAttr(email)+'" style="flex:1 1 auto;min-width:0">'+
-        (email ? '<a class="btn sm sup-email-link" href="mailto:'+escAttr(email)+'" title="Email '+escAttr(email)+'">✉</a>' : '')+
-      '</div></td>'+
-      '<td><div style="display:flex;gap:4px;align-items:center">'+
-        '<input class="f-phone" value="'+escAttr(phone)+'" style="flex:1 1 auto;min-width:0">'+
-        (phoneHref ? '<a class="btn sm sup-phone-link" href="'+escAttr(phoneHref)+'" title="Call '+escAttr(phone)+'">☎</a>' : '')+
-      '</div></td>'+
-      '<td><div style="display:flex;gap:4px;align-items:center">'+
-        '<input class="f-website" placeholder="e.g. supplier.com" value="'+escAttr(site)+'" style="flex:1 1 auto;min-width:0">'+
-        (site ? '<a class="btn sm sup-website-link" href="'+escAttr(siteHref)+'" target="_blank" rel="noopener noreferrer" title="Open '+escAttr(site)+'">Visit</a>' : '')+
-      '</div></td>'+
+      '<td><input class="f-email" value="'+escAttr(s.email||'')+'"></td>'+
+      '<td><input class="f-phone" value="'+escAttr(s.phone||'')+'"></td>'+
       '<td><input class="f-spec" value="'+escAttr(s.specialty||'')+'"></td>'+
       '<td><input class="f-notes" value="'+escAttr(s.notes||'')+'"></td>'+
       '<td class="col-actions no-print"><button class="btn sm danger del-sup">Delete</button></td>'+
     '</tr>'+
-    '<tr class="sup-docs-row" data-id="'+s.id+'"><td colspan="8" style="padding:0">'+
+    '<tr class="sup-docs-row" data-id="'+s.id+'"><td colspan="7" style="padding:0">'+
       '<details class="sup-docs-details"><summary style="cursor:pointer;padding:8px 16px;font-size:12.5px;color:var(--steel)">📄 Documents on file ('+docCount+') — POs, quotes &amp; receipts for '+escAttr(s.name)+'</summary>'+
       '<div style="padding:6px 16px 16px">'+renderSupplierDocsPanel(s)+'</div>'+
       '</details>'+
     '</td></tr>';
-  }).join('') || '<tr><td colspan="8" class="note">No suppliers yet — add one above.</td></tr>';
+  }).join('') || '<tr><td colspan="7" class="note">No suppliers yet — add one above.</td></tr>';
   tb.querySelectorAll('tr.sup-row').forEach(tr=>{
     const id=tr.dataset.id; const s=supplierById(id);
     tr.querySelector('.f-name').addEventListener('change',e=>{s.name=e.target.value; save(); renderCounts();});
     tr.querySelector('.f-contact').addEventListener('change',e=>{s.contact=e.target.value; save();});
-    tr.querySelector('.f-email').addEventListener('change',e=>{s.email=e.target.value.trim(); save(); renderSuppliers();});
-    tr.querySelector('.f-phone').addEventListener('change',e=>{s.phone=e.target.value.trim(); save(); renderSuppliers();});
-    tr.querySelector('.f-website').addEventListener('change',e=>{s.website=e.target.value.trim(); save(); renderSuppliers();});
+    tr.querySelector('.f-email').addEventListener('change',e=>{s.email=e.target.value; save();});
+    tr.querySelector('.f-phone').addEventListener('change',e=>{s.phone=e.target.value; save();});
     tr.querySelector('.f-spec').addEventListener('change',e=>{s.specialty=e.target.value; save();});
     tr.querySelector('.f-notes').addEventListener('change',e=>{s.notes=e.target.value; save();});
     tr.querySelector('.del-sup').addEventListener('click',()=>{ confirmModal('Delete '+s.name+'?', ()=>{ DB.suppliers=DB.suppliers.filter(x=>x.id!==id); save(); renderSuppliers(); renderCounts(); }); });
@@ -2409,7 +2393,7 @@ function renderSuppliers(){
     btn.addEventListener('click',()=>{ jumpToSupplierDoc(btn.dataset.type, btn.dataset.id); });
   });
   document.getElementById('add-supplier').addEventListener('click',()=>{
-    DB.suppliers.push({id:uid(),name:'New Supplier',contact:'',email:'',phone:'',website:'',specialty:'',notes:''});
+    DB.suppliers.push({id:uid(),name:'New Supplier',contact:'',email:'',phone:'',specialty:'',notes:''});
     save(); renderSuppliers(); renderCounts();
   });
 }
@@ -2510,10 +2494,10 @@ function renderPlan(){
   const el=document.getElementById('panel-plan');
   el.innerHTML=
     '<div class="toolbar no-print"><button class="btn" id="export-csv">Export CSV</button><button class="btn" id="export-pdf-plan">Export PDF</button><button class="btn" id="print-plan">Print</button></div>'+
-    '<p class="note">Every item appears here. <b>Covered by stock</b> means it has demand from your build plan but on-hand + safety stock already covers it — nothing to order yet. <b>No demand</b> means it isn\'t needed by anything currently in the Demand Plan.</p>'+
+    '<p class="note">Every item appears here. <b>Total Needed</b> is the raw quantity your Demand Plan calls for (gross demand). <b>Order Qty</b> is what\'s left to order after netting against on-hand stock and incoming POs — it can be less than Total Needed, or "—" if stock already covers it. <b>Covered by stock</b> means it has demand from your build plan but on-hand + safety stock already covers it — nothing to order yet. <b>No demand</b> means it isn\'t needed by anything currently in the Demand Plan.</p>'+
     '<div class="card"><div class="card-body">'+
-    '<table><colgroup><col style="width:16%"><col style="width:10%"><col style="width:10%"><col style="width:11%"><col style="width:11%"><col style="width:9%"><col style="width:10%"><col style="width:23%"></colgroup>'+
-    '<thead><tr><th>Part</th><th>Status</th><th class="num">Order Qty</th><th>Order By</th><th>Needed By</th><th class="num">On Hand</th><th class="num">Safety Stock</th><th>Driven By</th></tr></thead>'+
+    '<table><colgroup><col style="width:15%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:10%"><col style="width:10%"><col style="width:8%"><col style="width:9%"><col style="width:21%"></colgroup>'+
+    '<thead><tr><th>Part</th><th>Status</th><th class="num">Total Needed</th><th class="num">Order Qty</th><th>Order By</th><th>Needed By</th><th class="num">On Hand</th><th class="num">Safety Stock</th><th>Driven By</th></tr></thead>'+
     '<tbody>'+res.map(r=>{
         const badge = r.status==='late'?'<span class="badge late">Past due</span>':r.status==='soon'?'<span class="badge soon">Order soon</span>':r.status==='ok'?'<span class="badge ok">OK</span>':r.status==='covered'?'<span class="badge ok">Covered by stock</span>':'<span class="badge review">No demand</span>';
         const sources = r.plannedOrders.length ? r.plannedOrders.map(o=>o.source).join('; ') : (r.needSources||[]).join('; ');
@@ -2521,6 +2505,7 @@ function renderPlan(){
         return '<tr>'+
           '<td>'+lvl+r.item.name+'</td>'+
           '<td>'+badge+'</td>'+
+          '<td class="num mono">'+(r.totalGross || '—')+'</td>'+
           '<td class="num mono">'+(r.suggestedQty || '—')+'</td>'+
           '<td class="mono">'+fmtDate(r.earliestRelease)+'</td>'+
           '<td class="mono">'+(r.plannedOrders[0]?fmtDate(r.plannedOrders[0].dueDate):'—')+'</td>'+
@@ -2532,15 +2517,15 @@ function renderPlan(){
     '</div></div>';
   document.getElementById('export-csv').addEventListener('click',()=>exportPlanCSV(res));
   document.getElementById('export-pdf-plan').addEventListener('click',()=>{
-    const head=['Part','Status','Order Qty','Order By','Needed By','On Hand','Safety Stock','Driven By'];
-    const body=res.map(r=>[r.item.name, r.status, r.suggestedQty||0, r.earliestRelease?fmtDate(r.earliestRelease):'—', r.plannedOrders[0]?fmtDate(r.plannedOrders[0].dueDate):'—', r.item.onHand, r.item.safetyStock, (r.plannedOrders.length?r.plannedOrders.map(o=>o.source).join('; '):(r.needSources||[]).join('; '))||'—']);
+    const head=['Part','Status','Total Needed','Order Qty','Order By','Needed By','On Hand','Safety Stock','Driven By'];
+    const body=res.map(r=>[r.item.name, r.status, r.totalGross||0, r.suggestedQty||0, r.earliestRelease?fmtDate(r.earliestRelease):'—', r.plannedOrders[0]?fmtDate(r.plannedOrders[0].dueDate):'—', r.item.onHand, r.item.safetyStock, (r.plannedOrders.length?r.plannedOrders.map(o=>o.source).join('; '):(r.needSources||[]).join('; '))||'—']);
     exportTablePDF('Dragon Seats - Planned Orders', head, body);
   });
   document.getElementById('print-plan').addEventListener('click',()=>window.print());
 }
 function exportPlanCSV(res){
-  const rows=[['Part','Status','Order Qty','Order By','Needed By','On Hand','Safety Stock','Driven By']];
-  res.forEach(r=>rows.push([r.item.name, r.status, r.suggestedQty||0, r.earliestRelease||'', (r.plannedOrders[0]||{}).dueDate||'', r.item.onHand, r.item.safetyStock, r.plannedOrders.length?r.plannedOrders.map(o=>o.source).join(' | '):(r.needSources||[]).join(' | ')]));
+  const rows=[['Part','Status','Total Needed','Order Qty','Order By','Needed By','On Hand','Safety Stock','Driven By']];
+  res.forEach(r=>rows.push([r.item.name, r.status, r.totalGross||0, r.suggestedQty||0, r.earliestRelease||'', (r.plannedOrders[0]||{}).dueDate||'', r.item.onHand, r.item.safetyStock, r.plannedOrders.length?r.plannedOrders.map(o=>o.source).join(' | '):(r.needSources||[]).join(' | ')]));
   const csv=rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dragon-seats-planned-orders.csv'; a.click();
