@@ -1460,8 +1460,36 @@ function runMRP(){
   });
 
   const results=Object.values(resultsByItem);
+
+  // Group each part with the top-level planned order that's actually driving its demand,
+  // so e.g. "Foam Cushion" and "Leg Assembly" sit right next to the "Standard Chair" order
+  // that needs them, instead of being sorted independently by their own urgency/date.
+  const rank={late:0,soon:1,ok:2,covered:3,none:4};
+  function rootSourceOf(r){
+    const src = r.plannedOrders.length ? r.plannedOrders[0].source : (r.needSources[0]||'');
+    if(!src) return r.item.name;
+    const parts=src.split(' ← ');
+    return parts[parts.length-1].trim() || r.item.name;
+  }
+  const groupMeta={};
+  results.forEach(r=>{
+    r._rootKey=rootSourceOf(r);
+    const g=groupMeta[r._rootKey] || (groupMeta[r._rootKey]={rank:99, earliest:null});
+    const sr=rank[r.status];
+    if(sr<g.rank) g.rank=sr;
+    if(r.earliestRelease && (!g.earliest || r.earliestRelease<g.earliest)) g.earliest=r.earliestRelease;
+  });
   results.sort((a,b)=>{
-    const rank={late:0,soon:1,ok:2,none:3};
+    if(a._rootKey!==b._rootKey){
+      const ga=groupMeta[a._rootKey], gb=groupMeta[b._rootKey];
+      if(ga.rank!==gb.rank) return ga.rank-gb.rank;
+      if(ga.earliest && gb.earliest) return ga.earliest<gb.earliest?-1:(ga.earliest>gb.earliest?1:a._rootKey.localeCompare(b._rootKey));
+      if(ga.earliest) return -1;
+      if(gb.earliest) return 1;
+      return a._rootKey.localeCompare(b._rootKey);
+    }
+    // same order group: parent product before the components it needs (lower BOM level first)
+    if(a.level!==b.level) return a.level-b.level;
     if(rank[a.status]!==rank[b.status]) return rank[a.status]-rank[b.status];
     if(a.earliestRelease && b.earliestRelease) return a.earliestRelease<b.earliestRelease?-1:1;
     return 0;
@@ -2494,10 +2522,10 @@ function renderPlan(){
   const el=document.getElementById('panel-plan');
   el.innerHTML=
     '<div class="toolbar no-print"><button class="btn" id="export-csv">Export CSV</button><button class="btn" id="export-pdf-plan">Export PDF</button><button class="btn" id="print-plan">Print</button></div>'+
-    '<p class="note">Every item appears here. <b>Total Needed</b> is the raw quantity your Demand Plan calls for (gross demand). <b>Order Qty</b> is what\'s left to order after netting against on-hand stock and incoming POs — it can be less than Total Needed, or "—" if stock already covers it. <b>Covered by stock</b> means it has demand from your build plan but on-hand + safety stock already covers it — nothing to order yet. <b>No demand</b> means it isn\'t needed by anything currently in the Demand Plan.</p>'+
+    '<p class="note">Every item appears here. <b>Total Needed</b> is the raw quantity your Demand Plan calls for (gross demand). <b>On Hand</b> and <b>Safety Stock</b> show what you\'ve got and your buffer. <b>Order Qty</b> is what\'s left to order after netting those against Total Needed — it can be less than Total Needed, or "—" if stock already covers it. <b>Covered by stock</b> means it has demand from your build plan but on-hand + safety stock already covers it — nothing to order yet. <b>No demand</b> means it isn\'t needed by anything currently in the Demand Plan.</p>'+
     '<div class="card"><div class="card-body">'+
-    '<table><colgroup><col style="width:15%"><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:10%"><col style="width:10%"><col style="width:8%"><col style="width:9%"><col style="width:21%"></colgroup>'+
-    '<thead><tr><th>Part</th><th>Status</th><th class="num">Total Needed</th><th class="num">Order Qty</th><th>Order By</th><th>Needed By</th><th class="num">On Hand</th><th class="num">Safety Stock</th><th>Driven By</th></tr></thead>'+
+    '<table><colgroup><col style="width:15%"><col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:9%"><col style="width:9%"><col style="width:10%"><col style="width:10%"><col style="width:21%"></colgroup>'+
+    '<thead><tr><th>Part</th><th>Status</th><th class="num">Total Needed</th><th class="num">On Hand</th><th class="num">Safety Stock</th><th class="num">Order Qty</th><th>Order By</th><th>Needed By</th><th>Driven By</th></tr></thead>'+
     '<tbody>'+res.map(r=>{
         const badge = r.status==='late'?'<span class="badge late">Past due</span>':r.status==='soon'?'<span class="badge soon">Order soon</span>':r.status==='ok'?'<span class="badge ok">OK</span>':r.status==='covered'?'<span class="badge ok">Covered by stock</span>':'<span class="badge review">No demand</span>';
         const sources = r.plannedOrders.length ? r.plannedOrders.map(o=>o.source).join('; ') : (r.needSources||[]).join('; ');
@@ -2506,26 +2534,26 @@ function renderPlan(){
           '<td>'+lvl+r.item.name+'</td>'+
           '<td>'+badge+'</td>'+
           '<td class="num mono">'+(r.totalGross || '—')+'</td>'+
+          '<td class="num mono">'+r.item.onHand+'</td>'+
+          '<td class="num mono">'+r.item.safetyStock+'</td>'+
           '<td class="num mono">'+(r.suggestedQty || '—')+'</td>'+
           '<td class="mono">'+fmtDate(r.earliestRelease)+'</td>'+
           '<td class="mono">'+(r.plannedOrders[0]?fmtDate(r.plannedOrders[0].dueDate):'—')+'</td>'+
-          '<td class="num mono">'+r.item.onHand+'</td>'+
-          '<td class="num mono">'+r.item.safetyStock+'</td>'+
           '<td class="demand-src">'+(sources||'—')+'</td>'+
         '</tr>';
       }).join('')+'</tbody></table>'+
     '</div></div>';
   document.getElementById('export-csv').addEventListener('click',()=>exportPlanCSV(res));
   document.getElementById('export-pdf-plan').addEventListener('click',()=>{
-    const head=['Part','Status','Total Needed','Order Qty','Order By','Needed By','On Hand','Safety Stock','Driven By'];
-    const body=res.map(r=>[r.item.name, r.status, r.totalGross||0, r.suggestedQty||0, r.earliestRelease?fmtDate(r.earliestRelease):'—', r.plannedOrders[0]?fmtDate(r.plannedOrders[0].dueDate):'—', r.item.onHand, r.item.safetyStock, (r.plannedOrders.length?r.plannedOrders.map(o=>o.source).join('; '):(r.needSources||[]).join('; '))||'—']);
+    const head=['Part','Status','Total Needed','On Hand','Safety Stock','Order Qty','Order By','Needed By','Driven By'];
+    const body=res.map(r=>[r.item.name, r.status, r.totalGross||0, r.item.onHand, r.item.safetyStock, r.suggestedQty||0, r.earliestRelease?fmtDate(r.earliestRelease):'—', r.plannedOrders[0]?fmtDate(r.plannedOrders[0].dueDate):'—', (r.plannedOrders.length?r.plannedOrders.map(o=>o.source).join('; '):(r.needSources||[]).join('; '))||'—']);
     exportTablePDF('Dragon Seats - Planned Orders', head, body);
   });
   document.getElementById('print-plan').addEventListener('click',()=>window.print());
 }
 function exportPlanCSV(res){
-  const rows=[['Part','Status','Total Needed','Order Qty','Order By','Needed By','On Hand','Safety Stock','Driven By']];
-  res.forEach(r=>rows.push([r.item.name, r.status, r.totalGross||0, r.suggestedQty||0, r.earliestRelease||'', (r.plannedOrders[0]||{}).dueDate||'', r.item.onHand, r.item.safetyStock, r.plannedOrders.length?r.plannedOrders.map(o=>o.source).join(' | '):(r.needSources||[]).join(' | ')]));
+  const rows=[['Part','Status','Total Needed','On Hand','Safety Stock','Order Qty','Order By','Needed By','Driven By']];
+  res.forEach(r=>rows.push([r.item.name, r.status, r.totalGross||0, r.item.onHand, r.item.safetyStock, r.suggestedQty||0, r.earliestRelease||'', (r.plannedOrders[0]||{}).dueDate||'', r.plannedOrders.length?r.plannedOrders.map(o=>o.source).join(' | '):(r.needSources||[]).join(' | ')]));
   const csv=rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='dragon-seats-planned-orders.csv'; a.click();
