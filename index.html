@@ -766,7 +766,7 @@ function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/
 
 /* ---------------- data model v2 ---------------- */
 function mkItem(id,name,uom,opts){
-  return Object.assign({id,name,uom,onHand:0,leadTimeDays:'',safetyStock:0,minOrderQty:1,isProduct:false,category:'part',locations:null,lines:[],links:[],docs:[],notes:'',laborCost:0}, opts||{});
+  return Object.assign({id,name,uom,onHand:0,leadTimeDays:'',safetyStock:0,minOrderQty:1,isProduct:false,category:'part',locations:null,lines:[],links:[],docs:[],notes:'',laborCost:0,standardCost:0}, opts||{});
 }
 const EQUIP_LOCATIONS=['CLE','JAX','KC','Patrick'];
 function locationsTotal(loc){ if(!loc) return 0; return EQUIP_LOCATIONS.reduce((s,k)=>s+(Number(loc[k])||0),0); }
@@ -1807,8 +1807,8 @@ function renderItems(){
     '<div class="toolbar no-print"><button class="btn accent" id="add-item">+ New item</button><button class="btn accent" id="add-equipment">+ New equipment</button><button class="btn" id="export-pdf-items">Export PDF</button></div>'+
     '<p class="note">Components and raw materials only — products live on the <b>BOM / Products</b> tab instead, so they don\'t clutter this list.</p>'+
     '<div class="card"><div class="card-body">'+
-    '<table><colgroup><col style="width:23%"><col style="width:6%"><col style="width:9%"><col style="width:11%"><col style="width:11%"><col style="width:17%"><col style="width:11%"><col style="width:6%"><col style="width:6%"></colgroup>'+
-    '<thead><tr><th>Name</th><th>UoM</th><th class="num">On Hand</th><th>Lead Time</th><th class="num">Safety Stock</th><th>Notes</th><th>Files</th><th></th><th></th></tr></thead>'+
+    '<table><colgroup><col style="width:20%"><col style="width:6%"><col style="width:8%"><col style="width:10%"><col style="width:9%"><col style="width:9%"><col style="width:15%"><col style="width:10%"><col style="width:7%"><col style="width:6%"></colgroup>'+
+    '<thead><tr><th>Name</th><th>UoM</th><th class="num">On Hand</th><th>Lead Time</th><th class="num">Safety Stock</th><th class="num">Standard Cost</th><th>Notes</th><th>Files</th><th></th><th></th></tr></thead>'+
     '<tbody id="items-tbody"></tbody></table>'+
     '</div></div>'+
     '<div class="dash-section-title">Equipment Inventory</div>'+
@@ -1826,6 +1826,7 @@ function renderItems(){
       '<td class="num"><input class="f-onhand num" type="number" value="'+it.onHand+'"></td>'+
       '<td><input class="f-lead" type="text" value="'+escAttr(String(it.leadTimeDays||''))+'" placeholder="e.g. 2 weeks, 10 days"></td>'+
       '<td class="num"><input class="f-ss num" type="number" value="'+it.safetyStock+'"></td>'+
+      '<td class="num"><input class="f-stdcost num" type="number" step="0.01" min="0" value="'+(Number(it.standardCost)||0)+'" placeholder="0.00" title="Manual cost used by BOM / Products → Cost Rollup when no PO/Receipt history exists"></td>'+
       '<td><input class="f-notes" value="'+escAttr(it.notes||'')+'"></td>'+
       '<td>'+docChips(it.docs)+'<label class="btn sm file-btn no-print">+ file<input type="file" class="f-file"></label></td>'+
       '<td class="col-actions no-print"><button class="btn sm history-btn">History</button></td>'+
@@ -1838,6 +1839,7 @@ function renderItems(){
     tr.querySelector('.f-onhand').addEventListener('change',e=>{it.onHand=Number(e.target.value)||0; save();});
     tr.querySelector('.f-lead').addEventListener('change',e=>{it.leadTimeDays=e.target.value; save();});
     tr.querySelector('.f-ss').addEventListener('change',e=>{it.safetyStock=Number(e.target.value)||0; save();});
+    tr.querySelector('.f-stdcost').addEventListener('change',e=>{it.standardCost=Number(e.target.value)||0; save();});
     tr.querySelector('.f-notes').addEventListener('change',e=>{it.notes=e.target.value; save();});
     enableFileDrop(tr.querySelector('.file-btn'), tr.querySelector('.f-file'));
     tr.querySelector('.f-file').addEventListener('change', async e=>{
@@ -2276,8 +2278,12 @@ function fmtQty(n){
   const r=Math.round((Number(n)||0)*100)/100;
   return (r%1===0) ? String(r) : r.toFixed(2);
 }
-/* Per-part cost: prefer the most recent actual PO/Receipt price (real purchase history);
-   fall back to the cheapest quote sitting on the item's Links tab if it's never been bought yet. */
+/* Per-part cost, in priority order:
+   1) the most recent actual PO/Receipt price (real purchase history — most trustworthy)
+   2) the manually-entered Standard Cost on the item (Items tab, or inline on Cost Rollup) —
+      since Links entries are mostly just ordering links/phone numbers and the cost field
+      there often isn't kept accurate
+   3) the cheapest quote sitting on the item's Links tab, as a last-resort fallback */
 function resolvePartCost(item){
   const hist=priceHistoryFor(item.id).filter(r=>r.source==='PO'||r.source==='Receipt');
   if(hist.length){
@@ -2291,6 +2297,10 @@ function resolvePartCost(item){
       label:top.source+' '+fmtDate(top.date)+(top.poNumber?(' (#'+top.poNumber+')'):''),
       type:top.source
     };
+  }
+  const std=Number(item.standardCost)||0;
+  if(std>0){
+    return {cost:std, label:'Standard cost (manual)', type:'Standard'};
   }
   const linkCosts=(item.links||[]).map(l=>Number(l.cost)||0).filter(c=>c>0);
   if(linkCosts.length){
@@ -2332,7 +2342,7 @@ function renderBomCosting(){
   const el=document.getElementById('panel-bom-costing');
   const products=DB.items.filter(i=>i.isProduct);
   el.innerHTML=
-    '<p class="note">Cost to build one unit, rolled all the way down through nested sub-assemblies — Wheel Set is broken into Wheel, Axle, Bearing &amp; Bolt (not costed as a bought-complete unit) since those are built in-house, not purchased pre-built. Each part\'s cost uses the most recent actual PO/Receipt price when there\'s purchase history, otherwise falls back to the best quote on the Links tab. Add Labor &amp; Overhead per product below to get a full landed cost for quoting.</p>'+
+    '<p class="note">Cost to build one unit, rolled all the way down through nested sub-assemblies — Wheel Set is broken into Wheel, Axle, Bearing &amp; Bolt (not costed as a bought-complete unit) since those are built in-house, not purchased pre-built. Each part\'s cost uses the most recent actual PO/Receipt price when there\'s purchase history; otherwise type a <b>Standard Cost</b> right in the table below (or on the Items tab) — that\'s the recommended way to price a part manually, since Links entries are mostly just ordering links and their cost field often isn\'t kept current. The Links tab quote is only used as a last-resort fallback if neither of those exist. Add Labor &amp; Overhead per product below to get a full landed cost for quoting.</p>'+
     (products.length ? products.map(p=>renderProductCostCard(p)).join('') : '<p class="note">No products yet — add one on the Recipes tab.</p>');
   wireBomCosting();
 }
@@ -2344,17 +2354,18 @@ function renderProductCostCard(product){
       '<td>'+escAttr(r.item.name)+'</td>'+
       '<td class="note">'+escAttr(Array.from(r.vias).join(', '))+'</td>'+
       '<td class="num mono">'+fmtQty(r.qtyNeeded)+' '+escAttr(r.item.uom||'')+'</td>'+
+      '<td class="num"><input class="f-stdcost num" data-item="'+r.item.id+'" type="number" step="0.01" min="0" value="'+(Number(r.item.standardCost)||0)+'" placeholder="0.00"></td>'+
       '<td class="num mono">'+(r.type==='none'?'—':'$'+r.unitCost.toFixed(2))+'</td>'+
       '<td class="num mono">'+(r.type==='none'?'—':'$'+r.lineCost.toFixed(2))+'</td>'+
-      '<td class="note">'+(r.type==='none'?'No cost data — set one on Links tab':escAttr(r.label))+'</td>'+
+      '<td class="note">'+(r.type==='none'?'No cost data yet':escAttr(r.label))+'</td>'+
     '</tr>'
-  ).join('') : '<tr><td colspan="6" class="note">No components in this recipe yet — add some on the Recipes tab.</td></tr>';
+  ).join('') : '<tr><td colspan="7" class="note">No components in this recipe yet — add some on the Recipes tab.</td></tr>';
   return '<div class="card cost-card" data-id="'+product.id+'">'+
     '<div class="card-head"><h3>'+escAttr(product.name)+'</h3></div>'+
     '<div class="card-body">'+
-      (missing.length ? '<p class="cost-warning">'+missing.length+' part'+(missing.length>1?'s':'')+' missing cost data ('+missing.map(r=>escAttr(r.item.name)).join(', ')+') — total below is understated until those have a price on the Links tab or a purchase history.</p>' : '')+
-      '<table><colgroup><col style="width:22%"><col style="width:16%"><col style="width:14%"><col style="width:12%"><col style="width:12%"><col style="width:24%"></colgroup>'+
-      '<thead><tr><th>Component</th><th>Via</th><th class="num">Qty / unit</th><th class="num">Unit Cost</th><th class="num">Line Cost</th><th>Cost Source</th></tr></thead>'+
+      (missing.length ? '<p class="cost-warning">'+missing.length+' part'+(missing.length>1?'s':'')+' missing cost data ('+missing.map(r=>escAttr(r.item.name)).join(', ')+') — total below is understated until those get a Standard Cost (below or on the Items tab) or a purchase history.</p>' : '')+
+      '<table><colgroup><col style="width:18%"><col style="width:13%"><col style="width:9%"><col style="width:11%"><col style="width:10%"><col style="width:10%"><col style="width:29%"></colgroup>'+
+      '<thead><tr><th>Component</th><th>Via</th><th class="num">Qty / unit</th><th class="num">Standard Cost</th><th class="num">Unit Cost</th><th class="num">Line Cost</th><th>Cost Source</th></tr></thead>'+
       '<tbody>'+rows+'</tbody></table>'+
       '<div class="cost-summary">'+
         '<div>Material cost / unit: <b>$'+materialCost.toFixed(2)+'</b></div>'+
@@ -2371,6 +2382,14 @@ function wireBomCosting(){
     if(laborInput) laborInput.addEventListener('change',e=>{
       product.laborCost=Number(e.target.value)||0;
       save(); renderBomCosting();
+    });
+    card.querySelectorAll('.f-stdcost').forEach(inp=>{
+      inp.addEventListener('change',e=>{
+        const part=itemById(inp.dataset.item);
+        if(!part) return;
+        part.standardCost=Number(e.target.value)||0;
+        save(); renderBomCosting();
+      });
     });
   });
 }
