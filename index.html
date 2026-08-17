@@ -40,6 +40,12 @@ h1,h2,h3,.brand,.tab,.dash-section-title{font-family:'Space Grotesk',system-ui,s
 .subtab .count{font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a8d93;background:#f3f1ee;border-radius:8px;padding:1px 7px}
 .subtab.active .count{color:var(--red)}
 .doc-subpanel.hidden{display:none}
+.cost-card{margin-bottom:16px}
+.cost-missing td{color:var(--red)}
+.cost-summary{display:flex;gap:24px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:13.5px}
+.cost-summary b{font-family:'JetBrains Mono',monospace}
+.cost-summary input.f-labor{width:90px;margin-left:6px}
+.cost-warning{color:var(--red);font-weight:600}
 .sb-foot{padding:12px 18px;font-size:10.5px;color:#6f7176;border-top:1px solid #2a2b2e;margin-top:8px}
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
 .topbar{padding:14px 26px;border-bottom:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:space-between}
@@ -235,7 +241,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
     <div class="content">
       <div class="panel" id="panel-dash"></div>
       <div class="panel hidden" id="panel-items"></div>
-      <div class="panel hidden" id="panel-bom"></div>
+      <div class="panel hidden" id="panel-bom">
+        <div class="doc-subnav no-print">
+          <button class="subtab" data-subtab="recipes">Recipes</button>
+          <button class="subtab" data-subtab="costing">Cost Rollup</button>
+        </div>
+        <div class="doc-subpanel hidden" id="panel-bom-recipes"></div>
+        <div class="doc-subpanel hidden" id="panel-bom-costing"></div>
+      </div>
       <div class="panel hidden" id="panel-links"></div>
       <div class="panel hidden" id="panel-suppliers"></div>
       <div class="panel hidden" id="panel-calendar"></div>
@@ -753,7 +766,7 @@ function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/
 
 /* ---------------- data model v2 ---------------- */
 function mkItem(id,name,uom,opts){
-  return Object.assign({id,name,uom,onHand:0,leadTimeDays:'',safetyStock:0,minOrderQty:1,isProduct:false,category:'part',locations:null,lines:[],links:[],docs:[],notes:''}, opts||{});
+  return Object.assign({id,name,uom,onHand:0,leadTimeDays:'',safetyStock:0,minOrderQty:1,isProduct:false,category:'part',locations:null,lines:[],links:[],docs:[],notes:'',laborCost:0}, opts||{});
 }
 const EQUIP_LOCATIONS=['CLE','JAX','KC','Patrick'];
 function locationsTotal(loc){ if(!loc) return 0; return EQUIP_LOCATIONS.reduce((s,k)=>s+(Number(loc[k])||0),0); }
@@ -1520,6 +1533,12 @@ const DOC_SUBTAB_LABELS={
   receipts:'Receipts — what was actually paid, most trustworthy price history'
 };
 let docSubTab='po';
+/* Sub-tab labels for the BOM / Products page (recipes vs. rolled-up cost). */
+const BOM_SUBTAB_LABELS={
+  recipes:'Products broken down by section — components nest to any depth',
+  costing:'Cost to build one unit, rolled up all the way down through every nested component'
+};
+let bomSubTab='recipes';
 /* Each value is an array of supplier IDs to include; an empty array means "all suppliers". */
 let docSupplierFilter={po:[], quotes:[], receipts:[]};
 function filterBySupplier(list, supplierIds, getSupplierId){
@@ -1580,6 +1599,7 @@ function setTab(which){
   const addDocBtn=document.getElementById('add-doc-btn');
   if(addDocBtn) addDocBtn.classList.toggle('hidden', which!=='docs');
   if(which==='docs') setDocSubTab(sub||docSubTab);
+  else if(which==='bom') setBomSubTab(bomSubTab);
   else renderTab(which);
 }
 
@@ -1592,6 +1612,18 @@ function setDocSubTab(sub){
     if(btn) btn.classList.toggle('active', t===sub);
   });
   renderTab(sub);
+}
+
+function setBomSubTab(sub){
+  bomSubTab=sub;
+  document.getElementById('pagesub').textContent=BOM_SUBTAB_LABELS[sub];
+  ['recipes','costing'].forEach(t=>{
+    document.getElementById('panel-bom-'+t).classList.toggle('hidden', t!==sub);
+    const btn=document.querySelector('#panel-bom .subtab[data-subtab="'+t+'"]');
+    if(btn) btn.classList.toggle('active', t===sub);
+  });
+  if(sub==='recipes') renderBOM();
+  else if(sub==='costing') renderBomCosting();
 }
 
 function renderCounts(){
@@ -1616,7 +1648,7 @@ function renderCounts(){
 function renderTab(which){
   if(which==='dash') renderDash();
   else if(which==='items') renderItems();
-  else if(which==='bom') renderBOM();
+  else if(which==='bom') setBomSubTab(bomSubTab);
   else if(which==='links') renderLinks();
   else if(which==='suppliers') renderSuppliers();
   else if(which==='calendar') renderCalendar();
@@ -2173,7 +2205,7 @@ function linkChipsFor(item){
   return item.links.map(l=>{ const s=supplierById(l.supplierId); return '<span class="chip">'+(s?s.name:'?')+(Number(l.cost)?(' · $'+Number(l.cost).toFixed(2)):'')+'</span>'; }).join('');
 }
 function renderBOM(){
-  const el=document.getElementById('panel-bom');
+  const el=document.getElementById('panel-bom-recipes');
   const roots=DB.items.filter(i=>i.isProduct);
   el.innerHTML=
     '<div class="toolbar no-print"><button class="btn accent" id="add-bom-product">+ New product</button></div>'+
@@ -2235,6 +2267,110 @@ function wireBOM(){
       owner.lines=owner.lines||[];
       owner.lines.push({childId:fallback.id, qtyPer:1});
       save(); renderBOM();
+    });
+  });
+}
+
+/* ---------------- BOM Cost Rollup subtab ---------------- */
+function fmtQty(n){
+  const r=Math.round((Number(n)||0)*100)/100;
+  return (r%1===0) ? String(r) : r.toFixed(2);
+}
+/* Per-part cost: prefer the most recent actual PO/Receipt price (real purchase history);
+   fall back to the cheapest quote sitting on the item's Links tab if it's never been bought yet. */
+function resolvePartCost(item){
+  const hist=priceHistoryFor(item.id).filter(r=>r.source==='PO'||r.source==='Receipt');
+  if(hist.length){
+    hist.sort((a,b)=>{
+      if(a.date!==b.date) return a.date<b.date?1:-1;
+      return (b.reliability||0)-(a.reliability||0);
+    });
+    const top=hist[0];
+    return {
+      cost:Number(top.unitPrice)||0,
+      label:top.source+' '+fmtDate(top.date)+(top.poNumber?(' (#'+top.poNumber+')'):''),
+      type:top.source
+    };
+  }
+  const linkCosts=(item.links||[]).map(l=>Number(l.cost)||0).filter(c=>c>0);
+  if(linkCosts.length){
+    return {cost:Math.min(...linkCosts), label:'Links tab (best known quote)', type:'Link'};
+  }
+  return {cost:0, label:'No cost data', type:'none'};
+}
+/* Walks a product's BOM all the way down to individual parts. Sub-assemblies (like Wheel Set)
+   are never costed as a single "buy it built" line — only their own components are — since
+   Dragon Seats builds those in-house rather than sourcing them pre-built. */
+function computeItemMaterialCost(item, qtyPerParent, parentName, breakdown, ancestry){
+  if(!item || ancestry.indexOf(item.id)!==-1) return 0;
+  if(item.lines && item.lines.length){
+    let total=0;
+    item.lines.forEach(line=>{
+      const child=itemById(line.childId);
+      if(!child) return;
+      total += computeItemMaterialCost(child, qtyPerParent*Number(line.qtyPer||0), item.name, breakdown, ancestry.concat(item.id));
+    });
+    return total;
+  }
+  const resolved=resolvePartCost(item);
+  const lineCost=resolved.cost*qtyPerParent;
+  let row=breakdown.find(r=>r.item.id===item.id);
+  if(!row){ row={item, qtyNeeded:0, unitCost:resolved.cost, lineCost:0, label:resolved.label, type:resolved.type, vias:new Set()}; breakdown.push(row); }
+  row.qtyNeeded+=qtyPerParent;
+  row.lineCost+=lineCost;
+  row.vias.add(parentName);
+  return lineCost;
+}
+function computeProductCost(product){
+  const breakdown=[];
+  const materialCost=computeItemMaterialCost(product, 1, product.name, breakdown, []);
+  breakdown.sort((a,b)=>b.lineCost-a.lineCost);
+  const laborCost=Number(product.laborCost)||0;
+  return {materialCost, laborCost, totalCost:materialCost+laborCost, breakdown};
+}
+function renderBomCosting(){
+  const el=document.getElementById('panel-bom-costing');
+  const products=DB.items.filter(i=>i.isProduct);
+  el.innerHTML=
+    '<p class="note">Cost to build one unit, rolled all the way down through nested sub-assemblies — Wheel Set is broken into Wheel, Axle, Bearing &amp; Bolt (not costed as a bought-complete unit) since those are built in-house, not purchased pre-built. Each part\'s cost uses the most recent actual PO/Receipt price when there\'s purchase history, otherwise falls back to the best quote on the Links tab. Add Labor &amp; Overhead per product below to get a full landed cost for quoting.</p>'+
+    (products.length ? products.map(p=>renderProductCostCard(p)).join('') : '<p class="note">No products yet — add one on the Recipes tab.</p>');
+  wireBomCosting();
+}
+function renderProductCostCard(product){
+  const {materialCost, laborCost, totalCost, breakdown}=computeProductCost(product);
+  const missing=breakdown.filter(r=>r.type==='none');
+  const rows = breakdown.length ? breakdown.map(r=>
+    '<tr class="'+(r.type==='none'?'cost-missing':'')+'">'+
+      '<td>'+escAttr(r.item.name)+'</td>'+
+      '<td class="note">'+escAttr(Array.from(r.vias).join(', '))+'</td>'+
+      '<td class="num mono">'+fmtQty(r.qtyNeeded)+' '+escAttr(r.item.uom||'')+'</td>'+
+      '<td class="num mono">'+(r.type==='none'?'—':'$'+r.unitCost.toFixed(2))+'</td>'+
+      '<td class="num mono">'+(r.type==='none'?'—':'$'+r.lineCost.toFixed(2))+'</td>'+
+      '<td class="note">'+(r.type==='none'?'No cost data — set one on Links tab':escAttr(r.label))+'</td>'+
+    '</tr>'
+  ).join('') : '<tr><td colspan="6" class="note">No components in this recipe yet — add some on the Recipes tab.</td></tr>';
+  return '<div class="card cost-card" data-id="'+product.id+'">'+
+    '<div class="card-head"><h3>'+escAttr(product.name)+'</h3></div>'+
+    '<div class="card-body">'+
+      (missing.length ? '<p class="cost-warning">'+missing.length+' part'+(missing.length>1?'s':'')+' missing cost data ('+missing.map(r=>escAttr(r.item.name)).join(', ')+') — total below is understated until those have a price on the Links tab or a purchase history.</p>' : '')+
+      '<table><colgroup><col style="width:22%"><col style="width:16%"><col style="width:14%"><col style="width:12%"><col style="width:12%"><col style="width:24%"></colgroup>'+
+      '<thead><tr><th>Component</th><th>Via</th><th class="num">Qty / unit</th><th class="num">Unit Cost</th><th class="num">Line Cost</th><th>Cost Source</th></tr></thead>'+
+      '<tbody>'+rows+'</tbody></table>'+
+      '<div class="cost-summary">'+
+        '<div>Material cost / unit: <b>$'+materialCost.toFixed(2)+'</b></div>'+
+        '<div>Labor &amp; Overhead: <input class="f-labor num" type="number" step="0.01" min="0" value="'+laborCost+'"> per unit</div>'+
+        '<div>Total cost / unit: <b>$'+totalCost.toFixed(2)+'</b></div>'+
+      '</div>'+
+    '</div></div>';
+}
+function wireBomCosting(){
+  document.querySelectorAll('#panel-bom-costing .cost-card').forEach(card=>{
+    const id=card.dataset.id; const product=itemById(id);
+    if(!product) return;
+    const laborInput=card.querySelector('.f-labor');
+    if(laborInput) laborInput.addEventListener('change',e=>{
+      product.laborCost=Number(e.target.value)||0;
+      save(); renderBomCosting();
     });
   });
 }
@@ -3055,7 +3191,12 @@ async function init(){
     btn.addEventListener('click',()=>{ currentTab=btn.dataset.tab; setTab(currentTab); renderCounts(); });
   });
   document.querySelectorAll('.subtab[data-subtab]').forEach(btn=>{
-    btn.addEventListener('click',()=>{ setDocSubTab(btn.dataset.subtab); renderCounts(); });
+    btn.addEventListener('click',()=>{
+      const val=btn.dataset.subtab;
+      if(val==='recipes'||val==='costing'){ setBomSubTab(val); }
+      else{ setDocSubTab(val); }
+      renderCounts();
+    });
   });
   document.getElementById('add-doc-btn').addEventListener('click', openAddDocumentModal);
   document.addEventListener('click', e=>{
