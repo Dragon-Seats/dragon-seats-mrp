@@ -44,8 +44,11 @@ h1,h2,h3,.brand,.tab,.dash-section-title{font-family:'Space Grotesk',system-ui,s
 .cost-missing td{color:var(--red)}
 .cost-summary{display:flex;gap:24px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:13.5px}
 .cost-summary b{font-family:'JetBrains Mono',monospace}
-.cost-summary input.f-labor{width:90px;margin-left:6px}
 .cost-warning{color:var(--red);font-weight:600}
+.money-field{position:relative;display:block;width:100%}
+.money-field .money-prefix{position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--steel);font-size:12.5px;font-family:'JetBrains Mono',monospace;pointer-events:none}
+.money-field input.money-input{padding-left:17px;width:100%;box-sizing:border-box}
+.cost-summary .money-field{display:inline-block;width:90px;vertical-align:middle;margin-left:6px}
 .sb-foot{padding:12px 18px;font-size:10.5px;color:#6f7176;border-top:1px solid #2a2b2e;margin-top:8px}
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
 .topbar{padding:14px 26px;border-bottom:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:space-between}
@@ -1807,7 +1810,7 @@ function renderItems(){
     '<div class="toolbar no-print"><button class="btn accent" id="add-item">+ New item</button><button class="btn accent" id="add-equipment">+ New equipment</button><button class="btn" id="export-pdf-items">Export PDF</button></div>'+
     '<p class="note">Components and raw materials only — products live on the <b>BOM / Products</b> tab instead, so they don\'t clutter this list.</p>'+
     '<div class="card"><div class="card-body">'+
-    '<table><colgroup><col style="width:20%"><col style="width:6%"><col style="width:8%"><col style="width:10%"><col style="width:9%"><col style="width:9%"><col style="width:15%"><col style="width:10%"><col style="width:7%"><col style="width:6%"></colgroup>'+
+    '<table><colgroup><col style="width:17%"><col style="width:5%"><col style="width:7%"><col style="width:9%"><col style="width:10.5%"><col style="width:11.5%"><col style="width:13%"><col style="width:9%"><col style="width:9%"><col style="width:9%"></colgroup>'+
     '<thead><tr><th>Name</th><th>UoM</th><th class="num">On Hand</th><th>Lead Time</th><th class="num">Safety Stock</th><th class="num">Standard Cost</th><th>Notes</th><th>Files</th><th></th><th></th></tr></thead>'+
     '<tbody id="items-tbody"></tbody></table>'+
     '</div></div>'+
@@ -1826,7 +1829,7 @@ function renderItems(){
       '<td class="num"><input class="f-onhand num" type="number" value="'+it.onHand+'"></td>'+
       '<td><input class="f-lead" type="text" value="'+escAttr(String(it.leadTimeDays||''))+'" placeholder="e.g. 2 weeks, 10 days"></td>'+
       '<td class="num"><input class="f-ss num" type="number" value="'+it.safetyStock+'"></td>'+
-      '<td class="num"><input class="f-stdcost num" type="number" step="0.01" min="0" value="'+(Number(it.standardCost)||0)+'" placeholder="0.00" title="Manual cost used by BOM / Products → Cost Rollup when no PO/Receipt history exists"></td>'+
+      '<td class="num"><span class="money-field"><span class="money-prefix">$</span><input class="f-stdcost num money-input" type="number" step="0.01" min="0" value="'+(Number(it.standardCost)||0).toFixed(2)+'" placeholder="0.00" title="Manual cost used by BOM / Products → Cost Rollup when no PO/Receipt history exists"></span></td>'+
       '<td><input class="f-notes" value="'+escAttr(it.notes||'')+'"></td>'+
       '<td>'+docChips(it.docs)+'<label class="btn sm file-btn no-print">+ file<input type="file" class="f-file"></label></td>'+
       '<td class="col-actions no-print"><button class="btn sm history-btn">History</button></td>'+
@@ -1839,7 +1842,10 @@ function renderItems(){
     tr.querySelector('.f-onhand').addEventListener('change',e=>{it.onHand=Number(e.target.value)||0; save();});
     tr.querySelector('.f-lead').addEventListener('change',e=>{it.leadTimeDays=e.target.value; save();});
     tr.querySelector('.f-ss').addEventListener('change',e=>{it.safetyStock=Number(e.target.value)||0; save();});
-    tr.querySelector('.f-stdcost').addEventListener('change',e=>{it.standardCost=Number(e.target.value)||0; save();});
+    tr.querySelector('.f-stdcost').addEventListener('change',e=>{
+      const v=Math.max(0, Number(e.target.value)||0);
+      it.standardCost=v; e.target.value=v.toFixed(2); save();
+    });
     tr.querySelector('.f-notes').addEventListener('change',e=>{it.notes=e.target.value; save();});
     enableFileDrop(tr.querySelector('.file-btn'), tr.querySelector('.f-file'));
     tr.querySelector('.f-file').addEventListener('change', async e=>{
@@ -2354,7 +2360,7 @@ function renderProductCostCard(product){
       '<td>'+escAttr(r.item.name)+'</td>'+
       '<td class="note">'+escAttr(Array.from(r.vias).join(', '))+'</td>'+
       '<td class="num mono">'+fmtQty(r.qtyNeeded)+' '+escAttr(r.item.uom||'')+'</td>'+
-      '<td class="num"><input class="f-stdcost num" data-item="'+r.item.id+'" type="number" step="0.01" min="0" value="'+(Number(r.item.standardCost)||0)+'" placeholder="0.00"></td>'+
+      '<td class="num"><span class="money-field"><span class="money-prefix">$</span><input class="f-stdcost num money-input" data-item="'+r.item.id+'" type="number" step="0.01" min="0" value="'+(Number(r.item.standardCost)||0).toFixed(2)+'" placeholder="0.00"></span></td>'+
       '<td class="num mono">'+(r.type==='none'?'—':'$'+r.unitCost.toFixed(2))+'</td>'+
       '<td class="num mono">'+(r.type==='none'?'—':'$'+r.lineCost.toFixed(2))+'</td>'+
       '<td class="note">'+(r.type==='none'?'No cost data yet':escAttr(r.label))+'</td>'+
@@ -2369,7 +2375,7 @@ function renderProductCostCard(product){
       '<tbody>'+rows+'</tbody></table>'+
       '<div class="cost-summary">'+
         '<div>Material cost / unit: <b>$'+materialCost.toFixed(2)+'</b></div>'+
-        '<div>Labor &amp; Overhead: <input class="f-labor num" type="number" step="0.01" min="0" value="'+laborCost+'"> per unit</div>'+
+        '<div>Labor &amp; Overhead: <span class="money-field"><span class="money-prefix">$</span><input class="f-labor num money-input" type="number" step="0.01" min="0" value="'+laborCost.toFixed(2)+'"></span> per unit</div>'+
         '<div>Total cost / unit: <b>$'+totalCost.toFixed(2)+'</b></div>'+
       '</div>'+
     '</div></div>';
@@ -2380,14 +2386,14 @@ function wireBomCosting(){
     if(!product) return;
     const laborInput=card.querySelector('.f-labor');
     if(laborInput) laborInput.addEventListener('change',e=>{
-      product.laborCost=Number(e.target.value)||0;
+      product.laborCost=Math.max(0, Number(e.target.value)||0);
       save(); renderBomCosting();
     });
     card.querySelectorAll('.f-stdcost').forEach(inp=>{
       inp.addEventListener('change',e=>{
         const part=itemById(inp.dataset.item);
         if(!part) return;
-        part.standardCost=Number(e.target.value)||0;
+        part.standardCost=Math.max(0, Number(e.target.value)||0);
         save(); renderBomCosting();
       });
     });
