@@ -1048,6 +1048,14 @@ function migrateMfgHadlock(db){
   if(!db || !Array.isArray(db.items)) return db;
   const byId=id=>db.items.find(i=>i.id===id);
 
+  // Rename the old generic "Wheel Set" item to "LH Wheelbase Assembly" if it hasn't been already
+  // (runs every time, independent of whether the RH sibling below already exists) — leaves any
+  // custom rename the user made alone.
+  {
+    const lh0=byId('i-wheelset');
+    if(lh0 && lh0.name==='Wheel Set') lh0.name='LH Wheelbase Assembly';
+  }
+
   // Make sure the RH Wheelbase Assembly exists alongside the LH one, with matching price breaks,
   // and fix any product recipe still using the old single-Wheel-Set line (qtyPer 4/6) into 1 LH + 1 RH.
   if(!byId('i-wheelset-rh')){
@@ -3462,11 +3470,57 @@ function renderConferenceList(){
     DB.lists.conferences.splice(Number(b.dataset.i),1); save(); renderConferenceList();
   }));
 }
+function findDuplicateItems(){
+  const nameGroups={};
+  DB.items.forEach(it=>{
+    const key=(it.name||'').trim().toLowerCase();
+    if(!key) return;
+    (nameGroups[key]=nameGroups[key]||[]).push(it);
+  });
+  const nameDupes=Object.values(nameGroups).filter(g=>g.length>1);
+
+  const usageByItem={};
+  DB.items.filter(i=>i.isProduct).forEach(p=>{
+    const {breakdown}=computeProductCost(p);
+    breakdown.forEach(r=>{
+      (usageByItem[r.item.id]=usageByItem[r.item.id]||[]).push({product:p.name, type:r.type, vias:Array.from(r.vias)});
+    });
+  });
+  const mixedUsage=Object.entries(usageByItem)
+    .filter(([id,uses])=>uses.some(u=>u.type==='included') && uses.some(u=>u.type!=='included'))
+    .map(([id,uses])=>({item:itemById(id), uses}))
+    .filter(x=>x.item);
+
+  return {nameDupes, mixedUsage};
+}
+function renderDataAudit(){
+  const {nameDupes, mixedUsage}=findDuplicateItems();
+  if(!nameDupes.length && !mixedUsage.length){
+    return '<p class="note">No duplicate names or mixed bundle/direct usage found across your items and products right now.</p>';
+  }
+  let html='';
+  if(nameDupes.length){
+    html+='<p class="note" style="margin-bottom:6px"><b>Same name, multiple entries</b> — these look like duplicates. Pick which one to keep, move any real data (on-hand, notes, links) onto it, then delete the rest from the Items tab.</p>';
+    html+='<ul style="margin:0 0 14px 18px;padding:0">'+nameDupes.map(g=>
+      '<li style="margin-bottom:4px">"'+escAttr(g[0].name)+'" — '+g.length+' entries ('+g.map(it=>it.id).join(', ')+')</li>'
+    ).join('')+'</ul>';
+  }
+  if(mixedUsage.length){
+    html+='<p class="note" style="margin-bottom:6px"><b>Bundled in one place, listed separately in another</b> — these parts are already covered by a bundle price under one product, but also show up needing their own price under another. If that\'s really the same physical part, remove the separate line (or fold it into the bundle); if it\'s legitimately priced separately for that other product, no action needed.</p>';
+    html+='<ul style="margin:0;padding:0 0 0 18px">'+mixedUsage.map(x=>
+      '<li style="margin-bottom:6px">"'+escAttr(x.item.name)+'" — '+x.uses.map(u=>
+        (u.type==='included' ? 'included in a bundle via '+escAttr(u.vias.join(', ')) : 'needs its own price via '+escAttr(u.vias.join(', ')))+' ('+escAttr(u.product)+')'
+      ).join('; ')+'</li>'
+    ).join('')+'</ul>';
+  }
+  return html;
+}
 function renderSettings(){
   const el=document.getElementById('panel-settings');
   const bigSize = JSON.stringify(DB).length >= 4000000;
   el.innerHTML=
     '<div class="callout '+(bigSize?'':'hidden')+'" id="size-warn">Your saved data (including attached files) is getting large. Browser local storage has limits (often 5–10MB) — if you hit them, saving may silently fail. Consider removing large attachments you no longer need, or exporting a backup regularly.</div>'+
+    '<div class="card"><div class="card-head"><h3>Data audit</h3></div><div class="card-body">'+renderDataAudit()+'</div></div>'+
     '<div class="card"><div class="card-head"><h3>Data management</h3></div><div class="card-body">'+
       '<p class="note"><b>Export data</b> — download a JSON backup of everything (items, BOM, links, suppliers, demand plan, purchase orders, attached files).</p>'+
       '<button class="btn" id="export-data">Export data (JSON)</button><br><br>'+
