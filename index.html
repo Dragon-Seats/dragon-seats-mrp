@@ -91,6 +91,12 @@ h1,h2,h3,.brand,.tab,.dash-section-title{font-family:'Space Grotesk',system-ui,s
 .card-head{padding:12px 16px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fff,#faf9f7);display:flex;align-items:center;justify-content:space-between}
 .card-head h3{margin:0;font-size:14.5px}
 .card-body{padding:14px 16px}
+.cost-card-title{display:flex;align-items:center;gap:8px;cursor:pointer}
+.cost-collapse-toggle{background:none;border:none;cursor:pointer;font-size:11px;color:var(--steel);padding:2px 4px;line-height:1;transition:transform .12s ease}
+.cost-collapse-toggle:hover{color:var(--graphite)}
+.cost-collapse-toggle.is-collapsed{transform:rotate(-90deg)}
+.cost-details.hidden{display:none}
+.cost-summary.collapsed-summary{margin-top:0;padding-top:0;border-top:none}
 .dash-section-title{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--graphite);border-left:3px solid var(--red);padding-left:8px;margin:22px 0 10px}
 
 /* ---- Dashboard v2 (scoped to #panel-dash — no effect on any other tab) ---- */
@@ -799,7 +805,7 @@ function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/
 
 /* ---------------- data model v2 ---------------- */
 function mkItem(id,name,uom,opts){
-  return Object.assign({id,name,uom,onHand:0,leadTimeDays:'',safetyStock:0,minOrderQty:1,isProduct:false,category:'part',locations:null,lines:[],links:[],docs:[],notes:'',laborCost:0,standardCost:0,packQty:'',packPrice:'',priceBreaks:[],assumedOrderQty:''}, opts||{});
+  return Object.assign({id,name,uom,onHand:0,leadTimeDays:'',safetyStock:0,minOrderQty:1,isProduct:false,category:'part',locations:null,lines:[],links:[],docs:[],notes:'',standardCost:0,packQty:'',packPrice:'',priceBreaks:[],assumedOrderQty:''}, opts||{});
 }
 const EQUIP_LOCATIONS=['CLE','JAX','KC','Patrick'];
 function locationsTotal(loc){ if(!loc) return 0; return EQUIP_LOCATIONS.reduce((s,k)=>s+(Number(loc[k])||0),0); }
@@ -2773,7 +2779,6 @@ function computeItemMaterialCost(item, qtyPerParent, parentName, breakdown, ance
 function computeProductCost(product){
   const breakdown=[];
   const materialCost=computeItemMaterialCost(product, 1, product.name, breakdown, []);
-  const laborCost=Number(product.laborCost)||0;
 
   const priced=breakdown.filter(r=>r.type!=='included').sort((a,b)=>b.lineCost-a.lineCost);
   const includedRows=breakdown.filter(r=>r.type==='included');
@@ -2789,14 +2794,14 @@ function computeProductCost(product){
   });
   includedRows.forEach(ir=>{ if(!placed.has(ir)) ordered.push(ir); });
 
-  return {materialCost, laborCost, totalCost:materialCost+laborCost, breakdown:ordered};
+  return {materialCost, breakdown:ordered};
 }
 function renderBomCosting(){
   const el=document.getElementById('panel-bom-costing');
   const products=DB.items.filter(i=>i.isProduct);
   el.innerHTML=
     '<div class="toolbar no-print"><button class="btn accent" id="add-cost-product">+ New product</button></div>'+
-    '<p class="note">Cost to build one unit, rolled all the way down through nested sub-assemblies. Each part\'s cost uses the most recent actual PO/Receipt price when there\'s purchase history; otherwise type a <b>Standard Cost</b> right in the table below (or on the Items tab) — since Links entries are mostly just ordering links and their cost field often isn\'t kept current. If a part is only ever bought in multi-packs (like balls &amp; rods coming 10-to-a-pack), click the 📦 next to its Standard Cost and enter the pack quantity &amp; total pack price instead. A sub-assembly like Wheel Set normally breaks down into its own components (Wheel, Axle, Bearing &amp; Bolt), but if you price the sub-assembly itself (a vendor that only quotes one price for the whole kit, like ordering all the Wheel Set pieces together), that bundle price is used for the whole assembly instead — its components still show up underneath, dimmed, as included in that price rather than needing their own cost. The Links tab quote is only used as a last-resort fallback. Use the Recipe list on each card below to add or remove that product\'s own components. Add Labor &amp; Overhead per product below to get a full landed cost for quoting.</p>'+
+    '<p class="note">Cost to build one unit, rolled all the way down through nested sub-assemblies. Each part\'s cost uses the most recent actual PO/Receipt price when there\'s purchase history; otherwise type a <b>Standard Cost</b> right in the table below (or on the Items tab) — since Links entries are mostly just ordering links and their cost field often isn\'t kept current. If a part is only ever bought in multi-packs (like balls &amp; rods coming 10-to-a-pack), click the 📦 next to its Standard Cost and enter the pack quantity &amp; total pack price instead. A sub-assembly like Wheel Set normally breaks down into its own components (Wheel, Axle, Bearing &amp; Bolt), but if you price the sub-assembly itself (a vendor that only quotes one price for the whole kit, like ordering all the Wheel Set pieces together), that bundle price is used for the whole assembly instead — its components still show up underneath, dimmed, as included in that price rather than needing their own cost. The Links tab quote is only used as a last-resort fallback. Use the Recipe list on each card below to add or remove that product\'s own components.</p>'+
     (products.length ? products.map(p=>renderProductCostCard(p)).join('') : '<p class="note">No products yet — add one above.</p>');
   document.getElementById('add-cost-product').addEventListener('click',()=>{
     DB.items.push(mkItem(uid(),'New Product','ea',{isProduct:true}));
@@ -2857,7 +2862,7 @@ function removeCellHtml(row){
   }).join('');
 }
 function renderProductCostCard(product){
-  const {materialCost, laborCost, totalCost, breakdown}=computeProductCost(product);
+  const {materialCost, breakdown}=computeProductCost(product);
   const missing=breakdown.filter(r=>r.type==='none');
   const rows = breakdown.length ? breakdown.map(r=>{
     if(r.type==='included'){
@@ -2883,19 +2888,24 @@ function renderProductCostCard(product){
       '<td class="num">'+removeCellHtml(r)+'</td>'+
     '</tr>';
   }).join('') : '<tr><td colspan="8" class="note">No components in this recipe yet — add some below.</td></tr>';
+  const expanded=product.costRollupExpanded===true;
   return '<div class="card cost-card" data-id="'+product.id+'">'+
-    '<div class="card-head"><h3>'+escAttr(product.name)+'</h3>'+
+    '<div class="card-head">'+
+      '<div class="cost-card-title">'+
+        '<button type="button" class="cost-collapse-toggle'+(expanded?'':' is-collapsed')+'" title="'+(expanded?'Collapse':'Expand')+'" aria-expanded="'+expanded+'">▾</button>'+
+        '<h3>'+escAttr(product.name)+'</h3>'+
+      '</div>'+
     '<div class="row-actions no-print"><button class="btn sm danger del-cost-product">Delete product</button></div></div>'+
     '<div class="card-body">'+
-      renderCostRecipeEditor(product)+
-      (missing.length ? '<p class="cost-warning">'+missing.length+' part'+(missing.length>1?'s':'')+' missing cost data ('+missing.map(r=>escAttr(r.item.name)).join(', ')+') — total below is understated until those get a Standard Cost (below or on the Items tab) or a purchase history.</p>' : '')+
-      '<table><colgroup><col style="width:15%"><col style="width:9%"><col style="width:11%"><col style="width:10%"><col style="width:8%"><col style="width:8%"><col style="width:25%"><col style="width:14%"></colgroup>'+
-      '<thead><tr><th>Component</th><th>Via</th><th class="num">Qty / unit</th><th class="num">Standard Cost</th><th class="num">Unit Cost</th><th class="num">Line Cost</th><th>Cost Source</th><th class="num">Remove</th></tr></thead>'+
-      '<tbody>'+rows+'</tbody></table>'+
-      '<div class="cost-summary">'+
-        '<div>Material cost / unit: <b>$'+materialCost.toFixed(2)+'</b></div>'+
-        '<div>Labor &amp; Overhead: <span class="money-field"><span class="money-prefix">$</span><input class="f-labor num money-input" type="number" step="0.01" min="0" value="'+laborCost.toFixed(2)+'"></span> per unit</div>'+
-        '<div>Total cost / unit: <b>$'+totalCost.toFixed(2)+'</b></div>'+
+      '<div class="cost-details'+(expanded?'':' hidden')+'">'+
+        renderCostRecipeEditor(product)+
+        (missing.length ? '<p class="cost-warning">'+missing.length+' part'+(missing.length>1?'s':'')+' missing cost data ('+missing.map(r=>escAttr(r.item.name)).join(', ')+') — total below is understated until those get a Standard Cost (below or on the Items tab) or a purchase history.</p>' : '')+
+        '<table><colgroup><col style="width:15%"><col style="width:9%"><col style="width:11%"><col style="width:10%"><col style="width:8%"><col style="width:8%"><col style="width:25%"><col style="width:14%"></colgroup>'+
+        '<thead><tr><th>Component</th><th>Via</th><th class="num">Qty / unit</th><th class="num">Standard Cost</th><th class="num">Unit Cost</th><th class="num">Line Cost</th><th>Cost Source</th><th class="num">Remove</th></tr></thead>'+
+        '<tbody>'+rows+'</tbody></table>'+
+      '</div>'+
+      '<div class="cost-summary'+(expanded?'':' collapsed-summary')+'">'+
+        '<div>Cost / unit: <b>$'+materialCost.toFixed(2)+'</b></div>'+
       '</div>'+
     '</div></div>';
 }
@@ -2903,9 +2913,9 @@ function wireBomCosting(){
   document.querySelectorAll('#panel-bom-costing .cost-card').forEach(card=>{
     const id=card.dataset.id; const product=itemById(id);
     if(!product) return;
-    const laborInput=card.querySelector('.f-labor');
-    if(laborInput) laborInput.addEventListener('change',e=>{
-      product.laborCost=Math.max(0, Number(e.target.value)||0);
+    const collapseTitle=card.querySelector('.cost-card-title');
+    if(collapseTitle) collapseTitle.addEventListener('click',()=>{
+      product.costRollupExpanded = !(product.costRollupExpanded===true);
       save(); renderBomCosting();
     });
     card.querySelectorAll('.cost-cell').forEach(cell=>{
