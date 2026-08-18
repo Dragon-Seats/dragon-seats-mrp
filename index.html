@@ -2684,45 +2684,48 @@ function resolvePartCost(item){
    price is used for the whole assembly and its components are NOT also costed separately — they
    still show up underneath, dimmed, as "included in the bundle above" for reference. If the
    assembly has no cost of its own, it falls back to decomposing into its components as before. */
-function computeItemMaterialCost(item, qtyPerParent, parentName, breakdown, ancestry){
+function computeItemMaterialCost(item, qtyPerParent, parentName, breakdown, ancestry, source){
   if(!item || ancestry.indexOf(item.id)!==-1) return 0;
   if(item.lines && item.lines.length){
     const bundle=resolvePartCost(item);
     if(bundle.type!=='none'){
       let row=breakdown.find(r=>r.item.id===item.id && r.isBundle);
-      if(!row){ row={item, qtyNeeded:0, unitCost:bundle.cost, lineCost:0, label:bundle.label, type:bundle.type, vias:new Set(), isBundle:true}; breakdown.push(row); }
+      if(!row){ row={item, qtyNeeded:0, unitCost:bundle.cost, lineCost:0, label:bundle.label, type:bundle.type, vias:new Set(), isBundle:true, sources:[]}; breakdown.push(row); }
       row.qtyNeeded+=qtyPerParent;
       row.unitCost=bundle.cost;
       row.label=bundle.label;
       row.type=bundle.type;
       row.lineCost=row.unitCost*row.qtyNeeded;
       row.vias.add(parentName);
-      item.lines.forEach(line=>{
+      if(source) row.sources.push(source);
+      item.lines.forEach((line,li)=>{
         const child=itemById(line.childId);
         if(!child) return;
         const childQty=qtyPerParent*Number(line.qtyPer||0);
         let crow=breakdown.find(r=>r.item.id===child.id && r.type==='included' && r.includedIn===item.name);
-        if(!crow){ crow={item:child, qtyNeeded:0, unitCost:0, lineCost:0, label:'Included in '+item.name+'\'s price above', type:'included', vias:new Set(), includedIn:item.name}; breakdown.push(crow); }
+        if(!crow){ crow={item:child, qtyNeeded:0, unitCost:0, lineCost:0, label:'Included in '+item.name+'\'s price above', type:'included', vias:new Set(), includedIn:item.name, sources:[]}; breakdown.push(crow); }
         crow.qtyNeeded+=childQty;
         crow.vias.add(item.name);
+        crow.sources.push({parentId:item.id, lineIndex:li});
       });
       return bundle.cost*qtyPerParent;
     }
     let total=0;
-    item.lines.forEach(line=>{
+    item.lines.forEach((line,li)=>{
       const child=itemById(line.childId);
       if(!child) return;
-      total += computeItemMaterialCost(child, qtyPerParent*Number(line.qtyPer||0), item.name, breakdown, ancestry.concat(item.id));
+      total += computeItemMaterialCost(child, qtyPerParent*Number(line.qtyPer||0), item.name, breakdown, ancestry.concat(item.id), {parentId:item.id, lineIndex:li});
     });
     return total;
   }
   const resolved=resolvePartCost(item);
   const lineCost=resolved.cost*qtyPerParent;
   let row=breakdown.find(r=>r.item.id===item.id && !r.isBundle && r.type!=='included');
-  if(!row){ row={item, qtyNeeded:0, unitCost:resolved.cost, lineCost:0, label:resolved.label, type:resolved.type, vias:new Set()}; breakdown.push(row); }
+  if(!row){ row={item, qtyNeeded:0, unitCost:resolved.cost, lineCost:0, label:resolved.label, type:resolved.type, vias:new Set(), sources:[]}; breakdown.push(row); }
   row.qtyNeeded+=qtyPerParent;
   row.lineCost+=lineCost;
   row.vias.add(parentName);
+  if(source) row.sources.push(source);
   return lineCost;
 }
 /* Sorts priced rows (bundles & plain leaf parts) by cost, then slots each bundle's dimmed
@@ -2779,6 +2782,17 @@ function renderCostRecipeEditor(product){
     '<button class="btn sm bom-add no-print">+ add component</button>'+
   '</div>';
 }
+function removeCellHtml(row){
+  if(!row.sources || !row.sources.length) return '<span class="note">—</span>';
+  if(row.sources.length===1){
+    const s=row.sources[0];
+    return '<button type="button" class="btn sm danger row-src-del" data-parent="'+s.parentId+'" data-line="'+s.lineIndex+'">Remove</button>';
+  }
+  return row.sources.map(s=>{
+    const parent=itemById(s.parentId);
+    return '<button type="button" class="btn sm danger row-src-del" data-parent="'+s.parentId+'" data-line="'+s.lineIndex+'" style="display:block;margin:2px 0">Remove ('+escAttr(parent?parent.name:'?')+')</button>';
+  }).join('');
+}
 function renderProductCostCard(product){
   const {materialCost, laborCost, totalCost, breakdown}=computeProductCost(product);
   const missing=breakdown.filter(r=>r.type==='none');
@@ -2792,6 +2806,7 @@ function renderProductCostCard(product){
         '<td class="num mono">—</td>'+
         '<td class="num mono">—</td>'+
         '<td class="note">'+escAttr(r.label)+'</td>'+
+        '<td class="num">'+removeCellHtml(r)+'</td>'+
       '</tr>';
     }
     return '<tr class="'+(r.type==='none'?'cost-missing':(r.isBundle?'cost-bundle':''))+'">'+
@@ -2802,16 +2817,17 @@ function renderProductCostCard(product){
       '<td class="num mono">'+(r.type==='none'?'—':'$'+r.unitCost.toFixed(2))+'</td>'+
       '<td class="num mono">'+(r.type==='none'?'—':'$'+r.lineCost.toFixed(2))+'</td>'+
       '<td class="note">'+(r.type==='none'?'No cost data yet':escAttr(r.label))+'</td>'+
+      '<td class="num">'+removeCellHtml(r)+'</td>'+
     '</tr>';
-  }).join('') : '<tr><td colspan="7" class="note">No components in this recipe yet — add some below.</td></tr>';
+  }).join('') : '<tr><td colspan="8" class="note">No components in this recipe yet — add some below.</td></tr>';
   return '<div class="card cost-card" data-id="'+product.id+'">'+
     '<div class="card-head"><h3>'+escAttr(product.name)+'</h3>'+
     '<div class="row-actions no-print"><button class="btn sm danger del-cost-product">Delete product</button></div></div>'+
     '<div class="card-body">'+
       renderCostRecipeEditor(product)+
       (missing.length ? '<p class="cost-warning">'+missing.length+' part'+(missing.length>1?'s':'')+' missing cost data ('+missing.map(r=>escAttr(r.item.name)).join(', ')+') — total below is understated until those get a Standard Cost (below or on the Items tab) or a purchase history.</p>' : '')+
-      '<table><colgroup><col style="width:18%"><col style="width:13%"><col style="width:9%"><col style="width:11%"><col style="width:10%"><col style="width:10%"><col style="width:29%"></colgroup>'+
-      '<thead><tr><th>Component</th><th>Via</th><th class="num">Qty / unit</th><th class="num">Standard Cost</th><th class="num">Unit Cost</th><th class="num">Line Cost</th><th>Cost Source</th></tr></thead>'+
+      '<table><colgroup><col style="width:15%"><col style="width:11%"><col style="width:8%"><col style="width:10%"><col style="width:8%"><col style="width:8%"><col style="width:26%"><col style="width:14%"></colgroup>'+
+      '<thead><tr><th>Component</th><th>Via</th><th class="num">Qty / unit</th><th class="num">Standard Cost</th><th class="num">Unit Cost</th><th class="num">Line Cost</th><th>Cost Source</th><th class="num">Remove</th></tr></thead>'+
       '<tbody>'+rows+'</tbody></table>'+
       '<div class="cost-summary">'+
         '<div>Material cost / unit: <b>$'+materialCost.toFixed(2)+'</b></div>'+
@@ -2855,6 +2871,19 @@ function wireBomCosting(){
       product.lines=product.lines||[];
       product.lines.push({childId:fallback.id, qtyPer:1});
       save(); renderBomCosting();
+    });
+    card.querySelectorAll('table .row-src-del').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const parentId=btn.dataset.parent;
+        const lineIndex=Number(btn.dataset.line);
+        const parent=itemById(parentId);
+        if(!parent || !Array.isArray(parent.lines) || !parent.lines[lineIndex]) return;
+        const child=itemById(parent.lines[lineIndex].childId);
+        confirmModal('Remove '+(child?child.name:'this component')+' from '+parent.name+'\'s recipe? This cannot be undone.', ()=>{
+          parent.lines.splice(lineIndex,1);
+          save(); renderBomCosting();
+        });
+      });
     });
   });
 }
@@ -3099,9 +3128,14 @@ function jumpToSupplierDoc(type, id){
 }
 
 /* ---------------- Demand Plan tab ---------------- */
+/* Anything you can plan a "build" for: real products AND sub-assemblies that have their own
+   recipe (like LH/RH Wheelbase Assembly) — planning demand for a sub-assembly directly is useful
+   when you build up spares/stock of it ahead of, or independent of, a specific bench build.
+   Raw parts with no recipe of their own (Wheel, Axle, Diffusers, etc.) aren't buildable, so they
+   stay off this list — those are tracked as plain inventory, netted from whatever explodes onto them. */
 function productSelect(selId){
-  const opts=DB.items.filter(i=>i.isProduct);
-  return '<select>'+opts.map(p=>'<option value="'+p.id+'" '+(p.id===selId?'selected':'')+'>'+escAttr(p.name)+'</option>').join('')+'</select>';
+  const opts=DB.items.filter(i=>i.isProduct || (i.lines && i.lines.length));
+  return '<select>'+opts.map(p=>'<option value="'+p.id+'" '+(p.id===selId?'selected':'')+'>'+escAttr(p.name)+(p.isProduct?'':' (sub-assembly)')+'</option>').join('')+'</select>';
 }
 function renderDemand(){
   const el=document.getElementById('panel-demand');
@@ -3502,14 +3536,26 @@ function findDuplicateItems(){
     .map(([id,uses])=>({item:itemById(id), uses}))
     .filter(x=>x.item);
 
-  return {nameDupes, mixedUsage};
+  // Sub-assemblies (items with their own recipe) that have NO price of their own — these get
+  // fully decomposed into individually-priced components instead of showing as one bundle line.
+  const unpricedAssemblies=DB.items
+    .filter(it=>!it.isProduct && Array.isArray(it.lines) && it.lines.length && resolvePartCost(it).type==='none')
+    .map(it=>({item:it, childCount:it.lines.length}));
+
+  return {nameDupes, mixedUsage, unpricedAssemblies};
 }
 function renderDataAudit(){
-  const {nameDupes, mixedUsage}=findDuplicateItems();
-  if(!nameDupes.length && !mixedUsage.length){
-    return '<p class="note">No duplicate names or mixed bundle/direct usage found across your items and products right now.</p>';
+  const {nameDupes, mixedUsage, unpricedAssemblies}=findDuplicateItems();
+  if(!nameDupes.length && !mixedUsage.length && !unpricedAssemblies.length){
+    return '<p class="note">No duplicate names, mixed bundle/direct usage, or un-grouped sub-assemblies found across your items and products right now.</p>';
   }
   let html='';
+  if(unpricedAssemblies.length){
+    html+='<p class="note" style="margin-bottom:6px"><b>Sub-assembly not grouped as a bundle</b> — these items have their own recipe (so they\'re a sub-assembly, not a raw part) but no price of their own set on <i>this exact item</i> (no Standard Cost, pack price, price breaks, PO/receipt history, or link cost). So instead of showing as one bundle-priced line, every component underneath needs its own price. If this should be one bundle price (like a vendor that quotes one price for the whole kit), open it on the Items tab and set a Standard Cost, pack price, or price breaks directly on it — click the 🏷️ next to its Standard Cost. If two entries with a similar name showed up above under "Same name, multiple entries," that\'s the most likely cause: the priced one and the one your bench actually uses are two different items.</p>';
+    html+='<ul style="margin:0 0 14px 18px;padding:0">'+unpricedAssemblies.map(x=>
+      '<li style="margin-bottom:4px">"'+escAttr(x.item.name)+'" ('+x.item.id+') — '+x.childCount+' component'+(x.childCount>1?'s':'')+' in its recipe, no price of its own</li>'
+    ).join('')+'</ul>';
+  }
   if(nameDupes.length){
     html+='<p class="note" style="margin-bottom:6px"><b>Same name, multiple entries</b> — these look like duplicates. Pick which one to keep, move any real data (on-hand, notes, links) onto it, then delete the rest from the Items tab.</p>';
     html+='<ul style="margin:0 0 14px 18px;padding:0">'+nameDupes.map(g=>
