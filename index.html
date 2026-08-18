@@ -42,6 +42,10 @@ h1,h2,h3,.brand,.tab,.dash-section-title{font-family:'Space Grotesk',system-ui,s
 .doc-subpanel.hidden{display:none}
 .cost-card{margin-bottom:16px}
 .cost-missing td{color:var(--red)}
+.cost-bundle td{background:#fbf9f5}
+.bundle-tag{font-size:9px;background:var(--steel-soft);color:var(--steel);padding:2px 6px;border-radius:8px;margin-left:6px;text-transform:uppercase;font-weight:700;letter-spacing:.03em;vertical-align:middle}
+.cost-included td{color:var(--steel);font-style:italic}
+.cost-included .cost-included-name{padding-left:24px}
 .cost-summary{display:flex;gap:24px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:13.5px}
 .cost-summary b{font-family:'JetBrains Mono',monospace}
 .cost-warning{color:var(--red);font-weight:600}
@@ -781,7 +785,7 @@ function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/
 
 /* ---------------- data model v2 ---------------- */
 function mkItem(id,name,uom,opts){
-  return Object.assign({id,name,uom,onHand:0,leadTimeDays:'',safetyStock:0,minOrderQty:1,isProduct:false,category:'part',locations:null,lines:[],links:[],docs:[],notes:'',laborCost:0,standardCost:0,packQty:'',packPrice:''}, opts||{});
+  return Object.assign({id,name,uom,onHand:0,leadTimeDays:'',safetyStock:0,minOrderQty:1,isProduct:false,category:'part',locations:null,lines:[],links:[],docs:[],notes:'',laborCost:0,standardCost:0,packQty:'',packPrice:'',priceBreaks:[],assumedOrderQty:''}, opts||{});
 }
 const EQUIP_LOCATIONS=['CLE','JAX','KC','Patrick'];
 function locationsTotal(loc){ if(!loc) return 0; return EQUIP_LOCATIONS.reduce((s,k)=>s+(Number(loc[k])||0),0); }
@@ -798,9 +802,15 @@ function sample(){
     mkItem('i-axle','Axle','ea',{onHand:60,leadTimeDays:0,safetyStock:15}),
     mkItem('i-bearing','Bearing','ea',{onHand:400,leadTimeDays:0,safetyStock:80}),
     mkItem('i-boltm','Mounting Bolt','ea',{onHand:900,leadTimeDays:0,safetyStock:150}),
-    mkItem('i-wheelset','Wheel Set','set',{onHand:18,leadTimeDays:0,safetyStock:5,
+    mkItem('i-wheelset','LH Wheelbase Assembly','set',{onHand:9,leadTimeDays:0,safetyStock:3,
       lines:[{childId:'i-wheel',qtyPer:2},{childId:'i-axle',qtyPer:1},{childId:'i-bearing',qtyPer:2},{childId:'i-boltm',qtyPer:4}],
+      priceBreaks:[{id:uid(),minQty:50,price:235},{id:uid(),minQty:100,price:225},{id:uid(),minQty:150,price:210},{id:uid(),minQty:250,price:185}],
+      notes:'Vendor sells LH and RH Wheelbase Assemblies as separate SKUs, ordered together in one bundled order (all pieces at once). On-hand/safety stock split between LH and RH is a placeholder — set to your real per-side counts.',
       links:[{id:uid(),supplierId:'s-mfg',cost:225,url:'',phone:'',contactType:'link',notes:'From Materials sheet, 6/24 count.'}]}),
+    mkItem('i-wheelset-rh','RH Wheelbase Assembly','set',{onHand:9,leadTimeDays:0,safetyStock:3,
+      lines:[{childId:'i-wheel',qtyPer:2},{childId:'i-axle',qtyPer:1},{childId:'i-bearing',qtyPer:2},{childId:'i-boltm',qtyPer:4}],
+      priceBreaks:[{id:uid(),minQty:50,price:235},{id:uid(),minQty:100,price:225},{id:uid(),minQty:150,price:210},{id:uid(),minQty:250,price:185}],
+      notes:'Vendor sells LH and RH Wheelbase Assemblies as separate SKUs, ordered together in one bundled order (all pieces at once). On-hand/safety stock split between LH and RH is a placeholder — set to your real per-side counts.'}),
     mkItem('i-hothat','Hot Hats','ea',{onHand:1300,leadTimeDays:0,safetyStock:100,
       links:[{id:uid(),supplierId:'s-mfg',cost:0,url:'',phone:'',contactType:'link',notes:'From Materials sheet, 6/24 count.'}]}),
     mkItem('i-handles','Handles','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
@@ -811,6 +821,42 @@ function sample(){
     mkItem('i-cap12','Cap 12"','ea',{onHand:26,leadTimeDays:0,safetyStock:10}),
     mkItem('i-cap6','Cap 6"','ea',{onHand:96,leadTimeDays:0,safetyStock:20}),
     mkItem('i-helmetbox','Helmet Boxes (Both Styles)','ea',{onHand:20,leadTimeDays:0,safetyStock:5}),
+    mkItem('i-manifold-mfg','MFG Manifold','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+      standardCost:603.36,
+      notes:'From MFG ROM Quote (Rev G, 2/10/2026). 2 required per MFG bench — this is the part the Hot Hats attach into; distinct from the Hot Hats item itself.',
+      links:[{id:uid(),supplierId:'s-mfg',cost:603.36,url:'',phone:'',contactType:'link',notes:'MFG ROM Quote Rev G.'}]}),
+    mkItem('i-footrest-mfg','MFG Footrest (w/ Carpet)','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+      standardCost:947.51,
+      notes:'From MFG ROM Quote (Rev G, 2/10/2026). MFG purchases/applies the carpet. 1 required per MFG bench. Same physical part as Hadlock\'s "Foot Deck" — different vendor, different name.',
+      links:[{id:uid(),supplierId:'s-mfg',cost:947.51,url:'',phone:'',contactType:'link',notes:'MFG ROM Quote Rev G.'}]}),
+    mkItem('i-benchframe-mfg-holes','MFG Bench Frame — With Holes','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+      standardCost:3465.16,
+      notes:'From MFG ROM Quote (Rev G, 2/10/2026): "12\' long bench w/ diffuser added." This is the molded bench shell only, with a drilled hole array on the seat surface — the standalone Diffusers item is still bought separately.',
+      links:[{id:uid(),supplierId:'s-mfg',cost:3465.16,url:'',phone:'',contactType:'link',notes:'MFG ROM Quote Rev G — bench with holes.'}]}),
+    mkItem('i-benchframe-mfg-noholes','MFG Bench Frame — No Holes','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+      standardCost:3136.84,
+      notes:'From MFG ROM Quote (Rev G, 2/10/2026). Same molded bench shell as the with-holes version, without the drilled hole array.',
+      links:[{id:uid(),supplierId:'s-mfg',cost:3136.84,url:'',phone:'',contactType:'link',notes:'MFG ROM Quote Rev G — bench without holes.'}]}),
+    mkItem('i-manifold-hadlock','Hadlock Manifold','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+      standardCost:661.88,
+      notes:'From Premix Hadlock pricing letter (8/29/2025). 2 required per Hadlock bench — the part the Hot Hats attach into; distinct from the Hot Hats item.',
+      links:[{id:uid(),supplierId:'s-zherco',cost:661.88,url:'',phone:'',contactType:'link',notes:'Premix Hadlock pricing letter, 8/29/2025.'}]}),
+    mkItem('i-footdeck-hadlock','Hadlock Foot Deck','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+      standardCost:791.16,
+      notes:'From Premix Hadlock pricing letter (8/29/2025). 1 required per Hadlock bench. Same physical part as MFG\'s "Footrest" — different vendor, different name.',
+      links:[{id:uid(),supplierId:'s-zherco',cost:791.16,url:'',phone:'',contactType:'link',notes:'Premix Hadlock pricing letter, 8/29/2025.'}]}),
+    mkItem('i-benchshell-hadlock','Hadlock Bench Shell','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+      standardCost:2149.93,
+      notes:'From Premix Hadlock pricing letter (8/29/2025), "Bench only" line. Bought as part of the bundled Hadlock Complete Bench Assembly below — this piece price is informational/reference only.',
+      links:[{id:uid(),supplierId:'s-zherco',cost:2149.93,url:'',phone:'',contactType:'link',notes:'Premix Hadlock pricing letter, 8/29/2025.'}]}),
+    mkItem('i-hadlock-assembly-holes','Hadlock Complete Bench Assembly — With Holes','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+      lines:[{childId:'i-benchshell-hadlock',qtyPer:1},{childId:'i-manifold-hadlock',qtyPer:2},{childId:'i-footdeck-hadlock',qtyPer:1}],
+      standardCost:4837.45,
+      notes:'From Premix Hadlock pricing letter (8/29/2025): "Complete Bench with 2 manifolds, 1 foot deck, with holes." Hadlock only quotes one price for the whole assembled kit, so it\'s priced as a bundle here — the Bench Shell / Manifold / Foot Deck below are shown for reference but don\'t need their own pricing.'}),
+    mkItem('i-hadlock-assembly-noholes','Hadlock Complete Bench Assembly — No Holes','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+      lines:[{childId:'i-benchshell-hadlock',qtyPer:1},{childId:'i-manifold-hadlock',qtyPer:2},{childId:'i-footdeck-hadlock',qtyPer:1}],
+      standardCost:4554.87,
+      notes:'From Premix Hadlock pricing letter (8/29/2025): "Complete Bench with 2 manifolds, 1 foot deck, no holes." Priced as a bundle, same reasoning as the with-holes version.'}),
     mkEquipment('eq-shaders','Shaders (Gen 1 & 2)','ea',{CLE:226,JAX:160,KC:42,Patrick:0},{
       safetyStock:59, notes:'From 2026 Inventory Projection workbook — currently have 428 (CLE 226 + JAX 160 + KC 42 + Patrick 0), need 487 to cover all conferences/NFL commitments, short by 59 (tracked via Safety Stock so MRP flags the gap). Covers Gen 1 & Gen 2 shaders. Spare components (legs, feet, poles, tops) tracked separately below. See Availability Calendar tab for team-by-team bookings.'}),
     mkEquipment('eq-shader-gen1-legs','Shader Legs — Gen 1','ea',{CLE:125,KC:21},{notes:'Spare component. 21 Gen 1 legs at KC (7 of those are Mizzou branded) — from 2026 Inventory Projection workbook.'}),
@@ -837,15 +883,29 @@ function sample(){
     mkEquipment('eq-nozzle-old','Nozzles — Old Style (CLE)','ea',{CLE:152},{notes:'From Nozzle Inventory (CLE) tab of the 2026 Inventory Projection workbook.'}),
     mkEquipment('eq-nozzle-new','Nozzles — New Style (CLE)','ea',{CLE:160},{notes:'From Nozzle Inventory (CLE) tab. Old + New = 312 total nozzles.'}),
     mkEquipment('eq-nozzle-ducted','Nozzles — With Ducts (CLE)','ea',{CLE:176},{notes:'Informational count from source workbook — this is an attribute of some old/new nozzles (which have ducts), not an additive separate stock. Total of all nozzles is 312 (old + new).'}),
-    mkItem('b-standard','Standard Bench','ea',{isProduct:true,lines:[
-      {childId:'i-diffuser',qtyPer:2},{childId:'i-wheelset',qtyPer:4},{childId:'i-hothat',qtyPer:1},
-      {childId:'i-handles',qtyPer:2},{childId:'i-flange12',qtyPer:3},{childId:'i-flange6',qtyPer:3},
+    mkItem('b-mfg-holes','MFG Bench — With Holes','ea',{isProduct:true,lines:[
+      {childId:'i-diffuser',qtyPer:2},{childId:'i-wheelset',qtyPer:1},{childId:'i-wheelset-rh',qtyPer:1},
+      {childId:'i-benchframe-mfg-holes',qtyPer:1},{childId:'i-manifold-mfg',qtyPer:2},{childId:'i-footrest-mfg',qtyPer:1},
+      {childId:'i-hothat',qtyPer:1},{childId:'i-handles',qtyPer:2},{childId:'i-flange12',qtyPer:3},{childId:'i-flange6',qtyPer:3},
       {childId:'i-cap12',qtyPer:3},{childId:'i-cap6',qtyPer:3},{childId:'i-helmetbox',qtyPer:1}
     ]}),
-    mkItem('b-heavy','Heavy-Duty Bench','ea',{isProduct:true,lines:[
-      {childId:'i-diffuser',qtyPer:3},{childId:'i-wheelset',qtyPer:6},{childId:'i-hothat',qtyPer:2},
-      {childId:'i-handles',qtyPer:2},{childId:'i-flange12',qtyPer:4},{childId:'i-flange6',qtyPer:4},
-      {childId:'i-cap12',qtyPer:4},{childId:'i-cap6',qtyPer:4},{childId:'i-helmetbox',qtyPer:1}
+    mkItem('b-mfg-noholes','MFG Bench — No Holes','ea',{isProduct:true,lines:[
+      {childId:'i-diffuser',qtyPer:2},{childId:'i-wheelset',qtyPer:1},{childId:'i-wheelset-rh',qtyPer:1},
+      {childId:'i-benchframe-mfg-noholes',qtyPer:1},{childId:'i-manifold-mfg',qtyPer:2},{childId:'i-footrest-mfg',qtyPer:1},
+      {childId:'i-hothat',qtyPer:1},{childId:'i-handles',qtyPer:2},{childId:'i-flange12',qtyPer:3},{childId:'i-flange6',qtyPer:3},
+      {childId:'i-cap12',qtyPer:3},{childId:'i-cap6',qtyPer:3},{childId:'i-helmetbox',qtyPer:1}
+    ]}),
+    mkItem('b-hadlock-holes','Hadlock Bench — With Holes','ea',{isProduct:true,lines:[
+      {childId:'i-diffuser',qtyPer:2},{childId:'i-wheelset',qtyPer:1},{childId:'i-wheelset-rh',qtyPer:1},
+      {childId:'i-hadlock-assembly-holes',qtyPer:1},
+      {childId:'i-hothat',qtyPer:1},{childId:'i-handles',qtyPer:2},{childId:'i-flange12',qtyPer:3},{childId:'i-flange6',qtyPer:3},
+      {childId:'i-cap12',qtyPer:3},{childId:'i-cap6',qtyPer:3},{childId:'i-helmetbox',qtyPer:1}
+    ]}),
+    mkItem('b-hadlock-noholes','Hadlock Bench — No Holes','ea',{isProduct:true,lines:[
+      {childId:'i-diffuser',qtyPer:2},{childId:'i-wheelset',qtyPer:1},{childId:'i-wheelset-rh',qtyPer:1},
+      {childId:'i-hadlock-assembly-noholes',qtyPer:1},
+      {childId:'i-hothat',qtyPer:1},{childId:'i-handles',qtyPer:2},{childId:'i-flange12',qtyPer:3},{childId:'i-flange6',qtyPer:3},
+      {childId:'i-cap12',qtyPer:3},{childId:'i-cap6',qtyPer:3},{childId:'i-helmetbox',qtyPer:1}
     ]}),
   ];
   const suppliers=[
@@ -853,12 +913,12 @@ function sample(){
     {id:'s-zherco', name:'Zherco/Hadlock', contact:'Jim Hayes', email:'jhayes@zehrco-giancola.com', phone:'440-990-0528', specialty:'New Builds / Refurbs', notes:''},
   ];
   const demandPlan=[
-    {id:uid(), productId:'b-standard', qty:12, needDate:addDays(t,21), label:'Sample build — edit me'},
-    {id:uid(), productId:'b-heavy', qty:6, needDate:addDays(t,35), label:'Sample build — edit me'},
+    {id:uid(), productId:'b-mfg-holes', qty:12, needDate:addDays(t,21), label:'Sample build — edit me'},
+    {id:uid(), productId:'b-hadlock-holes', qty:6, needDate:addDays(t,35), label:'Sample build — edit me'},
   ];
   const purchaseOrders=[
     {id:uid(), poNumber:'1468', supplierId:'s-mfg', orderDate:addDays(t,-90), expectedDate:addDays(t,-80), status:'Closed',
-     lines:[{id:uid(), itemId:'i-wheelset', qty:12, unitPrice:225}], docs:[], notes:'Sample historical order — edit or delete.'}
+     lines:[{id:uid(), itemId:'i-wheelset', qty:12, unitPrice:225}], docs:[], notes:'Sample historical order — edit or delete. Only tied to the LH Wheelbase Assembly; if this shipment actually included both LH and RH units, add a matching line for the RH side.'}
   ];
   const bookings=[
     {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Alabama (date TBD)', location:'', conference:'SEC', type:'Visiting'},
@@ -2293,12 +2353,36 @@ function fmtQty(n){
   const r=Math.round((Number(n)||0)*100)/100;
   return (r%1===0) ? String(r) : r.toFixed(2);
 }
+/* Resolves which price-break tier applies to an item, given the quantity you've told it you
+   typically order at once (assumedOrderQty). Picks the highest tier whose minQty is at or
+   below that assumed quantity — standard "buy more, pay less" volume pricing. Returns null if
+   no tiers are defined. */
+function resolveActiveTier(item){
+  const breaks=(item.priceBreaks||[])
+    .map(b=>({minQty:Number(b.minQty)||0, price:Number(b.price)||0}))
+    .filter(b=>b.price>0)
+    .sort((a,b)=>a.minQty-b.minQty);
+  if(!breaks.length) return null;
+  const assumedQty=Number(item.assumedOrderQty)||breaks[0].minQty||1;
+  let applicable=breaks[0];
+  breaks.forEach(b=>{ if(assumedQty>=b.minQty) applicable=b; });
+  return applicable;
+}
 /* Shared "Standard Cost" cell — used on both the Items tab and the Cost Rollup breakdown table,
-   so pack pricing works the same way and stays in sync no matter which one you edit from.
-   Plain mode: a normal $ input tied to item.standardCost, with a small pack button next to it.
-   Pack mode (once a pack quantity is set): shows the computed per-unit price as a button that
-   reopens the pack-pricing modal to adjust or clear it. */
+   so pricing works the same way and stays in sync no matter which one you edit from.
+   Plain mode: a normal $ input tied to item.standardCost, with a small button next to it for
+   pack or volume pricing. Once either is set, that button turns into a badge showing the
+   computed per-unit price (and which tier/pack it came from) that reopens the pricing modal. */
 function costCellHtml(item){
+  const tier=resolveActiveTier(item);
+  if(tier){
+    return '<div class="cost-cell" data-item="'+item.id+'">'+
+      '<button type="button" class="pack-badge pack-edit-btn" title="Priced by volume tier — click to edit">'+
+        '<span class="pack-unit-price">$'+tier.price.toFixed(3)+'</span>'+
+        '<span class="pack-tag">'+fmtQty(tier.minQty)+'+ units @ $'+tier.price.toFixed(2)+'</span>'+
+      '</button>'+
+    '</div>';
+  }
   const packQty=Number(item.packQty)||0;
   if(packQty>0){
     const per=Number(item.packPrice||0)/packQty;
@@ -2311,7 +2395,7 @@ function costCellHtml(item){
   }
   return '<div class="cost-cell" data-item="'+item.id+'">'+
     '<span class="money-field"><span class="money-prefix">$</span><input class="f-stdcost num money-input" type="number" step="0.01" min="0" value="'+(Number(item.standardCost)||0).toFixed(2)+'" placeholder="0.00"></span>'+
-    '<button type="button" class="pack-toggle-btn pack-edit-btn" title="Priced by the pack? Click to enter a pack quantity &amp; price">📦</button>'+
+    '<button type="button" class="pack-toggle-btn pack-edit-btn" title="Click for pack or volume pricing">🏷️</button>'+
   '</div>';
 }
 function wireCostCell(cell, rerenderFn){
@@ -2324,49 +2408,126 @@ function wireCostCell(cell, rerenderFn){
     item.standardCost=v; e.target.value=v.toFixed(2); save();
   });
   const editBtn=cell.querySelector('.pack-edit-btn');
-  if(editBtn) editBtn.addEventListener('click',()=>{ openPackPricingModal(item, rerenderFn); });
+  if(editBtn) editBtn.addEventListener('click',()=>{ openItemPricingModal(item, rerenderFn); });
 }
-function openPackPricingModal(item, onDone){
+/* Combined pricing modal: pack pricing (one multi-pack price divided out) and price breaks
+   (a table of quantity tiers, e.g. 50+ @ $235, 100+ @ $225 ...) plus the quantity you tell it
+   you typically order, so it knows which tier to use. Price breaks take priority over pack
+   pricing when both are set, since they're the more specific data. */
+function openItemPricingModal(item, onDone){
+  let breaks=(item.priceBreaks||[]).map(b=>({minQty:b.minQty, price:b.price}));
+  function tierRowsHtml(){
+    if(!breaks.length) return '<tr><td colspan="3" class="note">No price breaks yet — add one below.</td></tr>';
+    return breaks.map((b,i)=>
+      '<tr data-i="'+i+'">'+
+        '<td><input class="pb-minqty" type="number" min="0" step="1" value="'+(b.minQty===''||b.minQty==null?'':b.minQty)+'" placeholder="e.g. 50"></td>'+
+        '<td><span class="money-field"><span class="money-prefix">$</span><input class="pb-price money-input" type="number" min="0" step="0.01" value="'+(b.price===''||b.price==null?'':b.price)+'" placeholder="0.00"></span></td>'+
+        '<td><button type="button" class="btn sm subtle danger pb-del">Remove</button></td>'+
+      '</tr>'
+    ).join('');
+  }
   const body=
-    '<p class="note">If '+escAttr(item.name)+' is bought in multi-packs, enter how many come in a pack and the total price for the whole pack — the per-unit cost is calculated automatically and used everywhere else in the app (BOM Cost Rollup, etc). Clear the pack quantity to go back to a plain per-unit price.</p>'+
-    '<div class="pack-modal-grid">'+
-      '<label>Pack quantity<input id="pp-qty" type="number" min="0" step="1" value="'+escAttr(String(item.packQty||''))+'" placeholder="e.g. 10"></label>'+
-      '<label>Pack price<span class="money-field"><span class="money-prefix">$</span><input id="pp-price" class="money-input" type="number" min="0" step="0.01" value="'+escAttr(String(item.packPrice||''))+'" placeholder="e.g. 23.67"></span></label>'+
+    '<div class="pricing-section">'+
+      '<h4>Priced by pack?</h4>'+
+      '<p class="note">If '+escAttr(item.name)+' is bought in multi-packs, enter how many come in a pack and the total price for the whole pack.</p>'+
+      '<div class="pack-modal-grid">'+
+        '<label>Pack quantity<input id="pp-qty" type="number" min="0" step="1" value="'+escAttr(String(item.packQty||''))+'" placeholder="e.g. 10"></label>'+
+        '<label>Pack price<span class="money-field"><span class="money-prefix">$</span><input id="pp-price" class="money-input" type="number" min="0" step="0.01" value="'+escAttr(String(item.packPrice||''))+'" placeholder="e.g. 23.67"></span></label>'+
+      '</div>'+
+      '<p class="pack-result" id="pp-result"></p>'+
+      '<button type="button" class="btn sm" id="pp-clear">Clear pack pricing</button>'+
     '</div>'+
-    '<p class="pack-result" id="pp-result"></p>'+
-    '<div class="toolbar" style="justify-content:flex-end;margin-top:8px">'+
-      '<button class="btn" id="pp-clear">Clear pack pricing</button>'+
-      '<button class="btn accent" id="pp-save">Save</button>'+
-    '</div>';
-  openModal('Pack pricing — '+item.name, body);
+    '<div class="pricing-section">'+
+      '<h4>Price breaks by quantity</h4>'+
+      '<p class="note">If '+escAttr(item.name)+' gets cheaper the more you order at once, list each tier\'s minimum quantity and price per unit — the highest qualifying tier wins. Takes priority over pack pricing above when both are set.</p>'+
+      '<table class="pricebreak-table"><thead><tr><th>Qty at least</th><th>Price per unit</th><th></th></tr></thead><tbody id="pb-rows">'+tierRowsHtml()+'</tbody></table>'+
+      '<button type="button" class="btn sm" id="pb-add" style="margin-top:8px">+ Add price break</button>'+
+      '<div class="pack-modal-grid" style="margin-top:14px">'+
+        '<label>Assumed order quantity<input id="pb-assumed" type="number" min="0" step="1" value="'+escAttr(String(item.assumedOrderQty||''))+'" placeholder="e.g. 100"></label>'+
+      '</div>'+
+      '<p class="pack-result" id="pb-result"></p>'+
+      '<button type="button" class="btn sm" id="pb-clear">Clear price breaks</button>'+
+    '</div>'+
+    '<div class="toolbar" style="justify-content:flex-end;margin-top:16px"><button class="btn accent" id="pp-save">Save</button></div>';
+  openModal('Pricing — '+item.name, body);
+
   const qtyInput=document.getElementById('pp-qty');
   const priceInput=document.getElementById('pp-price');
-  const resultEl=document.getElementById('pp-result');
-  function updateResult(){
+  const packResultEl=document.getElementById('pp-result');
+  function updatePackResult(){
     const q=Number(qtyInput.value)||0, p=Number(priceInput.value)||0;
-    resultEl.textContent = q>0 ? ('= $'+(p/q).toFixed(4)+' per '+(item.uom||'unit')) : 'Enter a pack quantity to see the per-unit price.';
+    packResultEl.textContent = q>0 ? ('= $'+(p/q).toFixed(4)+' per '+(item.uom||'unit')) : 'Enter a pack quantity to see the per-unit price.';
   }
-  updateResult();
-  qtyInput.addEventListener('input', updateResult);
-  priceInput.addEventListener('input', updateResult);
+  updatePackResult();
+  qtyInput.addEventListener('input', updatePackResult);
+  priceInput.addEventListener('input', updatePackResult);
+  document.getElementById('pp-clear').addEventListener('click',()=>{ qtyInput.value=''; priceInput.value=''; updatePackResult(); });
+
+  const assumedInput=document.getElementById('pb-assumed');
+  const tierResultEl=document.getElementById('pb-result');
+  function readBreaksFromDom(){
+    breaks=[...document.querySelectorAll('#pb-rows tr[data-i]')].map(tr=>({
+      minQty:Number(tr.querySelector('.pb-minqty').value)||0,
+      price:Number(tr.querySelector('.pb-price').value)||0
+    }));
+  }
+  function wireTierRows(){
+    document.querySelectorAll('#pb-rows .pb-minqty, #pb-rows .pb-price').forEach(inp=>{
+      inp.addEventListener('input', updateTierResult);
+    });
+    document.querySelectorAll('#pb-rows .pb-del').forEach(btn=>{
+      btn.addEventListener('click',e=>{
+        const tr=e.target.closest('tr'); const i=Number(tr.dataset.i);
+        readBreaksFromDom();
+        breaks.splice(i,1);
+        renderTierRows(); updateTierResult();
+      });
+    });
+  }
+  function renderTierRows(){
+    document.getElementById('pb-rows').innerHTML=tierRowsHtml();
+    wireTierRows();
+  }
+  function updateTierResult(){
+    readBreaksFromDom();
+    const sorted=breaks.filter(b=>b.price>0).sort((a,b)=>a.minQty-b.minQty);
+    if(!sorted.length){ tierResultEl.textContent='Add at least one price break to see which tier applies.'; return; }
+    const assumedQty=Number(assumedInput.value)||sorted[0].minQty||1;
+    let applicable=sorted[0];
+    sorted.forEach(b=>{ if(assumedQty>=b.minQty) applicable=b; });
+    tierResultEl.textContent='= $'+applicable.price.toFixed(4)+' per '+(item.uom||'unit')+' (using the '+fmtQty(applicable.minQty)+'+ tier, assuming '+fmtQty(assumedQty)+' ordered)';
+  }
+  wireTierRows();
+  updateTierResult();
+  assumedInput.addEventListener('input', updateTierResult);
+  document.getElementById('pb-add').addEventListener('click',()=>{
+    readBreaksFromDom();
+    breaks.push({minQty:'', price:''});
+    renderTierRows(); updateTierResult();
+  });
+  document.getElementById('pb-clear').addEventListener('click',()=>{
+    breaks=[];
+    renderTierRows(); updateTierResult();
+  });
+
   document.getElementById('pp-save').addEventListener('click',()=>{
+    readBreaksFromDom();
     item.packQty=Number(qtyInput.value)||0;
     item.packPrice=Number(priceInput.value)||0;
-    save(); closeModal();
-    if(onDone) onDone();
-  });
-  document.getElementById('pp-clear').addEventListener('click',()=>{
-    item.packQty=''; item.packPrice='';
+    item.priceBreaks=breaks.filter(b=>b.price>0).map(b=>({id:uid(), minQty:b.minQty, price:b.price}));
+    item.assumedOrderQty=Number(assumedInput.value)||0;
     save(); closeModal();
     if(onDone) onDone();
   });
 }
 /* If an item is bought in multi-packs (e.g. balls & rods come 10-to-a-pack for one combined
    price), packQty/packPrice let you enter the pack as it's actually bought and get the true
-   per-unit cost automatically, instead of hand-dividing it yourself. Sourcing "10 pack, $23.67"
-   and letting the app compute $2.367/unit keeps the math auditable and self-correcting if the
-   pack price ever changes. Clearing the pack quantity reverts to the plain per-unit standardCost. */
+   per-unit cost automatically. Price breaks (a table of quantity tiers) take priority over pack
+   pricing when both are set, since a tier table is the more specific/complete pricing data.
+   Clearing both reverts to the plain per-unit standardCost. */
 function effectiveStandardCost(item){
+  const tier=resolveActiveTier(item);
+  if(tier) return tier.price;
   const packQty=Number(item.packQty)||0;
   if(packQty>0) return Number(item.packPrice||0)/packQty;
   return Number(item.standardCost)||0;
@@ -2374,9 +2535,9 @@ function effectiveStandardCost(item){
 /* Per-part cost, in priority order:
    1) the most recent actual PO/Receipt price (real purchase history — most trustworthy)
    2) the manually-entered Standard Cost on the item (Items tab, or inline on Cost Rollup) —
-      either a flat per-unit price, or a pack quantity/price divided out automatically —
-      since Links entries are mostly just ordering links/phone numbers and the cost field
-      there often isn't kept accurate
+      a price-break tier (if your assumed order quantity qualifies for one), a pack quantity/price
+      divided out automatically, or a flat per-unit price — since Links entries are mostly just
+      ordering links/phone numbers and the cost field there often isn't kept accurate
    3) the cheapest quote sitting on the item's Links tab, as a last-resort fallback */
 function resolvePartCost(item){
   const hist=priceHistoryFor(item.id).filter(r=>r.source==='PO'||r.source==='Receipt');
@@ -2394,10 +2555,14 @@ function resolvePartCost(item){
   }
   const std=effectiveStandardCost(item);
   if(std>0){
+    const tier=resolveActiveTier(item);
     const packQty=Number(item.packQty)||0;
-    const label = packQty>0
-      ? 'Standard cost (manual — '+fmtQty(packQty)+'-pack @ $'+Number(item.packPrice||0).toFixed(2)+')'
-      : 'Standard cost (manual)';
+    let label='Standard cost (manual)';
+    if(tier){
+      label='Standard cost (price break — '+fmtQty(tier.minQty)+'+ units @ $'+tier.price.toFixed(2)+', assuming '+fmtQty(Number(item.assumedOrderQty)||tier.minQty)+' ordered)';
+    } else if(packQty>0){
+      label='Standard cost (manual — '+fmtQty(packQty)+'-pack @ $'+Number(item.packPrice||0).toFixed(2)+')';
+    }
     return {cost:std, label, type:'Standard'};
   }
   const linkCosts=(item.links||[]).map(l=>Number(l.cost)||0).filter(c=>c>0);
@@ -2406,12 +2571,37 @@ function resolvePartCost(item){
   }
   return {cost:0, label:'No cost data', type:'none'};
 }
-/* Walks a product's BOM all the way down to individual parts. Sub-assemblies (like Wheel Set)
-   are never costed as a single "buy it built" line — only their own components are — since
-   Dragon Seats builds those in-house rather than sourcing them pre-built. */
+/* Walks a product's BOM all the way down to individual parts — EXCEPT where a sub-assembly
+   (like Wheel Set) is itself priced as a bundle. Some vendors don't sell the individual pieces
+   at all; they only quote one price for the whole kit as ordered. So: if a sub-assembly has its
+   own resolvable cost (Standard Cost / pack price / PO-Receipt history / Links), that bundle
+   price is used for the whole assembly and its components are NOT also costed separately — they
+   still show up underneath, dimmed, as "included in the bundle above" for reference. If the
+   assembly has no cost of its own, it falls back to decomposing into its components as before. */
 function computeItemMaterialCost(item, qtyPerParent, parentName, breakdown, ancestry){
   if(!item || ancestry.indexOf(item.id)!==-1) return 0;
   if(item.lines && item.lines.length){
+    const bundle=resolvePartCost(item);
+    if(bundle.type!=='none'){
+      let row=breakdown.find(r=>r.item.id===item.id && r.isBundle);
+      if(!row){ row={item, qtyNeeded:0, unitCost:bundle.cost, lineCost:0, label:bundle.label, type:bundle.type, vias:new Set(), isBundle:true}; breakdown.push(row); }
+      row.qtyNeeded+=qtyPerParent;
+      row.unitCost=bundle.cost;
+      row.label=bundle.label;
+      row.type=bundle.type;
+      row.lineCost=row.unitCost*row.qtyNeeded;
+      row.vias.add(parentName);
+      item.lines.forEach(line=>{
+        const child=itemById(line.childId);
+        if(!child) return;
+        const childQty=qtyPerParent*Number(line.qtyPer||0);
+        let crow=breakdown.find(r=>r.item.id===child.id && r.type==='included' && r.includedIn===item.name);
+        if(!crow){ crow={item:child, qtyNeeded:0, unitCost:0, lineCost:0, label:'Included in '+item.name+'\'s price above', type:'included', vias:new Set(), includedIn:item.name}; breakdown.push(crow); }
+        crow.qtyNeeded+=childQty;
+        crow.vias.add(item.name);
+      });
+      return bundle.cost*qtyPerParent;
+    }
     let total=0;
     item.lines.forEach(line=>{
       const child=itemById(line.childId);
@@ -2422,42 +2612,70 @@ function computeItemMaterialCost(item, qtyPerParent, parentName, breakdown, ance
   }
   const resolved=resolvePartCost(item);
   const lineCost=resolved.cost*qtyPerParent;
-  let row=breakdown.find(r=>r.item.id===item.id);
+  let row=breakdown.find(r=>r.item.id===item.id && !r.isBundle && r.type!=='included');
   if(!row){ row={item, qtyNeeded:0, unitCost:resolved.cost, lineCost:0, label:resolved.label, type:resolved.type, vias:new Set()}; breakdown.push(row); }
   row.qtyNeeded+=qtyPerParent;
   row.lineCost+=lineCost;
   row.vias.add(parentName);
   return lineCost;
 }
+/* Sorts priced rows (bundles & plain leaf parts) by cost, then slots each bundle's dimmed
+   "included" child rows in right after it, so the table still reads as one coherent tree
+   instead of scattering a bundle's components away from the bundle line that prices them. */
 function computeProductCost(product){
   const breakdown=[];
   const materialCost=computeItemMaterialCost(product, 1, product.name, breakdown, []);
-  breakdown.sort((a,b)=>b.lineCost-a.lineCost);
   const laborCost=Number(product.laborCost)||0;
-  return {materialCost, laborCost, totalCost:materialCost+laborCost, breakdown};
+
+  const priced=breakdown.filter(r=>r.type!=='included').sort((a,b)=>b.lineCost-a.lineCost);
+  const includedRows=breakdown.filter(r=>r.type==='included');
+  const placed=new Set();
+  const ordered=[];
+  priced.forEach(row=>{
+    ordered.push(row);
+    if(row.isBundle){
+      includedRows.forEach(ir=>{
+        if(!placed.has(ir) && ir.includedIn===row.item.name){ ordered.push(ir); placed.add(ir); }
+      });
+    }
+  });
+  includedRows.forEach(ir=>{ if(!placed.has(ir)) ordered.push(ir); });
+
+  return {materialCost, laborCost, totalCost:materialCost+laborCost, breakdown:ordered};
 }
 function renderBomCosting(){
   const el=document.getElementById('panel-bom-costing');
   const products=DB.items.filter(i=>i.isProduct);
   el.innerHTML=
-    '<p class="note">Cost to build one unit, rolled all the way down through nested sub-assemblies — Wheel Set is broken into Wheel, Axle, Bearing &amp; Bolt (not costed as a bought-complete unit) since those are built in-house, not purchased pre-built. Each part\'s cost uses the most recent actual PO/Receipt price when there\'s purchase history; otherwise type a <b>Standard Cost</b> right in the table below (or on the Items tab) — that\'s the recommended way to price a part manually, since Links entries are mostly just ordering links and their cost field often isn\'t kept current. If a part is only ever bought in multi-packs (like balls &amp; rods coming 10-to-a-pack), click the 📦 next to its Standard Cost and enter the pack quantity &amp; total pack price instead — the per-unit price is worked out for you automatically. The Links tab quote is only used as a last-resort fallback if neither of those exist. Add Labor &amp; Overhead per product below to get a full landed cost for quoting.</p>'+
+    '<p class="note">Cost to build one unit, rolled all the way down through nested sub-assemblies. Each part\'s cost uses the most recent actual PO/Receipt price when there\'s purchase history; otherwise type a <b>Standard Cost</b> right in the table below (or on the Items tab) — since Links entries are mostly just ordering links and their cost field often isn\'t kept current. If a part is only ever bought in multi-packs (like balls &amp; rods coming 10-to-a-pack), click the 📦 next to its Standard Cost and enter the pack quantity &amp; total pack price instead. A sub-assembly like Wheel Set normally breaks down into its own components (Wheel, Axle, Bearing &amp; Bolt), but if you price the sub-assembly itself (a vendor that only quotes one price for the whole kit, like ordering all the Wheel Set pieces together), that bundle price is used for the whole assembly instead — its components still show up underneath, dimmed, as included in that price rather than needing their own cost. The Links tab quote is only used as a last-resort fallback. Add Labor &amp; Overhead per product below to get a full landed cost for quoting.</p>'+
     (products.length ? products.map(p=>renderProductCostCard(p)).join('') : '<p class="note">No products yet — add one on the Recipes tab.</p>');
   wireBomCosting();
 }
 function renderProductCostCard(product){
   const {materialCost, laborCost, totalCost, breakdown}=computeProductCost(product);
   const missing=breakdown.filter(r=>r.type==='none');
-  const rows = breakdown.length ? breakdown.map(r=>
-    '<tr class="'+(r.type==='none'?'cost-missing':'')+'">'+
-      '<td>'+escAttr(r.item.name)+'</td>'+
+  const rows = breakdown.length ? breakdown.map(r=>{
+    if(r.type==='included'){
+      return '<tr class="cost-included">'+
+        '<td class="cost-included-name">'+escAttr(r.item.name)+'</td>'+
+        '<td class="note">'+escAttr(Array.from(r.vias).join(', '))+'</td>'+
+        '<td class="num mono">'+fmtQty(r.qtyNeeded)+' '+escAttr(r.item.uom||'')+'</td>'+
+        '<td class="num">—</td>'+
+        '<td class="num mono">—</td>'+
+        '<td class="num mono">—</td>'+
+        '<td class="note">'+escAttr(r.label)+'</td>'+
+      '</tr>';
+    }
+    return '<tr class="'+(r.type==='none'?'cost-missing':(r.isBundle?'cost-bundle':''))+'">'+
+      '<td>'+escAttr(r.item.name)+(r.isBundle?' <span class="bundle-tag">bundle price</span>':'')+'</td>'+
       '<td class="note">'+escAttr(Array.from(r.vias).join(', '))+'</td>'+
       '<td class="num mono">'+fmtQty(r.qtyNeeded)+' '+escAttr(r.item.uom||'')+'</td>'+
       '<td class="num">'+costCellHtml(r.item)+'</td>'+
       '<td class="num mono">'+(r.type==='none'?'—':'$'+r.unitCost.toFixed(2))+'</td>'+
       '<td class="num mono">'+(r.type==='none'?'—':'$'+r.lineCost.toFixed(2))+'</td>'+
       '<td class="note">'+(r.type==='none'?'No cost data yet':escAttr(r.label))+'</td>'+
-    '</tr>'
-  ).join('') : '<tr><td colspan="7" class="note">No components in this recipe yet — add some on the Recipes tab.</td></tr>';
+    '</tr>';
+  }).join('') : '<tr><td colspan="7" class="note">No components in this recipe yet — add some on the Recipes tab.</td></tr>';
   return '<div class="card cost-card" data-id="'+product.id+'">'+
     '<div class="card-head"><h3>'+escAttr(product.name)+'</h3></div>'+
     '<div class="card-body">'+
