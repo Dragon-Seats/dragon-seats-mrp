@@ -67,7 +67,10 @@ h1,h2,h3,.brand,.tab,.dash-section-title{font-family:'Space Grotesk',system-ui,s
 .tier-options{display:flex;flex-wrap:wrap;gap:3px}
 .tier-opt{font-size:9.5px;color:var(--steel);background:var(--steel-soft);border-radius:6px;padding:1px 5px;white-space:nowrap}
 .tier-opt.is-active{color:#fff;background:var(--red);font-weight:700}
-.qty-edit-wrap input.row-qty-edit{width:56px !important}
+.qty-edit-wrap{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap}
+.qty-edit-wrap input.row-qty-edit{width:52px !important;font-size:16px;font-weight:700;text-align:center;padding:5px 2px;border:1.5px solid var(--line);border-radius:6px;background:var(--steel-soft)}
+.qty-edit-wrap input.row-qty-edit:hover{border-color:var(--graphite)}
+.qty-edit-wrap input.row-qty-edit:focus{border-color:var(--red);background:#fff;outline:none;box-shadow:0 0 0 2px rgba(170,2,1,.14)}
 .pack-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
 .pack-modal-grid label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--steel);font-weight:600}
 .pack-modal-grid input{font-weight:400;color:var(--ink)}
@@ -174,7 +177,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
 .bom-lines{margin:4px 0}
 .bom-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .bom-row select{min-width:170px;width:auto}
-.bom-row input.bom-qtyper{width:70px !important}
+.bom-qty-wrap{display:inline-flex;flex-direction:column;align-items:center;gap:1px}
+.bom-qty-wrap .bom-qty-label{font-size:9.5px;color:var(--steel);text-transform:uppercase;letter-spacing:.05em;line-height:1}
+.bom-row input.bom-qtyper{width:56px !important;font-size:16px;font-weight:700;text-align:center;padding:5px 2px;border:1.5px solid var(--line);border-radius:6px;background:var(--steel-soft)}
+.bom-row input.bom-qtyper:hover{border-color:var(--graphite)}
+.bom-row input.bom-qtyper:focus{border-color:var(--red);background:#fff;outline:none;box-shadow:0 0 0 2px rgba(170,2,1,.14)}
 .bom-links{font-size:11.5px;color:var(--steel)}
 .bom-nest{margin-left:22px;border-left:2px dashed var(--line);padding-left:14px;margin-top:2px;margin-bottom:10px}
 .bom-add{margin:6px 0 14px}
@@ -817,7 +824,8 @@ function sample(){
     mkItem('i-wheelset-rh','RH Wheelbase Assembly','set',{onHand:9,leadTimeDays:0,safetyStock:3,
       lines:[{childId:'i-wheel',qtyPer:2},{childId:'i-axle',qtyPer:1},{childId:'i-bearing',qtyPer:2},{childId:'i-boltm',qtyPer:4}],
       priceBreaks:[{id:uid(),minQty:50,price:235},{id:uid(),minQty:100,price:225},{id:uid(),minQty:150,price:210},{id:uid(),minQty:250,price:185}],
-      notes:'Vendor sells LH and RH Wheelbase Assemblies as separate SKUs, ordered together in one bundled order (all pieces at once). On-hand/safety stock split between LH and RH is a placeholder — set to your real per-side counts.'}),
+      notes:'Vendor sells LH and RH Wheelbase Assemblies as separate SKUs, ordered together in one bundled order (all pieces at once). On-hand/safety stock split between LH and RH is a placeholder — set to your real per-side counts.',
+      links:[{id:uid(),supplierId:'s-mfg',cost:225,url:'',phone:'',contactType:'link',notes:'From Materials sheet, 6/24 count.'}]}),
     mkItem('i-hothat','Hot Hats','ea',{onHand:1300,leadTimeDays:0,safetyStock:100,
       links:[{id:uid(),supplierId:'s-mfg',cost:0,url:'',phone:'',contactType:'link',notes:'From Materials sheet, 6/24 count.'}]}),
     mkItem('i-handles','Handles','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
@@ -1072,6 +1080,7 @@ function migrateMfgHadlock(db){
         onHand:lh.onHand||0, leadTimeDays:lh.leadTimeDays||0, safetyStock:lh.safetyStock||0,
         lines:(lh.lines||[]).map(l=>Object.assign({},l)),
         priceBreaks:mkTiers(),
+        links:(lh.links||[]).map(l=>Object.assign({},l,{id:uid()})),
         notes:'Vendor sells LH and RH Wheelbase Assemblies as separate SKUs, ordered together in one bundled order. Added automatically to match your LH Wheelbase Assembly — double-check on-hand/safety stock for the RH side.'
       }));
       db.items.forEach(it=>{
@@ -1092,6 +1101,23 @@ function migrateMfgHadlock(db){
       rh.priceBreaks = (lh && Array.isArray(lh.priceBreaks) && lh.priceBreaks.length)
         ? lh.priceBreaks.map(t=>Object.assign({},t,{id:uid()}))
         : mkTiers();
+    }
+    // Same gap-fill for supplier links: LH and RH are bought together as one bundled order, so they
+    // should carry the same per-unit cost. Earlier versions of this migration created the RH item
+    // without copying LH's link at all (RH ends up with no supplier chip), and even where a matching
+    // supplier link was later added to RH by hand, it can sit with no $ cost typed in yet (RH's chip
+    // then shows the supplier name with no price, unlike LH's). Fill in whichever piece is missing —
+    // never touch a cost you've already entered on RH's own link.
+    if(rh && lh && Array.isArray(lh.links) && lh.links.length){
+      if(!Array.isArray(rh.links) || !rh.links.length){
+        rh.links = lh.links.map(l=>Object.assign({},l,{id:uid()}));
+      } else {
+        rh.links.forEach(rl=>{
+          if(Number(rl.cost)) return;
+          const match=lh.links.find(ll=>ll.supplierId===rl.supplierId && Number(ll.cost));
+          if(match) rl.cost=match.cost;
+        });
+      }
     }
   }
 
@@ -2421,7 +2447,7 @@ function renderBomLines(parent, ancestry){
     else if(cycle){ nested='<div class="bom-nest"><span class="note" style="color:var(--red)">circular reference — not expanding further</span></div>'; }
     return '<div class="bom-row" data-owner="'+parent.id+'" data-i="'+i+'">'+
       itemSelectForBomLine(line.childId, ancestry)+
-      '<input class="bom-qtyper num" type="number" value="'+line.qtyPer+'">'+
+      '<span class="bom-qty-wrap"><span class="bom-qty-label">Qty</span><input class="bom-qtyper num" type="number" min="0" step="any" value="'+line.qtyPer+'"></span>'+
       '<span class="bom-links">'+(child?linkChipsFor(child):'')+'</span>'+
       '<button class="btn sm danger bom-del">Remove</button>'+
     '</div>'+nested;
@@ -2784,7 +2810,7 @@ function renderCostRecipeEditor(product){
     const child=itemById(line.childId);
     return '<div class="bom-row" data-i="'+i+'">'+
       itemSelectForBomLine(line.childId, ancestry)+
-      '<input class="bom-qtyper num" type="number" value="'+line.qtyPer+'">'+
+      '<span class="bom-qty-wrap"><span class="bom-qty-label">Qty</span><input class="bom-qtyper num" type="number" min="0" step="any" value="'+line.qtyPer+'"></span>'+
       '<span class="bom-links">'+(child?linkChipsFor(child):'')+'</span>'+
       '<button class="btn sm danger bom-del">Remove</button>'+
     '</div>';
@@ -2863,7 +2889,7 @@ function renderProductCostCard(product){
     '<div class="card-body">'+
       renderCostRecipeEditor(product)+
       (missing.length ? '<p class="cost-warning">'+missing.length+' part'+(missing.length>1?'s':'')+' missing cost data ('+missing.map(r=>escAttr(r.item.name)).join(', ')+') — total below is understated until those get a Standard Cost (below or on the Items tab) or a purchase history.</p>' : '')+
-      '<table><colgroup><col style="width:15%"><col style="width:11%"><col style="width:8%"><col style="width:10%"><col style="width:8%"><col style="width:8%"><col style="width:26%"><col style="width:14%"></colgroup>'+
+      '<table><colgroup><col style="width:15%"><col style="width:9%"><col style="width:11%"><col style="width:10%"><col style="width:8%"><col style="width:8%"><col style="width:25%"><col style="width:14%"></colgroup>'+
       '<thead><tr><th>Component</th><th>Via</th><th class="num">Qty / unit</th><th class="num">Standard Cost</th><th class="num">Unit Cost</th><th class="num">Line Cost</th><th>Cost Source</th><th class="num">Remove</th></tr></thead>'+
       '<tbody>'+rows+'</tbody></table>'+
       '<div class="cost-summary">'+
