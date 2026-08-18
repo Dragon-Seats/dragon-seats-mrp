@@ -41,6 +41,8 @@ h1,h2,h3,.brand,.tab,.dash-section-title{font-family:'Space Grotesk',system-ui,s
 .subtab.active .count{color:var(--red)}
 .doc-subpanel.hidden{display:none}
 .cost-card{margin-bottom:16px}
+.cost-recipe-editor{margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.cost-recipe-head{margin-bottom:4px;font-size:13px}
 .cost-missing td{color:var(--red)}
 .cost-bundle td{background:#fbf9f5}
 .bundle-tag{font-size:9px;background:var(--steel-soft);color:var(--steel);padding:2px 6px;border-radius:8px;margin-left:6px;text-transform:uppercase;font-weight:700;letter-spacing:.03em;vertical-align:middle}
@@ -2732,9 +2734,31 @@ function renderBomCosting(){
   const el=document.getElementById('panel-bom-costing');
   const products=DB.items.filter(i=>i.isProduct);
   el.innerHTML=
-    '<p class="note">Cost to build one unit, rolled all the way down through nested sub-assemblies. Each part\'s cost uses the most recent actual PO/Receipt price when there\'s purchase history; otherwise type a <b>Standard Cost</b> right in the table below (or on the Items tab) — since Links entries are mostly just ordering links and their cost field often isn\'t kept current. If a part is only ever bought in multi-packs (like balls &amp; rods coming 10-to-a-pack), click the 📦 next to its Standard Cost and enter the pack quantity &amp; total pack price instead. A sub-assembly like Wheel Set normally breaks down into its own components (Wheel, Axle, Bearing &amp; Bolt), but if you price the sub-assembly itself (a vendor that only quotes one price for the whole kit, like ordering all the Wheel Set pieces together), that bundle price is used for the whole assembly instead — its components still show up underneath, dimmed, as included in that price rather than needing their own cost. The Links tab quote is only used as a last-resort fallback. Add Labor &amp; Overhead per product below to get a full landed cost for quoting.</p>'+
-    (products.length ? products.map(p=>renderProductCostCard(p)).join('') : '<p class="note">No products yet — add one on the Recipes tab.</p>');
+    '<div class="toolbar no-print"><button class="btn accent" id="add-cost-product">+ New product</button></div>'+
+    '<p class="note">Cost to build one unit, rolled all the way down through nested sub-assemblies. Each part\'s cost uses the most recent actual PO/Receipt price when there\'s purchase history; otherwise type a <b>Standard Cost</b> right in the table below (or on the Items tab) — since Links entries are mostly just ordering links and their cost field often isn\'t kept current. If a part is only ever bought in multi-packs (like balls &amp; rods coming 10-to-a-pack), click the 📦 next to its Standard Cost and enter the pack quantity &amp; total pack price instead. A sub-assembly like Wheel Set normally breaks down into its own components (Wheel, Axle, Bearing &amp; Bolt), but if you price the sub-assembly itself (a vendor that only quotes one price for the whole kit, like ordering all the Wheel Set pieces together), that bundle price is used for the whole assembly instead — its components still show up underneath, dimmed, as included in that price rather than needing their own cost. The Links tab quote is only used as a last-resort fallback. Use the Recipe list on each card below to add or remove that product\'s own components. Add Labor &amp; Overhead per product below to get a full landed cost for quoting.</p>'+
+    (products.length ? products.map(p=>renderProductCostCard(p)).join('') : '<p class="note">No products yet — add one above.</p>');
+  document.getElementById('add-cost-product').addEventListener('click',()=>{
+    DB.items.push(mkItem(uid(),'New Product','ea',{isProduct:true}));
+    save(); renderBomCosting(); renderCounts();
+  });
   wireBomCosting();
+}
+function renderCostRecipeEditor(product){
+  const ancestry=[product.id];
+  const rows=(product.lines||[]).map((line,i)=>{
+    const child=itemById(line.childId);
+    return '<div class="bom-row" data-i="'+i+'">'+
+      itemSelectForBomLine(line.childId, ancestry)+
+      '<input class="bom-qtyper num" type="number" value="'+line.qtyPer+'">'+
+      '<span class="bom-links">'+(child?linkChipsFor(child):'')+'</span>'+
+      '<button class="btn sm danger bom-del">Remove</button>'+
+    '</div>';
+  }).join('');
+  return '<div class="cost-recipe-editor">'+
+    '<div class="cost-recipe-head"><b>Recipe</b> <span class="note">— add or remove this product\'s own components. Nested sub-assembly parts (shown dimmed in the table below) are edited from their own item\'s recipe on the Recipes tab.</span></div>'+
+    '<div class="bom-lines">'+(rows || '<p class="note" style="margin:4px 0">No components yet — add one below.</p>')+'</div>'+
+    '<button class="btn sm bom-add no-print">+ add component</button>'+
+  '</div>';
 }
 function renderProductCostCard(product){
   const {materialCost, laborCost, totalCost, breakdown}=computeProductCost(product);
@@ -2760,10 +2784,12 @@ function renderProductCostCard(product){
       '<td class="num mono">'+(r.type==='none'?'—':'$'+r.lineCost.toFixed(2))+'</td>'+
       '<td class="note">'+(r.type==='none'?'No cost data yet':escAttr(r.label))+'</td>'+
     '</tr>';
-  }).join('') : '<tr><td colspan="7" class="note">No components in this recipe yet — add some on the Recipes tab.</td></tr>';
+  }).join('') : '<tr><td colspan="7" class="note">No components in this recipe yet — add some below.</td></tr>';
   return '<div class="card cost-card" data-id="'+product.id+'">'+
-    '<div class="card-head"><h3>'+escAttr(product.name)+'</h3></div>'+
+    '<div class="card-head"><h3>'+escAttr(product.name)+'</h3>'+
+    '<div class="row-actions no-print"><button class="btn sm danger del-cost-product">Delete product</button></div></div>'+
     '<div class="card-body">'+
+      renderCostRecipeEditor(product)+
       (missing.length ? '<p class="cost-warning">'+missing.length+' part'+(missing.length>1?'s':'')+' missing cost data ('+missing.map(r=>escAttr(r.item.name)).join(', ')+') — total below is understated until those get a Standard Cost (below or on the Items tab) or a purchase history.</p>' : '')+
       '<table><colgroup><col style="width:18%"><col style="width:13%"><col style="width:9%"><col style="width:11%"><col style="width:10%"><col style="width:10%"><col style="width:29%"></colgroup>'+
       '<thead><tr><th>Component</th><th>Via</th><th class="num">Qty / unit</th><th class="num">Standard Cost</th><th class="num">Unit Cost</th><th class="num">Line Cost</th><th>Cost Source</th></tr></thead>'+
@@ -2786,6 +2812,30 @@ function wireBomCosting(){
     });
     card.querySelectorAll('.cost-cell').forEach(cell=>{
       wireCostCell(cell, renderBomCosting);
+    });
+    const delBtn=card.querySelector('.del-cost-product');
+    if(delBtn) delBtn.addEventListener('click',()=>{
+      confirmModal('Delete '+product.name+'? This also removes it from the Demand Plan. This cannot be undone.', ()=>{
+        DB.items=DB.items.filter(x=>x.id!==id);
+        DB.demandPlan=DB.demandPlan.filter(d=>d.productId!==id);
+        save(); renderBomCosting(); renderCounts();
+      });
+    });
+    card.querySelectorAll('.cost-recipe-editor .bom-row').forEach(row=>{
+      const i=Number(row.dataset.i);
+      const sel=row.querySelector('select');
+      if(sel) sel.addEventListener('change',e=>{ product.lines[i].childId=e.target.value; save(); renderBomCosting(); });
+      const qtyInput=row.querySelector('.bom-qtyper');
+      if(qtyInput) qtyInput.addEventListener('change',e=>{ product.lines[i].qtyPer=Number(e.target.value)||0; save(); renderBomCosting(); });
+      const rowDelBtn=row.querySelector('.bom-del');
+      if(rowDelBtn) rowDelBtn.addEventListener('click',()=>{ product.lines.splice(i,1); save(); renderBomCosting(); });
+    });
+    const addBtn=card.querySelector('.cost-recipe-editor .bom-add');
+    if(addBtn) addBtn.addEventListener('click',()=>{
+      const fallback=DB.items.find(x=>x.id!==product.id) || product;
+      product.lines=product.lines||[];
+      product.lines.push({childId:fallback.id, qtyPer:1});
+      save(); renderBomCosting();
     });
   });
 }
