@@ -1039,6 +1039,87 @@ function migrateToV2(db){
   };
 }
 
+// One-time, idempotent, additive migration: brings existing saved DBs up to date with the
+// LH/RH Wheelbase Assembly split and the MFG / Hadlock bench products, WITHOUT touching or
+// deleting anything already saved (on-hand counts, notes, POs, old Standard/Heavy-Duty Bench, etc.).
+function migrateMfgHadlock(db){
+  if(!db || !Array.isArray(db.items)) return db;
+  const byId=id=>db.items.find(i=>i.id===id);
+
+  // Make sure the RH Wheelbase Assembly exists alongside the LH one, with matching price breaks,
+  // and fix any product recipe still using the old single-Wheel-Set line (qtyPer 4/6) into 1 LH + 1 RH.
+  if(!byId('i-wheelset-rh')){
+    const lh=byId('i-wheelset');
+    const mkTiers=()=>[{id:uid(),minQty:50,price:235},{id:uid(),minQty:100,price:225},{id:uid(),minQty:150,price:210},{id:uid(),minQty:250,price:185}];
+    if(lh){
+      if(!Array.isArray(lh.priceBreaks) || !lh.priceBreaks.length) lh.priceBreaks=mkTiers();
+      db.items.push(mkItem('i-wheelset-rh','RH Wheelbase Assembly','set',{
+        onHand:lh.onHand||0, leadTimeDays:lh.leadTimeDays||0, safetyStock:lh.safetyStock||0,
+        lines:(lh.lines||[]).map(l=>Object.assign({},l)),
+        priceBreaks:mkTiers(),
+        notes:'Vendor sells LH and RH Wheelbase Assemblies as separate SKUs, ordered together in one bundled order. Added automatically to match your LH Wheelbase Assembly — double-check on-hand/safety stock for the RH side.'
+      }));
+      db.items.forEach(it=>{
+        if(!Array.isArray(it.lines) || !it.lines.length) return;
+        const wsLine=it.lines.find(l=>l.childId==='i-wheelset');
+        const hasRh=it.lines.some(l=>l.childId==='i-wheelset-rh');
+        if(wsLine && !hasRh){ wsLine.qtyPer=1; it.lines.push({childId:'i-wheelset-rh',qtyPer:1}); }
+      });
+    }
+  }
+
+  // Add the new MFG / Hadlock vendor-specific component items if they aren't already there.
+  const newParts=[
+    ['i-manifold-mfg','MFG Manifold',{standardCost:603.36,notes:'From MFG ROM Quote (Rev G, 2/10/2026). 2 required per MFG bench — this is the part the Hot Hats attach into; distinct from the Hot Hats item itself.',links:[{id:uid(),supplierId:'s-mfg',cost:603.36,url:'',phone:'',contactType:'link',notes:'MFG ROM Quote Rev G.'}]}],
+    ['i-footrest-mfg','MFG Footrest (w/ Carpet)',{standardCost:947.51,notes:'From MFG ROM Quote (Rev G, 2/10/2026). MFG purchases/applies the carpet. 1 required per MFG bench. Same physical part as Hadlock\'s "Foot Deck" — different vendor, different name.',links:[{id:uid(),supplierId:'s-mfg',cost:947.51,url:'',phone:'',contactType:'link',notes:'MFG ROM Quote Rev G.'}]}],
+    ['i-benchframe-mfg-holes','MFG Bench Frame — With Holes',{standardCost:3465.16,notes:'From MFG ROM Quote (Rev G, 2/10/2026): "12\' long bench w/ diffuser added." Molded bench shell only, with a drilled hole array on the seat surface — the standalone Diffusers item is still bought separately.',links:[{id:uid(),supplierId:'s-mfg',cost:3465.16,url:'',phone:'',contactType:'link',notes:'MFG ROM Quote Rev G — bench with holes.'}]}],
+    ['i-benchframe-mfg-noholes','MFG Bench Frame — No Holes',{standardCost:3136.84,notes:'From MFG ROM Quote (Rev G, 2/10/2026). Same molded bench shell as the with-holes version, without the drilled hole array.',links:[{id:uid(),supplierId:'s-mfg',cost:3136.84,url:'',phone:'',contactType:'link',notes:'MFG ROM Quote Rev G — bench without holes.'}]}],
+    ['i-manifold-hadlock','Hadlock Manifold',{standardCost:661.88,notes:'From Premix Hadlock pricing letter (8/29/2025). 2 required per Hadlock bench — the part the Hot Hats attach into; distinct from the Hot Hats item.',links:[{id:uid(),supplierId:'s-zherco',cost:661.88,url:'',phone:'',contactType:'link',notes:'Premix Hadlock pricing letter, 8/29/2025.'}]}],
+    ['i-footdeck-hadlock','Hadlock Foot Deck',{standardCost:791.16,notes:'From Premix Hadlock pricing letter (8/29/2025). 1 required per Hadlock bench. Same physical part as MFG\'s "Footrest" — different vendor, different name.',links:[{id:uid(),supplierId:'s-zherco',cost:791.16,url:'',phone:'',contactType:'link',notes:'Premix Hadlock pricing letter, 8/29/2025.'}]}],
+    ['i-benchshell-hadlock','Hadlock Bench Shell',{standardCost:2149.93,notes:'From Premix Hadlock pricing letter (8/29/2025), "Bench only" line. Bought as part of the bundled Hadlock Complete Bench Assembly below — this piece price is informational/reference only.',links:[{id:uid(),supplierId:'s-zherco',cost:2149.93,url:'',phone:'',contactType:'link',notes:'Premix Hadlock pricing letter, 8/29/2025.'}]}]
+  ];
+  newParts.forEach(([id,name,opts])=>{ if(!byId(id)) db.items.push(mkItem(id,name,'ea',Object.assign({onHand:0,leadTimeDays:0,safetyStock:0},opts))); });
+
+  if(!byId('i-hadlock-assembly-holes')) db.items.push(mkItem('i-hadlock-assembly-holes','Hadlock Complete Bench Assembly — With Holes','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+    lines:[{childId:'i-benchshell-hadlock',qtyPer:1},{childId:'i-manifold-hadlock',qtyPer:2},{childId:'i-footdeck-hadlock',qtyPer:1}],
+    standardCost:4837.45,
+    notes:'From Premix Hadlock pricing letter (8/29/2025): "Complete Bench with 2 manifolds, 1 foot deck, with holes." Priced as a bundle — the Bench Shell / Manifold / Foot Deck are shown for reference but don\'t need their own pricing.'}));
+  if(!byId('i-hadlock-assembly-noholes')) db.items.push(mkItem('i-hadlock-assembly-noholes','Hadlock Complete Bench Assembly — No Holes','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+    lines:[{childId:'i-benchshell-hadlock',qtyPer:1},{childId:'i-manifold-hadlock',qtyPer:2},{childId:'i-footdeck-hadlock',qtyPer:1}],
+    standardCost:4554.87,
+    notes:'From Premix Hadlock pricing letter (8/29/2025): "Complete Bench with 2 manifolds, 1 foot deck, no holes." Priced as a bundle, same reasoning as the with-holes version.'}));
+
+  // Add the 4 new top-level bench products if missing. Old Standard Bench / Heavy-Duty Bench (if
+  // present) are left completely untouched — switch your Demand Plan to the new products and
+  // delete the old ones yourself whenever you're ready.
+  if(!byId('b-mfg-holes')) db.items.push(mkItem('b-mfg-holes','MFG Bench — With Holes','ea',{isProduct:true,lines:[
+    {childId:'i-diffuser',qtyPer:2},{childId:'i-wheelset',qtyPer:1},{childId:'i-wheelset-rh',qtyPer:1},
+    {childId:'i-benchframe-mfg-holes',qtyPer:1},{childId:'i-manifold-mfg',qtyPer:2},{childId:'i-footrest-mfg',qtyPer:1},
+    {childId:'i-hothat',qtyPer:1},{childId:'i-handles',qtyPer:2},{childId:'i-flange12',qtyPer:3},{childId:'i-flange6',qtyPer:3},
+    {childId:'i-cap12',qtyPer:3},{childId:'i-cap6',qtyPer:3},{childId:'i-helmetbox',qtyPer:1}
+  ]}));
+  if(!byId('b-mfg-noholes')) db.items.push(mkItem('b-mfg-noholes','MFG Bench — No Holes','ea',{isProduct:true,lines:[
+    {childId:'i-diffuser',qtyPer:2},{childId:'i-wheelset',qtyPer:1},{childId:'i-wheelset-rh',qtyPer:1},
+    {childId:'i-benchframe-mfg-noholes',qtyPer:1},{childId:'i-manifold-mfg',qtyPer:2},{childId:'i-footrest-mfg',qtyPer:1},
+    {childId:'i-hothat',qtyPer:1},{childId:'i-handles',qtyPer:2},{childId:'i-flange12',qtyPer:3},{childId:'i-flange6',qtyPer:3},
+    {childId:'i-cap12',qtyPer:3},{childId:'i-cap6',qtyPer:3},{childId:'i-helmetbox',qtyPer:1}
+  ]}));
+  if(!byId('b-hadlock-holes')) db.items.push(mkItem('b-hadlock-holes','Hadlock Bench — With Holes','ea',{isProduct:true,lines:[
+    {childId:'i-diffuser',qtyPer:2},{childId:'i-wheelset',qtyPer:1},{childId:'i-wheelset-rh',qtyPer:1},
+    {childId:'i-hadlock-assembly-holes',qtyPer:1},
+    {childId:'i-hothat',qtyPer:1},{childId:'i-handles',qtyPer:2},{childId:'i-flange12',qtyPer:3},{childId:'i-flange6',qtyPer:3},
+    {childId:'i-cap12',qtyPer:3},{childId:'i-cap6',qtyPer:3},{childId:'i-helmetbox',qtyPer:1}
+  ]}));
+  if(!byId('b-hadlock-noholes')) db.items.push(mkItem('b-hadlock-noholes','Hadlock Bench — No Holes','ea',{isProduct:true,lines:[
+    {childId:'i-diffuser',qtyPer:2},{childId:'i-wheelset',qtyPer:1},{childId:'i-wheelset-rh',qtyPer:1},
+    {childId:'i-hadlock-assembly-noholes',qtyPer:1},
+    {childId:'i-hothat',qtyPer:1},{childId:'i-handles',qtyPer:2},{childId:'i-flange12',qtyPer:3},{childId:'i-flange6',qtyPer:3},
+    {childId:'i-cap12',qtyPer:3},{childId:'i-cap6',qtyPer:3},{childId:'i-helmetbox',qtyPer:1}
+  ]}));
+
+  return db;
+}
+
 function ensureShape(){
   if(!Array.isArray(DB.items)) DB.items=[];
   if(!Array.isArray(DB.suppliers)) DB.suppliers=[];
@@ -1105,8 +1186,12 @@ function ensureShape(){
 async function load(){
   let raw=null;
   try{ raw=await storeGet(); }catch(e){}
-  if(raw){ try{ DB=migrateToV2(JSON.parse(raw)); }catch(e){ DB=sample(); } } else { DB=sample(); }
+  let migrated=false;
+  if(raw){
+    try{ DB=migrateMfgHadlock(migrateToV2(JSON.parse(raw))); migrated=true; }catch(e){ DB=sample(); }
+  } else { DB=sample(); }
   ensureShape();
+  if(migrated) await save(); // persist the one-time MFG/Hadlock migration so it doesn't need to re-run
 }
 async function save(){
   ensureShape();
