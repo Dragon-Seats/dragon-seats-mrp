@@ -67,6 +67,7 @@ h1,h2,h3,.brand,.tab,.dash-section-title{font-family:'Space Grotesk',system-ui,s
 .tier-options{display:flex;flex-wrap:wrap;gap:3px}
 .tier-opt{font-size:9.5px;color:var(--steel);background:var(--steel-soft);border-radius:6px;padding:1px 5px;white-space:nowrap}
 .tier-opt.is-active{color:#fff;background:var(--red);font-weight:700}
+.qty-edit-wrap input.row-qty-edit{width:56px !important}
 .pack-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
 .pack-modal-grid label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--steel);font-weight:600}
 .pack-modal-grid input{font-weight:400;color:var(--ink)}
@@ -1062,9 +1063,9 @@ function migrateMfgHadlock(db){
 
   // Make sure the RH Wheelbase Assembly exists alongside the LH one, with matching price breaks,
   // and fix any product recipe still using the old single-Wheel-Set line (qtyPer 4/6) into 1 LH + 1 RH.
+  const mkTiers=()=>[{id:uid(),minQty:50,price:235},{id:uid(),minQty:100,price:225},{id:uid(),minQty:150,price:210},{id:uid(),minQty:250,price:185}];
   if(!byId('i-wheelset-rh')){
     const lh=byId('i-wheelset');
-    const mkTiers=()=>[{id:uid(),minQty:50,price:235},{id:uid(),minQty:100,price:225},{id:uid(),minQty:150,price:210},{id:uid(),minQty:250,price:185}];
     if(lh){
       if(!Array.isArray(lh.priceBreaks) || !lh.priceBreaks.length) lh.priceBreaks=mkTiers();
       db.items.push(mkItem('i-wheelset-rh','RH Wheelbase Assembly','set',{
@@ -1079,6 +1080,18 @@ function migrateMfgHadlock(db){
         const hasRh=it.lines.some(l=>l.childId==='i-wheelset-rh');
         if(wsLine && !hasRh){ wsLine.qtyPer=1; it.lines.push({childId:'i-wheelset-rh',qtyPer:1}); }
       });
+    }
+  } else {
+    // RH already existed (created by an earlier version of this app, before price-break tiers were
+    // added here) — backfill the same 50/100/150/250 tiers from the pricing letter onto it if it's
+    // still sitting with no price breaks of its own. Only fills a gap; never overwrites tiers the
+    // user already entered for RH.
+    const rh=byId('i-wheelset-rh');
+    const lh=byId('i-wheelset');
+    if(rh && (!Array.isArray(rh.priceBreaks) || !rh.priceBreaks.length)){
+      rh.priceBreaks = (lh && Array.isArray(lh.priceBreaks) && lh.priceBreaks.length)
+        ? lh.priceBreaks.map(t=>Object.assign({},t,{id:uid()}))
+        : mkTiers();
     }
   }
 
@@ -2777,10 +2790,34 @@ function renderCostRecipeEditor(product){
     '</div>';
   }).join('');
   return '<div class="cost-recipe-editor">'+
-    '<div class="cost-recipe-head"><b>Recipe</b> <span class="note">— add or remove this product\'s own components. Nested sub-assembly parts (shown dimmed in the table below) are edited from their own item\'s recipe on the Recipes tab.</span></div>'+
+    '<div class="cost-recipe-head"><b>Recipe</b> <span class="note">— add or remove this product\'s own components. Nested/included sub-assembly parts (shown dimmed in the table below) can have their quantities edited right in the Qty / unit column of that table — no need to leave this page.</span></div>'+
     '<div class="bom-lines">'+(rows || '<p class="note" style="margin:4px 0">No components yet — add one below.</p>')+'</div>'+
     '<button class="btn sm bom-add no-print">+ add component</button>'+
   '</div>';
+}
+/* Renders the "Qty / unit" cell as an editable input wired straight to the underlying recipe
+   line(s) that produced this row (via row.sources — the same {parentId,lineIndex} tracking that
+   powers removeCellHtml below), so nested/included sub-assembly quantities (e.g. Wheel Stem,
+   Sliding Plate, Mounting Bar under a bundled LH/RH Wheelbase Assembly) can be adjusted right here
+   instead of only from the owning item's own Recipe editor. Falls back to plain read-only text for
+   rows with no traceable source line (e.g. a product with an empty recipe). */
+function qtyCellHtml(row){
+  const uom=escAttr(row.item.uom||'');
+  const editableSources=(row.sources||[]).map(s=>{
+    const parent=itemById(s.parentId);
+    const line=parent && Array.isArray(parent.lines) ? parent.lines[s.lineIndex] : null;
+    return line ? {s, parent, line} : null;
+  }).filter(Boolean);
+  if(!editableSources.length){
+    return '<span class="mono">'+fmtQty(row.qtyNeeded)+' '+uom+'</span>';
+  }
+  if(editableSources.length===1){
+    const {s,line}=editableSources[0];
+    return '<span class="qty-edit-wrap"><input type="number" step="any" min="0" class="num row-qty-edit" data-parent="'+s.parentId+'" data-line="'+s.lineIndex+'" value="'+line.qtyPer+'"> '+uom+'</span>';
+  }
+  return editableSources.map(({s,parent,line})=>
+    '<div class="qty-edit-wrap" style="margin:2px 0"><input type="number" step="any" min="0" class="num row-qty-edit" data-parent="'+s.parentId+'" data-line="'+s.lineIndex+'" value="'+line.qtyPer+'"> '+uom+' <span class="note">('+escAttr(parent?parent.name:'?')+')</span></div>'
+  ).join('');
 }
 function removeCellHtml(row){
   if(!row.sources || !row.sources.length) return '<span class="note">—</span>';
@@ -2801,7 +2838,7 @@ function renderProductCostCard(product){
       return '<tr class="cost-included">'+
         '<td class="cost-included-name">'+escAttr(r.item.name)+'</td>'+
         '<td class="note">'+escAttr(Array.from(r.vias).join(', '))+'</td>'+
-        '<td class="num mono">'+fmtQty(r.qtyNeeded)+' '+escAttr(r.item.uom||'')+'</td>'+
+        '<td class="num">'+qtyCellHtml(r)+'</td>'+
         '<td class="num">—</td>'+
         '<td class="num mono">—</td>'+
         '<td class="num mono">—</td>'+
@@ -2812,7 +2849,7 @@ function renderProductCostCard(product){
     return '<tr class="'+(r.type==='none'?'cost-missing':(r.isBundle?'cost-bundle':''))+'">'+
       '<td>'+escAttr(r.item.name)+(r.isBundle?' <span class="bundle-tag">bundle price</span>':'')+'</td>'+
       '<td class="note">'+escAttr(Array.from(r.vias).join(', '))+'</td>'+
-      '<td class="num mono">'+fmtQty(r.qtyNeeded)+' '+escAttr(r.item.uom||'')+'</td>'+
+      '<td class="num">'+qtyCellHtml(r)+'</td>'+
       '<td class="num">'+costCellHtml(r.item)+'</td>'+
       '<td class="num mono">'+(r.type==='none'?'—':'$'+r.unitCost.toFixed(2))+'</td>'+
       '<td class="num mono">'+(r.type==='none'?'—':'$'+r.lineCost.toFixed(2))+'</td>'+
@@ -2883,6 +2920,16 @@ function wireBomCosting(){
           parent.lines.splice(lineIndex,1);
           save(); renderBomCosting();
         });
+      });
+    });
+    card.querySelectorAll('table .row-qty-edit').forEach(inp=>{
+      inp.addEventListener('change',e=>{
+        const parentId=inp.dataset.parent;
+        const lineIndex=Number(inp.dataset.line);
+        const parent=itemById(parentId);
+        if(!parent || !Array.isArray(parent.lines) || !parent.lines[lineIndex]) return;
+        parent.lines[lineIndex].qtyPer=Math.max(0, Number(e.target.value)||0);
+        save(); renderBomCosting();
       });
     });
   });
@@ -3135,7 +3182,7 @@ function jumpToSupplierDoc(type, id){
    stay off this list — those are tracked as plain inventory, netted from whatever explodes onto them. */
 function productSelect(selId){
   const opts=DB.items.filter(i=>i.isProduct || (i.lines && i.lines.length));
-  return '<select>'+opts.map(p=>'<option value="'+p.id+'" '+(p.id===selId?'selected':'')+'>'+escAttr(p.name)+(p.isProduct?'':' (sub-assembly)')+'</option>').join('')+'</select>';
+  return '<select>'+opts.map(p=>'<option value="'+p.id+'" '+(p.id===selId?'selected':'')+'>'+escAttr(p.name)+'</option>').join('')+'</select>';
 }
 function renderDemand(){
   const el=document.getElementById('panel-demand');
