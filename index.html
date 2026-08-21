@@ -298,10 +298,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
           <button class="subtab" data-subtab="po">Purchase Orders <span class="count" id="cnt-po">0</span></button>
           <button class="subtab" data-subtab="quotes">Quotes <span class="count" id="cnt-quotes">0</span></button>
           <button class="subtab" data-subtab="receipts">Receipts <span class="count" id="cnt-receipts">0</span></button>
+          <button class="subtab" data-subtab="deliveries">Deliveries / Load-Outs <span class="count" id="cnt-deliveries">0</span></button>
         </div>
         <div class="doc-subpanel hidden" id="panel-po"></div>
         <div class="doc-subpanel hidden" id="panel-quotes"></div>
         <div class="doc-subpanel hidden" id="panel-receipts"></div>
+        <div class="doc-subpanel hidden" id="panel-deliveries"></div>
       </div>
       <div class="panel hidden" id="panel-feedback"></div>
       <div class="panel hidden" id="panel-settings"></div>
@@ -1034,7 +1036,7 @@ function sample(){
     {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'UCF — Brad has in separate count, 0 needed here (date TBD)', location:'', conference:'BIG12', type:''},
     {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Notre Dame — no allocation entered yet (date TBD)', location:'', conference:'IND.', type:''}
   ];
-  return {items, suppliers, demandPlan, purchaseOrders, quotes:[], receipts:[], bookings, lists:{poStatus:['Open','Partially Received','Closed'], quoteStatus:['Open','Expired','Converted to PO'], conferences:['SEC','BIG10','MW','NFL','ACC','BIG12','IND.']}, horizonDays:90};
+  return {items, suppliers, demandPlan, purchaseOrders, quotes:[], receipts:[], deliveries:[], bookings, lists:{poStatus:['Open','Partially Received','Closed'], quoteStatus:['Open','Expired','Converted to PO'], conferences:['SEC','BIG10','MW','NFL','ACC','BIG12','IND.']}, horizonDays:90};
 }
 
 let DB=null;
@@ -1055,7 +1057,7 @@ function migrateToV2(db){
   });
   return {
     items, suppliers:db.suppliers||[], demandPlan:db.demandPlan||[],
-    purchaseOrders:[], quotes:[], receipts:[], bookings:db.bookings||[], lists:{poStatus:['Open','Partially Received','Closed'], quoteStatus:['Open','Expired','Converted to PO']},
+    purchaseOrders:[], quotes:[], receipts:[], deliveries:[], bookings:db.bookings||[], lists:{poStatus:['Open','Partially Received','Closed'], quoteStatus:['Open','Expired','Converted to PO']},
     horizonDays:db.horizonDays||90
   };
 }
@@ -1186,6 +1188,7 @@ function ensureShape(){
   if(!Array.isArray(DB.purchaseOrders)) DB.purchaseOrders=[];
   if(!Array.isArray(DB.quotes)) DB.quotes=[];
   if(!Array.isArray(DB.receipts)) DB.receipts=[];
+  if(!Array.isArray(DB.deliveries)) DB.deliveries=[];
   if(!Array.isArray(DB.bookings)) DB.bookings=[];
   if(!DB.lists || typeof DB.lists!=='object') DB.lists={};
   if(!Array.isArray(DB.lists.poStatus) || !DB.lists.poStatus.length) DB.lists.poStatus=['Open','Partially Received','Closed'];
@@ -1229,6 +1232,18 @@ function ensureShape(){
     if(!r.receiptNumber) r.receiptNumber='';
     if(r.poId===undefined) r.poId='';
     if(!r.notes) r.notes='';
+    if(typeof r.orderLink!=='string') r.orderLink='';
+    if(typeof r.appliedToStock!=='boolean') r.appliedToStock=false;
+    if(r.appliedAt===undefined) r.appliedAt=null;
+  });
+  DB.deliveries.forEach(d=>{
+    if(!Array.isArray(d.lines)) d.lines=[];
+    if(!Array.isArray(d.docs)) d.docs=[];
+    if(typeof d.label!=='string') d.label='';
+    if(!d.deliveryDate) d.deliveryDate=todayISO();
+    if(typeof d.notes!=='string') d.notes='';
+    if(typeof d.appliedToStock!=='boolean') d.appliedToStock=false;
+    if(d.appliedAt===undefined) d.appliedAt=null;
   });
   DB.bookings.forEach(b=>{
     if(!b.id) b.id=uid();
@@ -1266,6 +1281,7 @@ function supplierById(id){ return DB.suppliers.find(s=>s.id===id); }
 function poById(id){ return DB.purchaseOrders.find(p=>p.id===id); }
 function quoteById(id){ return DB.quotes.find(q=>q.id===id); }
 function receiptById(id){ return DB.receipts.find(r=>r.id===id); }
+function deliveryById(id){ return DB.deliveries.find(d=>d.id===id); }
 function closedStatusName(){ return DB.lists.poStatus.includes('Closed') ? 'Closed' : DB.lists.poStatus[DB.lists.poStatus.length-1]; }
 
 /* ---------------- bookings / equipment availability ---------------- */
@@ -1436,27 +1452,34 @@ function addDocGuessFn(type){
 function openAddDocumentModal(){
   const bodyHtml=
     '<div class="po-meta">'+
-      '<div><label>Document type</label><select id="add-doc-type"><option value="po">Purchase Order</option><option value="quote">Quote</option><option value="receipt">Receipt</option></select></div>'+
+      '<div><label>Document type</label><select id="add-doc-type"><option value="receipt" selected>Receipt</option><option value="po">Purchase Order</option><option value="quote">Quote</option></select></div>'+
       '<div><label>Supplier</label><div id="add-doc-supplier-wrap">'+supplierSelectSimple((DB.suppliers[0]||{}).id||'')+'</div></div>'+
     '</div>'+
     '<div class="doc-subnav no-print" id="add-doc-source-toggle" style="margin:12px 0">'+
       '<button type="button" class="subtab active" data-source="file">Upload file</button>'+
       '<button type="button" class="subtab" data-source="paste">Paste text</button>'+
+      '<button type="button" class="subtab" data-source="link">Web order link</button>'+
     '</div>'+
     '<div id="add-doc-file-wrap" class="dropzone"><label>File</label><br><input type="file" id="add-doc-file" accept=".pdf,.docx,.txt,.csv"><div class="note" style="margin-top:6px">Drag &amp; drop a file here, or click to browse.</div></div>'+
     '<div id="add-doc-paste-wrap" class="hidden"><label>Paste the email or document text</label><br>'+
       '<textarea id="add-doc-paste" rows="8" style="width:100%;font:inherit;box-sizing:border-box" placeholder="Paste the body of the email here — we\'ll try to pull the doc number, date, supplier, and line items from it as you paste."></textarea>'+
+    '</div>'+
+    '<div id="add-doc-link-wrap" class="hidden"><label>Order link</label><br>'+
+      '<input type="text" id="add-doc-link" style="width:100%;font:inherit;box-sizing:border-box" placeholder="Paste the link to the order or order-confirmation page (e.g. an Amazon or Home Depot order)">'+
+      '<div class="note" style="margin-top:6px">No file needed — just the link. Add the item lines and supplier below once it\'s saved.</div>'+
     '</div>'+
     '<p class="note" id="add-doc-status">Choose a file, or switch to "Paste text" and paste an email in directly — either way we\'ll guess the document\'s fields and supplier from its contents, but you can change the type or supplier below before saving. Manual entry from each tab\'s "+ New blank" button still works even if nothing can be read automatically.</p>'+
     '<div class="toolbar" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="add-doc-cancel">Cancel</button><button class="btn accent" id="add-doc-save" disabled>Save</button></div>';
   openModal('Add Document', bodyHtml);
 
   let source='file';
-  let pendingName='', pendingText='', pendingDataUrl='';
+  let pendingName='', pendingText='', pendingDataUrl='', pendingLink='';
   const fileInput=document.getElementById('add-doc-file');
   const pasteInput=document.getElementById('add-doc-paste');
+  const linkInput=document.getElementById('add-doc-link');
   const fileWrap=document.getElementById('add-doc-file-wrap');
   const pasteWrap=document.getElementById('add-doc-paste-wrap');
+  const linkWrap=document.getElementById('add-doc-link-wrap');
   const typeSelect=document.getElementById('add-doc-type');
   const statusEl=document.getElementById('add-doc-status');
   const saveBtn=document.getElementById('add-doc-save');
@@ -1465,20 +1488,30 @@ function openAddDocumentModal(){
   enableFileDrop(fileWrap, fileInput);
 
   function resetPending(){
-    pendingName=''; pendingText=''; pendingDataUrl=''; saveBtn.disabled=true;
+    pendingName=''; pendingText=''; pendingDataUrl=''; pendingLink=''; saveBtn.disabled=true;
   }
   function setSource(s){
     source=s;
     sourceBtns.forEach(b=>b.classList.toggle('active', b.dataset.source===s));
     fileWrap.classList.toggle('hidden', s!=='file');
     pasteWrap.classList.toggle('hidden', s!=='paste');
+    linkWrap.classList.toggle('hidden', s!=='link');
     resetPending();
-    fileInput.value=''; pasteInput.value='';
+    fileInput.value=''; pasteInput.value=''; linkInput.value='';
     statusEl.textContent = s==='file'
       ? 'Choose a file — we\'ll guess the document\'s fields and supplier from its contents.'
-      : 'Paste the email text below — we\'ll guess the document\'s fields and supplier from it as you paste.';
+      : s==='paste'
+      ? 'Paste the email text below — we\'ll guess the document\'s fields and supplier from it as you paste.'
+      : 'Paste the order link, then pick the supplier and add item lines after saving.';
   }
   sourceBtns.forEach(b=>b.addEventListener('click',()=>setSource(b.dataset.source)));
+  linkInput.addEventListener('input', ()=>{
+    const v=linkInput.value.trim();
+    pendingLink=v;
+    pendingName = v ? ('Web order link — '+todayISO()) : '';
+    saveBtn.disabled = !v;
+    statusEl.textContent = v ? 'Link captured — pick the supplier and add item lines after saving.' : 'Paste the order link, then pick the supplier and add item lines after saving.';
+  });
 
   function refreshSupplierGuess(){
     if(!pendingText) return;
@@ -1518,22 +1551,24 @@ function openAddDocumentModal(){
     const supplierSel=supplierWrap.querySelector('.supplier-select');
     const guess=addDocGuessFn(type)(pendingText);
     const chosenSupplierId=(supplierSel?supplierSel.value:'')||guess.supplierId||(DB.suppliers[0]||{}).id||'';
-    const notes= pendingText? ('Auto-filled from '+pendingName+' — please verify every field.') : ('Could not read this file automatically — attached for reference; please enter details manually.');
+    const notes = source==='link'
+      ? 'Added from a web order link — please add item lines and verify the supplier.'
+      : (pendingText? ('Auto-filled from '+pendingName+' — please verify every field.') : ('Could not read this file automatically — attached for reference; please enter details manually.'));
     const docs=pendingDataUrl?[{id:uid(), name:pendingName, dataUrl:pendingDataUrl, uploadedAt:todayISO()}]:[];
     const lines=guess.lines.length?guess.lines.map(l=>({id:uid(), itemId:l.itemId, qty:l.qty, unitPrice:l.unitPrice})):[];
     if(type==='quote'){
       const q={
         id:uid(), quoteNumber:guess.quoteNumber||'', supplierId:chosenSupplierId,
         quoteDate:guess.quoteDate||todayISO(), validUntil:addDays(guess.quoteDate||todayISO(),30),
-        status:DB.lists.quoteStatus[0], lines:lines, docs:docs, notes:notes
+        status:DB.lists.quoteStatus[0], lines:lines, docs:docs, notes: source==='link'&&pendingLink? (notes+' Link: '+pendingLink) : notes
       };
       DB.quotes.unshift(q);
       save(); closeModal(); currentTab='quotes'; setTab('quotes'); renderCounts();
     } else if(type==='receipt'){
       const r={
         id:uid(), receiptNumber:guess.receiptNumber||'', supplierId:chosenSupplierId,
-        receiptDate:guess.receiptDate||todayISO(), poId:'',
-        lines:lines, docs:docs, notes:notes
+        receiptDate:guess.receiptDate||todayISO(), poId:'', orderLink:pendingLink||'',
+        lines:lines, docs:docs, notes:notes, appliedToStock:false, appliedAt:null
       };
       DB.receipts.unshift(r);
       save(); closeModal(); currentTab='receipts'; setTab('receipts'); renderCounts();
@@ -1541,7 +1576,7 @@ function openAddDocumentModal(){
       const po={
         id:uid(), poNumber:guess.poNumber||'', supplierId:chosenSupplierId,
         orderDate:guess.orderDate||todayISO(), expectedDate:addDays(guess.orderDate||todayISO(),14),
-        status:DB.lists.poStatus[0], lines:lines, docs:docs, notes:notes
+        status:DB.lists.poStatus[0], lines:lines, docs:docs, notes: source==='link'&&pendingLink? (notes+' Link: '+pendingLink) : notes
       };
       DB.purchaseOrders.unshift(po);
       save(); closeModal(); currentTab='po'; setTab('po'); renderCounts();
@@ -1749,7 +1784,8 @@ const TAB_LABELS={
 const DOC_SUBTAB_LABELS={
   po:'Purchase Orders — open/close orders, price history, file import',
   quotes:'Quotes — supplier quotes & estimates, pricing signal before you commit',
-  receipts:'Receipts — what was actually paid, most trustworthy price history'
+  receipts:'Receipts — what was actually paid, most trustworthy price history',
+  deliveries:'Deliveries / Load-Outs — what left the shop on a truck or trailer, so usage comes out of stock'
 };
 let docSubTab='po';
 /* Sub-tab labels for the BOM / Products page (recipes vs. rolled-up cost). */
@@ -1807,7 +1843,7 @@ function setTab(which){
      to a specific record from Suppliers, or after saving via Add Document). Route those
      into the merged docs page and select the right sub-tab. */
   let sub=null;
-  if(which==='po'||which==='quotes'||which==='receipts'){ sub=which; which='docs'; }
+  if(which==='po'||which==='quotes'||which==='receipts'||which==='deliveries'){ sub=which; which='docs'; }
   Object.keys(TAB_LABELS).forEach(t=>{
     document.getElementById('panel-'+t).classList.toggle('hidden', t!==which);
     const btn=document.querySelector('.tab[data-tab="'+t+'"]');
@@ -1825,7 +1861,7 @@ function setTab(which){
 function setDocSubTab(sub){
   docSubTab=sub;
   document.getElementById('pagesub').textContent=DOC_SUBTAB_LABELS[sub];
-  ['po','quotes','receipts'].forEach(t=>{
+  ['po','quotes','receipts','deliveries'].forEach(t=>{
     document.getElementById('panel-'+t).classList.toggle('hidden', t!==sub);
     const btn=document.querySelector('.subtab[data-subtab="'+t+'"]');
     if(btn) btn.classList.toggle('active', t===sub);
@@ -1856,10 +1892,13 @@ function renderCounts(){
   const closed=closedStatusName();
   const openPoCount=DB.purchaseOrders.filter(po=>po.status!==closed).length;
   const openQuoteCount=DB.quotes.filter(q=>q.status==='Open').length;
+  const pendingReceiptCount=DB.receipts.filter(r=>!r.appliedToStock).length;
+  const pendingDeliveryCount=DB.deliveries.filter(d=>!d.appliedToStock).length;
   document.getElementById('cnt-po').textContent=openPoCount;
   document.getElementById('cnt-quotes').textContent=openQuoteCount;
-  document.getElementById('cnt-receipts').textContent=DB.receipts.length;
-  document.getElementById('cnt-docs').textContent=openPoCount+openQuoteCount;
+  document.getElementById('cnt-receipts').textContent=pendingReceiptCount;
+  document.getElementById('cnt-deliveries').textContent=pendingDeliveryCount;
+  document.getElementById('cnt-docs').textContent=openPoCount+openQuoteCount+pendingReceiptCount+pendingDeliveryCount;
   document.getElementById('cnt-bookings').textContent=DB.bookings.length;
   document.getElementById('cnt-feedback').textContent=loadFeedbackList().filter(f=>!f.resolved).length;
 }
@@ -1876,6 +1915,7 @@ function renderTab(which){
   else if(which==='po') renderPO();
   else if(which==='quotes') renderQuotes();
   else if(which==='receipts') renderReceipts();
+  else if(which==='deliveries') renderDeliveries();
   else if(which==='feedback') renderFeedback();
   else if(which==='settings') renderSettings();
 }
@@ -1937,6 +1977,7 @@ function renderDash(){
   const openPOs=DB.purchaseOrders.filter(po=>po.status!==closed).length;
   const openQuotes=DB.quotes.filter(q=>q.status==='Open').length;
   const missingLinks=DB.items.filter(i=>!i.isProduct && (!i.links||!i.links.length)).length;
+  const pendingReceipts=DB.receipts.filter(r=>!r.appliedToStock).slice().sort((a,b)=>(b.receiptDate||'')<(a.receiptDate||'')?-1:1);
   const today=todayISO();
   const upcoming=DB.demandPlan.filter(d=>d.needDate>=today).slice().sort((a,b)=>a.needDate<b.needDate?-1:1).slice(0,5);
   const el=document.getElementById('panel-dash');
@@ -1946,14 +1987,24 @@ function renderDash(){
   el.innerHTML=
     '<div class="dash-hero"><div class="dash-greeting">'+greeting+', John</div><div class="dash-date">'+dateStr+'</div></div>'+
     '<div class="stat-grid">'+
+      statCard(pendingReceipts.length,'Receipts pending inventory update', pendingReceipts.length?'warn':'good')+
       statCard(late,'Parts past due to order', late?'warn':'good')+
       statCard(soon,'Order within 14 days', soon?'amber':'good')+
       statCard(openPOs,'Open purchase orders','')+
       statCard(openQuotes,'Open quotes','')+
-      statCard(DB.demandPlan.length,'Planned builds','')+
       statCard(missingLinks,'Items with no supplier link', missingLinks?'amber':'good')+
     '</div>'+
     (needsReview? '<div class="callout">Some items have no lead time set, so order-by dates default to their due date. Set a lead time on the <b>Items</b> tab (plain text is fine, e.g. "2 weeks" or "10 days") for accurate planning.</div>':'')+
+    (pendingReceipts.length? '<div class="dash-section-title">Receipts waiting to be added to inventory</div>'+
+      '<div class="card"><div class="card-body">'+
+      '<table><colgroup><col style="width:20%"><col style="width:22%"><col style="width:16%"><col style="width:12%"><col style="width:30%"></colgroup>'+
+      '<thead><tr><th>Receipt</th><th>Supplier</th><th>Date</th><th class="num">Lines</th><th></th></tr></thead>'+
+      '<tbody>'+pendingReceipts.slice(0,6).map(r=>
+        '<tr><td>'+escAttr(r.receiptNumber||'(no number)')+'</td><td>'+escAttr((supplierById(r.supplierId)||{}).name||'—')+'</td><td class="mono">'+fmtDate(r.receiptDate)+'</td><td class="num mono">'+(r.lines||[]).length+'</td>'+
+        '<td class="col-actions no-print"><button class="btn sm receipt-jump" data-id="'+r.id+'">Review &amp; add to stock</button></td></tr>').join('')+
+      '</tbody></table>'+
+      (pendingReceipts.length>6? '<p class="note">+'+(pendingReceipts.length-6)+' more on the Receipts tab.</p>':'')+
+      '</div></div>' : '')+
     '<div class="chart-row">'+poStatusChart()+plannedOrdersWeekChart(res)+'</div>'+
     '<div class="dash-section-title">Top priority — order these first</div>'+
     '<div class="card"><div class="card-body">'+
@@ -1973,6 +2024,11 @@ function renderDash(){
       CAL_ITEM_ID=btn.dataset.item;
       const d=new Date(); CAL_YEAR=d.getFullYear(); CAL_MONTH=d.getMonth();
       currentTab='calendar'; setTab('calendar'); renderCounts();
+    });
+  });
+  el.querySelectorAll('.receipt-jump').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      currentTab='receipts'; setTab('receipts'); renderCounts();
     });
   });
 }
@@ -3489,40 +3545,56 @@ function wireQuotes(){
 /* ---------------- Receipts tab ---------------- */
 function renderReceipts(){
   const el=document.getElementById('panel-receipts');
-  const filteredReceipts=filterBySupplier(DB.receipts, docSupplierFilter.receipts, r=>r.supplierId);
+  const filteredReceipts=filterBySupplier(DB.receipts, docSupplierFilter.receipts, r=>r.supplierId)
+    .slice().sort((a,b)=>{
+      if(a.appliedToStock!==b.appliedToStock) return a.appliedToStock?1:-1; // pending (not yet in stock) first
+      return (b.receiptDate||'')<(a.receiptDate||'')?-1:1;
+    });
+  const pendingCount=DB.receipts.filter(r=>!r.appliedToStock).length;
   el.innerHTML=
     '<div class="toolbar no-print">'+
       '<button class="btn accent" id="add-receipt">+ New blank receipt</button>'+
       '<button class="btn" id="export-pdf-receipts">Export PDF</button>'+
       filterDropdownHtml('filter-receipts', docSupplierFilter.receipts)+
     '</div>'+
-    '<p class="note">Receipts record what was actually paid — the most trustworthy real-cost source, since it can differ from the PO price due to shipping, tax, or partial-ship adjustments. Auto-fill from PDF/Word/text files is best-effort; always double-check before saving.</p>'+
+    '<p class="note">This is the intake point for everything the team buys — a physical receipt, a packing slip, or just a link to a web order — whether or not it was ever tied to a formal PO. Save it here, then use <b>Add to inventory</b> on each receipt once the items are actually in hand, so on-hand stock stays current. Auto-fill from PDF/Word/text files is best-effort; always double-check before saving.</p>'+
+    (pendingCount? '<div class="callout">'+pendingCount+' receipt'+(pendingCount===1?'':'s')+' not yet added to inventory — items may already be on the shelf but not reflected in stock counts until you click <b>Add to inventory</b> below.</div>' : '')+
     '<div id="receipt-list">'+(filteredReceipts.map(r=>renderReceiptCard(r)).join('') || '<p class="note">'+(DB.receipts.length?'No receipts match this filter.':'No receipts yet.')+'</p>')+'</div>';
   wireReceipts();
   wireFilterDropdown('filter-receipts','receipts',renderReceipts);
   document.getElementById('add-receipt').addEventListener('click',()=>{
-    DB.receipts.push({id:uid(), receiptNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', receiptDate:todayISO(), poId:'', lines:[], docs:[], notes:''});
+    DB.receipts.unshift({id:uid(), receiptNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', receiptDate:todayISO(), poId:'', orderLink:'', lines:[], docs:[], notes:'', appliedToStock:false, appliedAt:null});
     save(); renderReceipts(); renderCounts();
   });
   document.getElementById('export-pdf-receipts').addEventListener('click',()=>{
-    const head=['Receipt #','Supplier','Receipt Date','Linked PO','Total $'];
+    const head=['Receipt #','Supplier','Receipt Date','Linked PO','In Stock?','Total $'];
     const body=filteredReceipts.map(r=>{
       const total=(r.lines||[]).reduce((s,l)=>s+Number(l.qty||0)*Number(l.unitPrice||0),0);
-      return [r.receiptNumber||'', (supplierById(r.supplierId)||{}).name||'', fmtDate(r.receiptDate), (poById(r.poId)||{}).poNumber||'', '$'+total.toFixed(2)];
+      return [r.receiptNumber||'', (supplierById(r.supplierId)||{}).name||'', fmtDate(r.receiptDate), (poById(r.poId)||{}).poNumber||'', r.appliedToStock?'Yes':'Pending', '$'+total.toFixed(2)];
     });
     exportTablePDF('Dragon Seats - Receipts', head, body);
   });
 }
 function renderReceiptCard(r){
+  const applied=!!r.appliedToStock;
+  const linkHref=orderLinkHref(r.orderLink);
   return '<div class="card po-card" data-id="'+r.id+'">'+
-    '<div class="card-head"><h3>Receipt '+escAttr(r.receiptNumber||'(no number)')+'</h3>'+
-    '<div class="row-actions no-print"><button class="btn sm danger del-receipt">Delete receipt</button></div></div>'+
+    '<div class="card-head"><h3>Receipt '+escAttr(r.receiptNumber||'(no number)')+' <span class="status-badge '+(applied?'closed':'open')+'">'+(applied?'Added to inventory':'Pending — not in stock')+'</span></h3>'+
+    '<div class="row-actions no-print">'+
+      (applied
+        ? '<button class="btn sm undo-receipt">Undo — remove from stock</button>'
+        : '<button class="btn sm accent apply-receipt">Add to inventory</button>')+
+      '<button class="btn sm danger del-receipt">Delete receipt</button></div></div>'+
     '<div class="card-body">'+
+      (applied? '<p class="note">Added to on-hand stock on '+fmtDate(r.appliedAt)+'.</p>' : '')+
       '<div class="po-meta">'+
         '<div><label>Receipt #</label><input class="f-rnum" value="'+escAttr(r.receiptNumber||'')+'"></div>'+
         '<div><label>Supplier</label>'+supplierSelectSimple(r.supplierId)+'</div>'+
         '<div><label>Receipt date</label><input class="f-rdate" type="date" value="'+(r.receiptDate||'')+'"></div>'+
         '<div><label>Linked PO (optional)</label><select class="f-poid"><option value="">— none —</option>'+DB.purchaseOrders.map(po=>'<option value="'+po.id+'" '+(po.id===r.poId?'selected':'')+'>PO '+escAttr(po.poNumber||po.id)+'</option>').join('')+'</select></div>'+
+      '</div>'+
+      '<div><label class="note">Order link (optional)</label><br><input class="f-rlink" style="width:100%;box-sizing:border-box" placeholder="Link to the web order / order confirmation, if there is no file" value="'+escAttr(r.orderLink||'')+'">'+
+        (linkHref? ' <a href="'+escAttr(linkHref)+'" target="_blank" rel="noopener" class="btn sm" style="margin-top:6px;display:inline-block">Open link</a>' : '')+
       '</div>'+
       '<table><colgroup><col style="width:45%"><col style="width:18%"><col style="width:20%"><col style="width:17%"></colgroup>'+
       '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th></th></tr></thead>'+
@@ -3544,10 +3616,28 @@ function wireReceipts(){
     const id=card.dataset.id; const r=receiptById(id);
     card.querySelector('.f-rnum').addEventListener('change',e=>{r.receiptNumber=e.target.value; save(); renderReceipts();});
     card.querySelector('.supplier-select').addEventListener('change',e=>{r.supplierId=e.target.value; save();});
-    card.querySelector('.f-rdate').addEventListener('change',e=>{r.receiptDate=e.target.value; save();});
+    card.querySelector('.f-rdate').addEventListener('change',e=>{r.receiptDate=e.target.value; save(); renderReceipts();});
     card.querySelector('.f-poid').addEventListener('change',e=>{r.poId=e.target.value; save();});
+    card.querySelector('.f-rlink').addEventListener('change',e=>{r.orderLink=e.target.value.trim(); save(); renderReceipts();});
     card.querySelector('.f-ponotes').addEventListener('change',e=>{r.notes=e.target.value; save();});
     card.querySelector('.del-receipt').addEventListener('click',()=>{ confirmModal('Delete this receipt?', ()=>{ DB.receipts=DB.receipts.filter(x=>x.id!==id); save(); renderReceipts(); renderCounts(); }); });
+    const applyBtn=card.querySelector('.apply-receipt');
+    if(applyBtn) applyBtn.addEventListener('click',()=>{
+      const warn = r.poId ? ' This receipt is linked to a PO — if that PO was already received to stock, adding this too will double-count it.' : '';
+      confirmModal('Add all line-item quantities on this receipt to on-hand stock?'+warn, ()=>{
+        (r.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it) it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); });
+        r.appliedToStock=true; r.appliedAt=todayISO();
+        save(); renderReceipts(); renderCounts(); runMRP();
+      }, {okLabel:'Add to inventory'});
+    });
+    const undoBtn=card.querySelector('.undo-receipt');
+    if(undoBtn) undoBtn.addEventListener('click',()=>{
+      confirmModal('Remove this receipt\'s quantities back out of on-hand stock? Only do this if it was applied by mistake.', ()=>{
+        (r.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it) it.onHand=(Number(it.onHand)||0)-Number(l.qty||0); });
+        r.appliedToStock=false; r.appliedAt=null;
+        save(); renderReceipts(); renderCounts(); runMRP();
+      }, {okLabel:'Undo'});
+    });
     card.querySelector('.po-add-line').addEventListener('click',()=>{ r.lines=r.lines||[]; r.lines.push({id:uid(), itemId:(DB.items[0]||{}).id||'', qty:1, unitPrice:0}); save(); renderReceipts(); });
     card.querySelectorAll('.po-lines-tbody tr').forEach(tr=>{
       const i=Number(tr.dataset.i);
@@ -3563,6 +3653,108 @@ function wireReceipts(){
       const dataUrl=await readFileAsDataURL(f);
       r.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
       save(); renderReceipts();
+    });
+  });
+}
+
+/* ---------------- Deliveries / Load-Outs tab ----------------
+   What leaves the shop on a truck or trailer for a job and gets used up (extension cords,
+   nozzles, heater duct, AC duct, etc.) — separate from Cheqroom, which is the system of
+   record for equipment that gets checked out and comes back. This is a simple standalone
+   log for now (not tied to a specific booking/event yet); each line's qty comes straight
+   out of on-hand once you mark it "used". */
+function renderDeliveries(){
+  const el=document.getElementById('panel-deliveries');
+  const sorted=DB.deliveries.slice().sort((a,b)=>{
+    if(a.appliedToStock!==b.appliedToStock) return a.appliedToStock?1:-1; // pending (not yet removed from stock) first
+    return (b.deliveryDate||'')<(a.deliveryDate||'')?-1:1;
+  });
+  const pendingCount=DB.deliveries.filter(d=>!d.appliedToStock).length;
+  el.innerHTML=
+    '<div class="toolbar no-print">'+
+      '<button class="btn accent" id="add-delivery">+ New load-out</button>'+
+      '<button class="btn" id="export-pdf-deliveries">Export PDF</button>'+
+    '</div>'+
+    '<p class="note">Log what goes out on a truck or trailer for a job — extension cords, nozzles, heater duct, AC duct, anything that gets used up rather than checked back in through Cheqroom. Once the truck is loaded (or back), click <b>Mark as used</b> on each load-out so on-hand stock reflects what was actually consumed.</p>'+
+    (pendingCount? '<div class="callout">'+pendingCount+' load-out'+(pendingCount===1?'':'s')+' not yet marked as used — stock still shows these items as on-hand even though they may already be loaded or gone.</div>' : '')+
+    '<div id="delivery-list">'+(sorted.map(d=>renderDeliveryCard(d)).join('') || '<p class="note">No load-outs logged yet.</p>')+'</div>';
+  wireDeliveries();
+  document.getElementById('add-delivery').addEventListener('click',()=>{
+    DB.deliveries.unshift({id:uid(), label:'', deliveryDate:todayISO(), lines:[], docs:[], notes:'', appliedToStock:false, appliedAt:null});
+    save(); renderDeliveries(); renderCounts();
+  });
+  document.getElementById('export-pdf-deliveries').addEventListener('click',()=>{
+    const head=['Load-out','Date','Lines','Used?'];
+    const body=sorted.map(d=>[d.label||'(no label)', fmtDate(d.deliveryDate), String((d.lines||[]).length), d.appliedToStock?'Yes':'Pending']);
+    exportTablePDF('Dragon Seats - Deliveries', head, body);
+  });
+}
+function renderDeliveryCard(d){
+  const applied=!!d.appliedToStock;
+  return '<div class="card po-card" data-id="'+d.id+'">'+
+    '<div class="card-head"><h3>'+escAttr(d.label||'Load-out — '+fmtDate(d.deliveryDate))+' <span class="status-badge '+(applied?'closed':'open')+'">'+(applied?'Used — removed from stock':'Pending — still in stock')+'</span></h3>'+
+    '<div class="row-actions no-print">'+
+      (applied
+        ? '<button class="btn sm undo-delivery">Undo — restore to stock</button>'
+        : '<button class="btn sm accent apply-delivery">Mark as used → remove from stock</button>')+
+      '<button class="btn sm danger del-delivery">Delete load-out</button></div></div>'+
+    '<div class="card-body">'+
+      (applied? '<p class="note">Removed from on-hand stock on '+fmtDate(d.appliedAt)+'.</p>' : '')+
+      '<div class="po-meta">'+
+        '<div><label>Label / destination</label><input class="f-dlabel" placeholder="e.g. Truck — Auburn game 9/5" value="'+escAttr(d.label||'')+'"></div>'+
+        '<div><label>Date</label><input class="f-ddate" type="date" value="'+(d.deliveryDate||'')+'"></div>'+
+      '</div>'+
+      '<table><colgroup><col style="width:60%"><col style="width:25%"><col style="width:15%"></colgroup>'+
+      '<thead><tr><th>Item</th><th class="num">Qty used</th><th></th></tr></thead>'+
+      '<tbody class="delivery-lines-tbody">'+((d.lines||[]).map((l,i)=>
+        '<tr data-i="'+i+'">'+
+          '<td>'+itemSelectSimple(l.itemId)+'</td>'+
+          '<td class="num"><input class="f-qty num" type="number" value="'+l.qty+'"></td>'+
+          '<td class="col-actions no-print"><button class="btn sm danger po-del-line">Remove</button></td>'+
+        '</tr>').join('') || '<tr><td colspan="3" class="note">No items yet.</td></tr>')+'</tbody></table>'+
+      '<button class="btn sm delivery-add-line no-print">+ Add item</button>'+
+      '<div><label class="note">Files</label><br>'+docChips(d.docs)+'<label class="btn sm file-btn no-print">+ file<input type="file" class="delivery-file"></label></div>'+
+      '<div><label class="note">Notes</label><br><input class="f-dnotes" style="width:100%" value="'+escAttr(d.notes||'')+'"></div>'+
+    '</div></div>';
+}
+function wireDeliveries(){
+  const list=document.getElementById('delivery-list');
+  list.querySelectorAll('.po-card').forEach(card=>{
+    const id=card.dataset.id; const d=deliveryById(id);
+    card.querySelector('.f-dlabel').addEventListener('change',e=>{d.label=e.target.value; save(); renderDeliveries();});
+    card.querySelector('.f-ddate').addEventListener('change',e=>{d.deliveryDate=e.target.value; save(); renderDeliveries();});
+    card.querySelector('.f-dnotes').addEventListener('change',e=>{d.notes=e.target.value; save();});
+    card.querySelector('.del-delivery').addEventListener('click',()=>{ confirmModal('Delete this load-out?', ()=>{ DB.deliveries=DB.deliveries.filter(x=>x.id!==id); save(); renderDeliveries(); renderCounts(); }); });
+    const applyBtn=card.querySelector('.apply-delivery');
+    if(applyBtn) applyBtn.addEventListener('click',()=>{
+      confirmModal('Remove all item quantities on this load-out from on-hand stock? Only do this once the truck has actually gone out with these items.', ()=>{
+        (d.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it) it.onHand=(Number(it.onHand)||0)-Number(l.qty||0); });
+        d.appliedToStock=true; d.appliedAt=todayISO();
+        save(); renderDeliveries(); renderCounts(); runMRP();
+      }, {okLabel:'Mark as used'});
+    });
+    const undoBtn=card.querySelector('.undo-delivery');
+    if(undoBtn) undoBtn.addEventListener('click',()=>{
+      confirmModal('Add this load-out\'s quantities back into on-hand stock? Only do this if it was marked used by mistake.', ()=>{
+        (d.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it) it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); });
+        d.appliedToStock=false; d.appliedAt=null;
+        save(); renderDeliveries(); renderCounts(); runMRP();
+      }, {okLabel:'Undo'});
+    });
+    card.querySelector('.delivery-add-line').addEventListener('click',()=>{ d.lines=d.lines||[]; d.lines.push({id:uid(), itemId:(DB.items[0]||{}).id||'', qty:1}); save(); renderDeliveries(); });
+    card.querySelectorAll('.delivery-lines-tbody tr').forEach(tr=>{
+      const i=Number(tr.dataset.i);
+      const isel=tr.querySelector('.item-select');
+      if(isel) isel.addEventListener('change',e=>{ d.lines[i].itemId=e.target.value; save(); });
+      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ d.lines[i].qty=Number(e.target.value)||0; save(); });
+      const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ d.lines.splice(i,1); save(); renderDeliveries(); });
+    });
+    enableFileDrop(card.querySelector('.file-btn'), card.querySelector('.delivery-file'));
+    card.querySelector('.delivery-file').addEventListener('change', async e=>{
+      const f=e.target.files[0]; if(!f) return;
+      const dataUrl=await readFileAsDataURL(f);
+      d.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
+      save(); renderDeliveries();
     });
   });
 }
