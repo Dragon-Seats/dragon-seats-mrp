@@ -88,6 +88,18 @@ h1,h2,h3,.brand,.tab,.dash-section-title{font-family:'Space Grotesk',system-ui,s
 .kpi.warn b{color:var(--red)}
 .kpi.amber b{color:var(--amber)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:18px;overflow:hidden}
+.links-layout{display:flex;gap:18px;align-items:flex-start}
+.links-picker{flex:0 0 260px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;align-self:flex-start}
+.links-picker-search{padding:10px;border-bottom:1px solid var(--line)}
+.links-picker-search input{width:100%;box-sizing:border-box}
+.links-picker-list{max-height:560px;overflow-y:auto;padding:6px 0}
+.links-picker-group{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--steel);padding:10px 14px 4px}
+.links-picker-item{all:unset;display:block;width:100%;box-sizing:border-box;cursor:pointer;padding:7px 14px;font-size:13px;color:var(--ink);border-left:3px solid transparent}
+.links-picker-item:hover{background:var(--steel-soft)}
+.links-picker-item.active{background:var(--amber-tint);border-left-color:var(--amber);color:var(--amber-tint-text);font-weight:600}
+.links-picker-empty{padding:12px 14px;color:var(--steel);font-size:12.5px;margin:0}
+.links-detail-wrap{flex:1;min-width:0}
+@media (max-width:900px){.links-layout{flex-direction:column}.links-picker{flex:0 0 auto;width:100%}.links-picker-list{max-height:280px}}
 .card-head{padding:12px 16px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fff,#faf9f7);display:flex;align-items:center;justify-content:space-between}
 .card-head h3{margin:0;font-size:14.5px}
 .card-body{padding:14px 16px}
@@ -98,6 +110,22 @@ h1,h2,h3,.brand,.tab,.dash-section-title{font-family:'Space Grotesk',system-ui,s
 .cost-details.hidden{display:none}
 .cost-summary.collapsed-summary{margin-top:0;padding-top:0;border-top:none}
 .dash-section-title{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--graphite);border-left:3px solid var(--red);padding-left:8px;margin:22px 0 10px}
+tr.item-group-row td{background:var(--steel-soft);color:var(--graphite);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:7px 10px;border-bottom:1.5px solid var(--ink)}
+tr.item-group-row:first-child td{border-top:none}
+/* ---- Items tab decluttering: fields read as plain text until you touch the row, action
+   buttons collapse to icons — same data, a lot less "form full of boxes" visual noise. ---- */
+#panel-items .icon-btn{padding:5px 7px;font-size:13px;line-height:1;min-width:0}
+#panel-items table input,#panel-items table select{border-color:transparent;background:transparent;box-shadow:none;padding:6px 4px}
+#panel-items table tr:hover input,#panel-items table tr:hover select,#panel-items table input:focus,#panel-items table select:focus{border-color:var(--line);background:#fff}
+#panel-items table input:focus,#panel-items table select:focus{border-color:var(--red)}
+#panel-items tbody td{padding:4px 8px}
+.lastordered-cell{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.lastordered-cell input.f-lastdate{font-size:11.5px;min-width:104px;box-sizing:border-box}
+.lastordered-cell input.f-lastqty{width:56px;box-sizing:border-box}
+.reorder-cell{display:flex;flex-direction:column;gap:4px}
+.links-cost-row{display:flex;align-items:center;gap:4px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.cadence-days-wrap{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+.cadence-days-wrap input{width:52px;box-sizing:border-box}
 
 /* ---- Dashboard v2 (scoped to #panel-dash — no effect on any other tab) ---- */
 #panel-dash .dash-hero{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:20px}
@@ -243,7 +271,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
 .cal-legend .dot-ok{background:var(--green)}
 .cal-legend .dot-amber{background:var(--amber)}
 .cal-legend .dot-red{background:var(--red)}
-.booking-row{display:grid;grid-template-columns:1.6fr 1fr 1fr 0.7fr auto;gap:8px;align-items:center;margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -260,8 +287,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
       <button class="tab" data-tab="bom">BOM / Products <span class="count" id="cnt-products">0</span></button>
       <button class="tab" data-tab="links">Links <span class="count" id="cnt-links">0</span></button>
       <button class="tab" data-tab="suppliers">Suppliers <span class="count" id="cnt-suppliers">0</span></button>
-      <div class="sb-group-label">Equipment</div>
-      <button class="tab" data-tab="calendar">Availability Calendar <span class="count" id="cnt-bookings">0</span></button>
       <div class="sb-group-label">Planning</div>
       <button class="tab" data-tab="demand">Demand Plan <span class="count" id="cnt-demand">0</span></button>
       <button class="tab" data-tab="plan">Planned Orders <span class="count" id="cnt-plan">0</span></button>
@@ -290,7 +315,6 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--red);box
       </div>
       <div class="panel hidden" id="panel-links"></div>
       <div class="panel hidden" id="panel-suppliers"></div>
-      <div class="panel hidden" id="panel-calendar"></div>
       <div class="panel hidden" id="panel-demand"></div>
       <div class="panel hidden" id="panel-plan"></div>
       <div class="panel hidden" id="panel-docs">
@@ -807,105 +831,90 @@ function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/
 
 /* ---------------- data model v2 ---------------- */
 function mkItem(id,name,uom,opts){
-  return Object.assign({id,name,uom,onHand:0,leadTimeDays:'',safetyStock:0,minOrderQty:1,isProduct:false,category:'part',locations:null,lines:[],links:[],docs:[],notes:'',standardCost:0,packQty:'',packPrice:'',priceBreaks:[],assumedOrderQty:''}, opts||{});
+  return Object.assign({id,name,uom,onHand:0,leadTimeDays:'',safetyStock:0,minOrderQty:1,isProduct:false,category:'part',itemGroup:'',locations:null,lines:[],links:[],docs:[],notes:'',standardCost:0,packQty:'',packPrice:'',priceBreaks:[],assumedOrderQty:'',lastPurchaseDate:null,lastPurchaseQty:null,reorderCadenceDays:null}, opts||{});
 }
-const EQUIP_LOCATIONS=['CLE','JAX','KC','Patrick'];
-function locationsTotal(loc){ if(!loc) return 0; return EQUIP_LOCATIONS.reduce((s,k)=>s+(Number(loc[k])||0),0); }
-function syncItemOnHand(item){ if(item.locations) item.onHand=locationsTotal(item.locations); }
-function mkEquipment(id,name,uom,loc,opts){
-  const locations=Object.assign({CLE:0,JAX:0,KC:0,Patrick:0}, loc||{});
-  return mkItem(id,name,uom,Object.assign({category:'equipment',locations,onHand:locationsTotal(locations)}, opts||{}));
+function cadenceDueDate(it){
+  if(!it || !it.lastPurchaseDate || !Number(it.reorderCadenceDays)) return null;
+  return addDays(it.lastPurchaseDate, Number(it.reorderCadenceDays));
 }
-
+function cadenceStatus(it){
+  const due=cadenceDueDate(it);
+  if(!due) return {cls:'none', text:'Not tracked', title:'Set a last-purchase date and a reorder cadence to start tracking.'};
+  const daysLeft=Math.round((new Date(due+'T00:00:00')-new Date(todayISO()+'T00:00:00'))/86400000);
+  if(daysLeft<0) return {cls:'late', text:'Past due', title:'Due '+fmtDate(due)};
+  if(daysLeft<=7) return {cls:'soon', text:'Due soon', title:'Due '+fmtDate(due)};
+  return {cls:'ok', text:'OK', title:'Due '+fmtDate(due)};
+}
+function recordPurchase(item, qty, dateISO){
+  if(!item) return;
+  const q=Number(qty)||0;
+  if(q<=0) return;
+  item.lastPurchaseDate = dateISO || todayISO();
+  item.lastPurchaseQty = q;
+}
 function sample(){
   const t=todayISO();
   const items=[
-    mkItem('i-wheel','Wheel','ea',{onHand:240,leadTimeDays:0,safetyStock:40}),
-    mkItem('i-axle','Axle','ea',{onHand:60,leadTimeDays:0,safetyStock:15}),
-    mkItem('i-bearing','Bearing','ea',{onHand:400,leadTimeDays:0,safetyStock:80}),
-    mkItem('i-boltm','Mounting Bolt','ea',{onHand:900,leadTimeDays:0,safetyStock:150}),
-    mkItem('i-wheelset','LH Wheelbase Assembly','set',{onHand:9,leadTimeDays:0,safetyStock:3,
+    mkItem('i-wheel','Wheel','ea',{onHand:240,leadTimeDays:0,safetyStock:40,itemGroup:'Wheel Assembly'}),
+    mkItem('i-axle','Axle','ea',{onHand:60,leadTimeDays:0,safetyStock:15,itemGroup:'Wheel Assembly'}),
+    mkItem('i-bearing','Bearing','ea',{onHand:400,leadTimeDays:0,safetyStock:80,itemGroup:'Wheel Assembly'}),
+    mkItem('i-boltm','Mounting Bolt','ea',{onHand:900,leadTimeDays:0,safetyStock:150,itemGroup:'Wheel Assembly'}),
+    mkItem('i-wheelset','LH Wheelbase Assembly','set',{onHand:9,leadTimeDays:0,safetyStock:3,itemGroup:'Wheel Assembly',
       lines:[{childId:'i-wheel',qtyPer:2},{childId:'i-axle',qtyPer:1},{childId:'i-bearing',qtyPer:2},{childId:'i-boltm',qtyPer:4}],
       priceBreaks:[{id:uid(),minQty:50,price:235},{id:uid(),minQty:100,price:225},{id:uid(),minQty:150,price:210},{id:uid(),minQty:250,price:185}],
       notes:'Vendor sells LH and RH Wheelbase Assemblies as separate SKUs, ordered together in one bundled order (all pieces at once). On-hand/safety stock split between LH and RH is a placeholder — set to your real per-side counts.',
       links:[{id:uid(),supplierId:'s-mfg',cost:225,url:'',phone:'',contactType:'link',notes:'From Materials sheet, 6/24 count.'}]}),
-    mkItem('i-wheelset-rh','RH Wheelbase Assembly','set',{onHand:9,leadTimeDays:0,safetyStock:3,
+    mkItem('i-wheelset-rh','RH Wheelbase Assembly','set',{onHand:9,leadTimeDays:0,safetyStock:3,itemGroup:'Wheel Assembly',
       lines:[{childId:'i-wheel',qtyPer:2},{childId:'i-axle',qtyPer:1},{childId:'i-bearing',qtyPer:2},{childId:'i-boltm',qtyPer:4}],
       priceBreaks:[{id:uid(),minQty:50,price:235},{id:uid(),minQty:100,price:225},{id:uid(),minQty:150,price:210},{id:uid(),minQty:250,price:185}],
       notes:'Vendor sells LH and RH Wheelbase Assemblies as separate SKUs, ordered together in one bundled order (all pieces at once). On-hand/safety stock split between LH and RH is a placeholder — set to your real per-side counts.',
       links:[{id:uid(),supplierId:'s-mfg',cost:225,url:'',phone:'',contactType:'link',notes:'From Materials sheet, 6/24 count.'}]}),
-    mkItem('i-hothat','Hot Hats','ea',{onHand:1300,leadTimeDays:0,safetyStock:100,
+    mkItem('i-hothat','Hot Hats','ea',{onHand:1300,leadTimeDays:0,safetyStock:100,itemGroup:'Bench Hardware',
       links:[{id:uid(),supplierId:'s-mfg',cost:0,url:'',phone:'',contactType:'link',notes:'From Materials sheet, 6/24 count.'}]}),
-    mkItem('i-handles','Handles','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+    mkItem('i-handles','Handles','ea',{onHand:0,leadTimeDays:0,safetyStock:0,itemGroup:'Bench Hardware',
       notes:'New item — not on the original Materials sheet. Set real on-hand / lead time / qty-per-bench.'}),
-    mkItem('i-diffuser','Diffusers','ea',{onHand:38,leadTimeDays:0,safetyStock:10}),
-    mkItem('i-flange12','Flange 12"','ea',{onHand:31,leadTimeDays:0,safetyStock:10}),
-    mkItem('i-flange6','Flange 6"','ea',{onHand:90,leadTimeDays:0,safetyStock:20}),
-    mkItem('i-cap12','Cap 12"','ea',{onHand:26,leadTimeDays:0,safetyStock:10}),
-    mkItem('i-cap6','Cap 6"','ea',{onHand:96,leadTimeDays:0,safetyStock:20}),
-    mkItem('i-helmetbox','Helmet Boxes (Both Styles)','ea',{onHand:20,leadTimeDays:0,safetyStock:5}),
-    mkItem('i-manifold-mfg','MFG Manifold','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+    mkItem('i-diffuser','Diffusers','ea',{onHand:38,leadTimeDays:0,safetyStock:10,itemGroup:'Bench Hardware'}),
+    mkItem('i-flange12','Flange 12"','ea',{onHand:31,leadTimeDays:0,safetyStock:10,itemGroup:'Bench Hardware'}),
+    mkItem('i-flange6','Flange 6"','ea',{onHand:90,leadTimeDays:0,safetyStock:20,itemGroup:'Bench Hardware'}),
+    mkItem('i-cap12','Cap 12"','ea',{onHand:26,leadTimeDays:0,safetyStock:10,itemGroup:'Bench Hardware'}),
+    mkItem('i-cap6','Cap 6"','ea',{onHand:96,leadTimeDays:0,safetyStock:20,itemGroup:'Bench Hardware'}),
+    mkItem('i-helmetbox','Helmet Boxes (Both Styles)','ea',{onHand:20,leadTimeDays:0,safetyStock:5,itemGroup:'Bench Hardware'}),
+    mkItem('i-manifold-mfg','MFG Manifold','ea',{onHand:0,leadTimeDays:0,safetyStock:0,itemGroup:'MFG Parts',
       standardCost:603.36,
       notes:'From MFG ROM Quote (Rev G, 2/10/2026). 2 required per MFG bench — this is the part the Hot Hats attach into; distinct from the Hot Hats item itself.',
       links:[{id:uid(),supplierId:'s-mfg',cost:603.36,url:'',phone:'',contactType:'link',notes:'MFG ROM Quote Rev G.'}]}),
-    mkItem('i-footrest-mfg','MFG Footrest (w/ Carpet)','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+    mkItem('i-footrest-mfg','MFG Footrest (w/ Carpet)','ea',{onHand:0,leadTimeDays:0,safetyStock:0,itemGroup:'MFG Parts',
       standardCost:947.51,
       notes:'From MFG ROM Quote (Rev G, 2/10/2026). MFG purchases/applies the carpet. 1 required per MFG bench. Same physical part as Hadlock\'s "Foot Deck" — different vendor, different name.',
       links:[{id:uid(),supplierId:'s-mfg',cost:947.51,url:'',phone:'',contactType:'link',notes:'MFG ROM Quote Rev G.'}]}),
-    mkItem('i-benchframe-mfg-holes','MFG Bench Frame — With Holes','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+    mkItem('i-benchframe-mfg-holes','MFG Bench Frame — With Holes','ea',{onHand:0,leadTimeDays:0,safetyStock:0,itemGroup:'MFG Parts',
       standardCost:3465.16,
       notes:'From MFG ROM Quote (Rev G, 2/10/2026): "12\' long bench w/ diffuser added." This is the molded bench shell only, with a drilled hole array on the seat surface — the standalone Diffusers item is still bought separately.',
       links:[{id:uid(),supplierId:'s-mfg',cost:3465.16,url:'',phone:'',contactType:'link',notes:'MFG ROM Quote Rev G — bench with holes.'}]}),
-    mkItem('i-benchframe-mfg-noholes','MFG Bench Frame — No Holes','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+    mkItem('i-benchframe-mfg-noholes','MFG Bench Frame — No Holes','ea',{onHand:0,leadTimeDays:0,safetyStock:0,itemGroup:'MFG Parts',
       standardCost:3136.84,
       notes:'From MFG ROM Quote (Rev G, 2/10/2026). Same molded bench shell as the with-holes version, without the drilled hole array.',
       links:[{id:uid(),supplierId:'s-mfg',cost:3136.84,url:'',phone:'',contactType:'link',notes:'MFG ROM Quote Rev G — bench without holes.'}]}),
-    mkItem('i-manifold-hadlock','Hadlock Manifold','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+    mkItem('i-manifold-hadlock','Hadlock Manifold','ea',{onHand:0,leadTimeDays:0,safetyStock:0,itemGroup:'Hadlock Parts',
       standardCost:661.88,
       notes:'From Premix Hadlock pricing letter (8/29/2025). 2 required per Hadlock bench — the part the Hot Hats attach into; distinct from the Hot Hats item.',
       links:[{id:uid(),supplierId:'s-zherco',cost:661.88,url:'',phone:'',contactType:'link',notes:'Premix Hadlock pricing letter, 8/29/2025.'}]}),
-    mkItem('i-footdeck-hadlock','Hadlock Foot Deck','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+    mkItem('i-footdeck-hadlock','Hadlock Foot Deck','ea',{onHand:0,leadTimeDays:0,safetyStock:0,itemGroup:'Hadlock Parts',
       standardCost:791.16,
       notes:'From Premix Hadlock pricing letter (8/29/2025). 1 required per Hadlock bench. Same physical part as MFG\'s "Footrest" — different vendor, different name.',
       links:[{id:uid(),supplierId:'s-zherco',cost:791.16,url:'',phone:'',contactType:'link',notes:'Premix Hadlock pricing letter, 8/29/2025.'}]}),
-    mkItem('i-benchshell-hadlock','Hadlock Bench Shell','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+    mkItem('i-benchshell-hadlock','Hadlock Bench Shell','ea',{onHand:0,leadTimeDays:0,safetyStock:0,itemGroup:'Hadlock Parts',
       standardCost:2149.93,
       notes:'From Premix Hadlock pricing letter (8/29/2025), "Bench only" line. Bought as part of the bundled Hadlock Complete Bench Assembly below — this piece price is informational/reference only.',
       links:[{id:uid(),supplierId:'s-zherco',cost:2149.93,url:'',phone:'',contactType:'link',notes:'Premix Hadlock pricing letter, 8/29/2025.'}]}),
-    mkItem('i-hadlock-assembly-holes','Hadlock Complete Bench Assembly — With Holes','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+    mkItem('i-hadlock-assembly-holes','Hadlock Complete Bench Assembly — With Holes','ea',{onHand:0,leadTimeDays:0,safetyStock:0,itemGroup:'Hadlock Parts',
       lines:[{childId:'i-benchshell-hadlock',qtyPer:1},{childId:'i-manifold-hadlock',qtyPer:2},{childId:'i-footdeck-hadlock',qtyPer:1}],
       standardCost:4837.45,
       notes:'From Premix Hadlock pricing letter (8/29/2025): "Complete Bench with 2 manifolds, 1 foot deck, with holes." Hadlock only quotes one price for the whole assembled kit, so it\'s priced as a bundle here — the Bench Shell / Manifold / Foot Deck below are shown for reference but don\'t need their own pricing.'}),
-    mkItem('i-hadlock-assembly-noholes','Hadlock Complete Bench Assembly — No Holes','ea',{onHand:0,leadTimeDays:0,safetyStock:0,
+    mkItem('i-hadlock-assembly-noholes','Hadlock Complete Bench Assembly — No Holes','ea',{onHand:0,leadTimeDays:0,safetyStock:0,itemGroup:'Hadlock Parts',
       lines:[{childId:'i-benchshell-hadlock',qtyPer:1},{childId:'i-manifold-hadlock',qtyPer:2},{childId:'i-footdeck-hadlock',qtyPer:1}],
       standardCost:4554.87,
       notes:'From Premix Hadlock pricing letter (8/29/2025): "Complete Bench with 2 manifolds, 1 foot deck, no holes." Priced as a bundle, same reasoning as the with-holes version.'}),
-    mkEquipment('eq-shaders','Shaders (Gen 1 & 2)','ea',{CLE:226,JAX:160,KC:42,Patrick:0},{
-      safetyStock:59, notes:'From 2026 Inventory Projection workbook — currently have 428 (CLE 226 + JAX 160 + KC 42 + Patrick 0), need 487 to cover all conferences/NFL commitments, short by 59 (tracked via Safety Stock so MRP flags the gap). Covers Gen 1 & Gen 2 shaders. Spare components (legs, feet, poles, tops) tracked separately below. See Availability Calendar tab for team-by-team bookings.'}),
-    mkEquipment('eq-shader-gen1-legs','Shader Legs — Gen 1','ea',{CLE:125,KC:21},{notes:'Spare component. 21 Gen 1 legs at KC (7 of those are Mizzou branded) — from 2026 Inventory Projection workbook.'}),
-    mkEquipment('eq-shader-gen2-legs','Shader Legs — Gen 2','ea',{CLE:200,KC:21},{notes:'Spare component. 21 Gen 2 legs at KC — from 2026 Inventory Projection workbook.'}),
-    mkEquipment('eq-shader-gen1-feet','Shader Feet — Gen 1','ea',{CLE:146},{notes:'Spare component from 2026 Inventory Projection workbook.'}),
-    mkEquipment('eq-shader-gen2-feet','Shader Feet — Gen 2','ea',{CLE:238},{notes:'Spare component from 2026 Inventory Projection workbook.'}),
-    mkEquipment('eq-shader-gen1-poles','Shader Poles — Gen 1','ea',{CLE:2},{notes:'Spare component from 2026 Inventory Projection workbook.'}),
-    mkEquipment('eq-shader-gen2-poles','Shader Poles — Gen 2','ea',{CLE:10},{notes:'Spare component from 2026 Inventory Projection workbook.'}),
-    mkEquipment('eq-shader-gen1-complete-poles','Gen 1 Shaders w/ Poles & Spreader Bars','ea',{CLE:47},{notes:'From 2026 Inventory Projection workbook, "Items" table.'}),
-    mkEquipment('eq-shader-gen2-complete-poles','Gen 2 Shaders w/ Poles & Spreader Bars','ea',{CLE:69},{notes:'From 2026 Inventory Projection workbook, "Items" table.'}),
-    mkEquipment('eq-shader-gen1-complete','COMPLETE Gen 1 Shaders','ea',{CLE:63},{notes:'From 2026 Inventory Projection workbook, "Items" table.'}),
-    mkEquipment('eq-shader-gen2-complete','COMPLETE Gen 2 Shaders','ea',{CLE:72},{notes:'From 2026 Inventory Projection workbook, "Items" table.'}),
-    mkEquipment('eq-shader-bigten-graphic','Gen 1 Big Ten Graphic Shader w/ Poles & Spreader Bar','ea',{CLE:4},{notes:'Branded top, from 2026 Inventory Projection workbook.'}),
-    mkEquipment('eq-shader-usc-graphic','Gen 1 USC Graphic Shader w/ Poles & Spreader Bar','ea',{CLE:6},{notes:'Branded top, from 2026 Inventory Projection workbook.'}),
-    mkEquipment('eq-shader-spectrum-graphic','Gen 1 Spectrum Graphic Shader w/ Poles & Spreader Bar','ea',{CLE:6},{notes:'Branded top, from 2026 Inventory Projection workbook.'}),
-    mkEquipment('eq-shader-gen2-graphic','Gen 2 Graphic Shader w/ Poles & Spreader Bar','ea',{CLE:3},{notes:'Branded top, from 2026 Inventory Projection workbook.'}),
-    mkEquipment('eq-shader-backs','Shader Backs','ea',{CLE:4},{notes:'Spare component, from 2026 Inventory Projection workbook.'}),
-    mkEquipment('eq-shader-sides','Shader Sides','ea',{CLE:5},{notes:'Spare component, from 2026 Inventory Projection workbook.'}),
-    mkEquipment('eq-shader-blank-tops','Blank Shader Tops','ea',{CLE:25},{notes:'Spare component, from 2026 Inventory Projection workbook.'}),
-    mkEquipment('eq-ac','AC Units','ea',{CLE:179,KC:51},{
-      notes:'From 2026 Inventory Projection workbook — Total Allocated 172, currently 58 over target (surplus, not shortage).'}),
-    mkEquipment('eq-heaters','Heaters (170 & 350 series)','ea',{CLE:294,KC:64},{
-      safetyStock:26, notes:'From 2026 Inventory Projection workbook — Total Allocated 384, Total Needed 26. Includes 170-series (CLE 280, KC 64) and 350-series (CLE 14).'}),
-    mkEquipment('eq-nozzle-old','Nozzles — Old Style (CLE)','ea',{CLE:152},{notes:'From Nozzle Inventory (CLE) tab of the 2026 Inventory Projection workbook.'}),
-    mkEquipment('eq-nozzle-new','Nozzles — New Style (CLE)','ea',{CLE:160},{notes:'From Nozzle Inventory (CLE) tab. Old + New = 312 total nozzles.'}),
-    mkEquipment('eq-nozzle-ducted','Nozzles — With Ducts (CLE)','ea',{CLE:176},{notes:'Informational count from source workbook — this is an attribute of some old/new nozzles (which have ducts), not an additive separate stock. Total of all nozzles is 312 (old + new).'}),
     mkItem('b-mfg-holes','MFG Bench — With Holes','ea',{isProduct:true,lines:[
       {childId:'i-diffuser',qtyPer:2},{childId:'i-wheelset',qtyPer:1},{childId:'i-wheelset-rh',qtyPer:1},
       {childId:'i-benchframe-mfg-holes',qtyPer:1},{childId:'i-manifold-mfg',qtyPer:2},{childId:'i-footrest-mfg',qtyPer:1},
@@ -941,102 +950,11 @@ function sample(){
   ];
   const purchaseOrders=[
     {id:uid(), poNumber:'1468', supplierId:'s-mfg', orderDate:addDays(t,-90), expectedDate:addDays(t,-80), status:'Closed',
+     requestedBy:'John', approvedBy:'',
      lines:[{id:uid(), itemId:'i-wheelset', qty:12, unitPrice:225}], docs:[], notes:'Sample historical order — edit or delete. Only tied to the LH Wheelbase Assembly; if this shipment actually included both LH and RH units, add a matching line for the RH side.'}
   ];
-  const bookings=[
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Alabama (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:1, startDate:'2026-08-01', endDate:'2027-01-31', label:'Alabama (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Arkansas (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Arkansas (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:2, startDate:'2026-08-01', endDate:'2027-01-31', label:'Auburn — *****5 visiting onsite, branding onsite (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:1, startDate:'2026-08-01', endDate:'2027-01-31', label:'Auburn — *****5 visiting onsite, branding onsite (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Florida (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:1, startDate:'2026-08-01', endDate:'2027-01-31', label:'Florida (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Georgia (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Georgia (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Kentucky (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Kentucky (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'LSU (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'LSU (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Ole Miss (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:9, startDate:'2026-08-01', endDate:'2027-01-31', label:'Ole Miss (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'MS. State (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:1, startDate:'2026-08-01', endDate:'2027-01-31', label:'MS. State (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Mizzou (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:5, startDate:'2026-08-01', endDate:'2027-01-31', label:'Mizzou (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Oklahoma (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:1, startDate:'2026-08-01', endDate:'2027-01-31', label:'Oklahoma (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'South Carolina (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'South Carolina (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Tennessee (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:1, startDate:'2026-08-01', endDate:'2027-01-31', label:'Tennessee (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Texas (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:9, startDate:'2026-08-01', endDate:'2027-01-31', label:'Texas (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Texas A&M (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Texas A&M (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Vanderbilt (date TBD)', location:'', conference:'SEC', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:7, startDate:'2026-08-01', endDate:'2027-01-31', label:'Vanderbilt (date TBD)', location:'', conference:'SEC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Illinois (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Illinois (date TBD)', location:'', conference:'BIG10', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Iowa (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Maryland — contracted for 12 shaders this season (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Maryland — contracted for 12 shaders this season (date TBD)', location:'', conference:'BIG10', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Michigan (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Michigan State (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Nebraska (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Nebraska (date TBD)', location:'', conference:'BIG10', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Northwestern (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Ohio State (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Ohio State (date TBD)', location:'', conference:'BIG10', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Purdue (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'UCLA (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'USC (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'USC (date TBD)', location:'', conference:'BIG10', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Washington (date TBD)', location:'', conference:'BIG10', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:4, startDate:'2026-08-01', endDate:'2027-01-31', label:'UNM — Just need (4) 16\' ShadERS for the whole season (date TBD)', location:'', conference:'MW', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Philadelphia Eagles (date TBD)', location:'', conference:'NFL', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Philadelphia Eagles (date TBD)', location:'', conference:'NFL', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Tennessee Titans (date TBD)', location:'', conference:'NFL', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Tennessee Titans (date TBD)', location:'', conference:'NFL', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Tampa Bay Buccaneers (date TBD)', location:'', conference:'NFL', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Tampa Bay Buccaneers (date TBD)', location:'', conference:'NFL', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Indianapolis Colts (date TBD)', location:'', conference:'NFL', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Indianapolis Colts (date TBD)', location:'', conference:'NFL', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Cleveland Browns (date TBD)', location:'', conference:'NFL', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Cleveland Browns (date TBD)', location:'', conference:'NFL', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Kansas City Chiefs (date TBD)', location:'', conference:'NFL', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Kansas City Chiefs (date TBD)', location:'', conference:'NFL', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Jacksonville Jaguars (date TBD)', location:'', conference:'NFL', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Jacksonville Jaguars (date TBD)', location:'', conference:'NFL', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Carolina Panthers (date TBD)', location:'', conference:'NFL', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Carolina Panthers (date TBD)', location:'', conference:'NFL', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-14', endDate:'2026-08-21', label:'MetLlife (Jets/Giants) — deliver Aug 14th', location:'', conference:'NFL', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-14', endDate:'2026-08-21', label:'MetLlife (Jets/Giants) — deliver Aug 14th', location:'', conference:'NFL', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-10', endDate:'2026-08-17', label:'Chicago Bears — deliver August 10th or 11th', location:'', conference:'NFL', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-10', endDate:'2026-08-17', label:'Chicago Bears — deliver August 10th or 11th', location:'', conference:'NFL', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Seattle Seahawks (date TBD)', location:'', conference:'NFL', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Seattle Seahawks (date TBD)', location:'', conference:'NFL', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Denver Broncos (date TBD)', location:'', conference:'NFL', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Denver Broncos (date TBD)', location:'', conference:'NFL', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-09-24', endDate:'2026-10-01', label:'New Orleans Saints — just need to be to them by Oct.1st', location:'', conference:'NFL', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2026-09-15', label:'Baltimore Ravens — For Preseason & Home Opener // Pick up after', location:'', conference:'NFL', type:'Visiting'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2026-09-15', label:'Baltimore Ravens — For Preseason & Home Opener // Pick up after', location:'', conference:'NFL', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Clemson (date TBD)', location:'', conference:'ACC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:8, startDate:'2026-08-01', endDate:'2027-01-31', label:'SMU (date TBD)', location:'', conference:'ACC', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Iowa State (date TBD)', location:'', conference:'BIG12', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'TCU (date TBD)', location:'', conference:'BIG12', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:6, startDate:'2026-08-01', endDate:'2027-01-31', label:'Houston (date TBD)', location:'', conference:'BIG12', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:2, startDate:'2026-08-01', endDate:'2027-01-31', label:'Central Oklahoma (date TBD)', location:'', conference:'IND.', type:'Home'},
-    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Indiana — already have shaders, 0 needed (date TBD)', location:'', conference:'BIG10', type:''},
-    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Minnesota — already have shaders (date TBD)', location:'', conference:'BIG10', type:''},
-    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Oregon — already have shaders, 0 needed (date TBD)', location:'', conference:'BIG10', type:''},
-    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Penn State — already have shaders (date TBD)', location:'', conference:'BIG10', type:''},
-    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Rutgers — already have shaders, 0 needed (date TBD)', location:'', conference:'BIG10', type:''},
-    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Wisconsin — no allocation entered yet (date TBD)', location:'', conference:'BIG10', type:''},
-    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'UCF — Brad has in separate count, 0 needed here (date TBD)', location:'', conference:'BIG12', type:''},
-    {id:uid(), itemId:'eq-shaders', qty:0, startDate:'2026-08-01', endDate:'2027-01-31', label:'Notre Dame — no allocation entered yet (date TBD)', location:'', conference:'IND.', type:''}
-  ];
-  return {items, suppliers, demandPlan, purchaseOrders, quotes:[], receipts:[], deliveries:[], bookings, lists:{poStatus:['Open','Partially Received','Closed'], quoteStatus:['Open','Expired','Converted to PO'], conferences:['SEC','BIG10','MW','NFL','ACC','BIG12','IND.']}, horizonDays:90};
+  const bookings=[];
+  return {items, suppliers, demandPlan, purchaseOrders, quotes:[], receipts:[], deliveries:[], bookings, lists:{poStatus:['Open','Partially Received','Closed'], quoteStatus:['Open','Expired','Converted to PO']}, horizonDays:90};
 }
 
 let DB=null;
@@ -1190,10 +1108,13 @@ function ensureShape(){
   if(!Array.isArray(DB.receipts)) DB.receipts=[];
   if(!Array.isArray(DB.deliveries)) DB.deliveries=[];
   if(!Array.isArray(DB.bookings)) DB.bookings=[];
+  purgeRetiredEquipment();
   if(!DB.lists || typeof DB.lists!=='object') DB.lists={};
+  delete DB.lists.conferences; // retired with the Equipment/Availability Calendar feature
   if(!Array.isArray(DB.lists.poStatus) || !DB.lists.poStatus.length) DB.lists.poStatus=['Open','Partially Received','Closed'];
+  if(!DB.lists.poStatus.includes('Awaiting Approval')) DB.lists.poStatus.unshift('Awaiting Approval');
   if(!Array.isArray(DB.lists.quoteStatus) || !DB.lists.quoteStatus.length) DB.lists.quoteStatus=['Open','Expired','Converted to PO'];
-  if(!Array.isArray(DB.lists.conferences) || !DB.lists.conferences.length) DB.lists.conferences=['SEC','BIG10','MW','NFL','ACC','BIG12','IND.'];
+  if(!Array.isArray(DB.lists.itemGroups)) DB.lists.itemGroups=['Wheel Assembly','Bench Hardware','MFG Parts','Hadlock Parts'];
   if(!DB.horizonDays) DB.horizonDays=90;
   DB.items.forEach(i=>{
     if(i.leadTimeDays===undefined || i.leadTimeDays===null) i.leadTimeDays='';
@@ -1208,16 +1129,19 @@ function ensureShape(){
     if(typeof i.isProduct!=='boolean') i.isProduct=false;
     if(typeof i.notes!=='string') i.notes='';
     if(!i.category) i.category=i.isProduct?'product':'part';
-    if(i.locations && typeof i.locations==='object'){
-      const loc={}; EQUIP_LOCATIONS.forEach(k=>{ loc[k]=Number(i.locations[k])||0; });
-      i.locations=loc; i.onHand=locationsTotal(loc);
-    } else { i.locations=null; }
+    if(typeof i.itemGroup!=='string') i.itemGroup='';
+    if(i.lastPurchaseDate===undefined) i.lastPurchaseDate=null;
+    if(i.lastPurchaseQty===undefined) i.lastPurchaseQty=null;
+    if(i.reorderCadenceDays===undefined) i.reorderCadenceDays=null;
+    i.locations=null;
   });
   DB.purchaseOrders.forEach(po=>{
     if(!Array.isArray(po.lines)) po.lines=[];
     if(!Array.isArray(po.docs)) po.docs=[];
     if(!po.status) po.status=DB.lists.poStatus[0];
     if(!po.poNumber) po.poNumber='';
+    if(typeof po.requestedBy!=='string') po.requestedBy='';
+    if(typeof po.approvedBy!=='string') po.approvedBy='';
   });
   DB.quotes.forEach(q=>{
     if(!Array.isArray(q.lines)) q.lines=[];
@@ -1235,6 +1159,7 @@ function ensureShape(){
     if(typeof r.orderLink!=='string') r.orderLink='';
     if(typeof r.appliedToStock!=='boolean') r.appliedToStock=false;
     if(r.appliedAt===undefined) r.appliedAt=null;
+    if(typeof r.requestedBy!=='string') r.requestedBy='';
   });
   DB.deliveries.forEach(d=>{
     if(!Array.isArray(d.lines)) d.lines=[];
@@ -1245,16 +1170,7 @@ function ensureShape(){
     if(typeof d.appliedToStock!=='boolean') d.appliedToStock=false;
     if(d.appliedAt===undefined) d.appliedAt=null;
   });
-  DB.bookings.forEach(b=>{
-    if(!b.id) b.id=uid();
-    if(typeof b.qty!=='number') b.qty=Number(b.qty)||0;
-    if(!b.startDate) b.startDate=todayISO();
-    if(!b.endDate) b.endDate=b.startDate;
-    if(typeof b.label!=='string') b.label='';
-    if(typeof b.location!=='string') b.location='';
-    if(typeof b.conference!=='string') b.conference='';
-    if(b.type!=='Home' && b.type!=='Visiting') b.type='';
-  });
+  DB.bookings=[]; // Equipment booking/Availability Calendar feature retired — always empty now.
 }
 
 async function load(){
@@ -1283,24 +1199,6 @@ function quoteById(id){ return DB.quotes.find(q=>q.id===id); }
 function receiptById(id){ return DB.receipts.find(r=>r.id===id); }
 function deliveryById(id){ return DB.deliveries.find(d=>d.id===id); }
 function closedStatusName(){ return DB.lists.poStatus.includes('Closed') ? 'Closed' : DB.lists.poStatus[DB.lists.poStatus.length-1]; }
-
-/* ---------------- bookings / equipment availability ---------------- */
-function bookingsForItem(itemId){ return DB.bookings.filter(b=>b.itemId===itemId).sort((a,b)=>a.startDate<b.startDate?-1:1); }
-function bookedQtyOnDate(itemId, iso, location){
-  return DB.bookings.reduce((s,b)=>{
-    if(b.itemId!==itemId || !(b.startDate<=iso && iso<=b.endDate)) return s;
-    if(location && location!=='all' && b.location!==location) return s;
-    return s+(Number(b.qty)||0);
-  }, 0);
-}
-function equipmentTotal(item){ return item.locations ? locationsTotal(item.locations) : (Number(item.onHand)||0); }
-function availableOnDate(item, iso){ return equipmentTotal(item) - bookedQtyOnDate(item.id, iso); }
-function equipmentItems(){ return DB.items.filter(i=>i.category==='equipment'); }
-function unassignedBookingsFor(itemId){
-  const item=itemById(itemId);
-  if(!item || !item.locations) return [];
-  return DB.bookings.filter(b=>b.itemId===itemId && !b.location);
-}
 
 /* ---------------- modal helper ---------------- */
 function openModal(title, bodyHtml){
@@ -1454,6 +1352,7 @@ function openAddDocumentModal(){
     '<div class="po-meta">'+
       '<div><label>Document type</label><select id="add-doc-type"><option value="receipt" selected>Receipt</option><option value="po">Purchase Order</option><option value="quote">Quote</option></select></div>'+
       '<div><label>Supplier</label><div id="add-doc-supplier-wrap">'+supplierSelectSimple((DB.suppliers[0]||{}).id||'')+'</div></div>'+
+      '<div id="add-doc-reqby-wrap"><label>Requested by / bought by</label><input type="text" id="add-doc-reqby" placeholder="Name — e.g. a service tech or front office"></div>'+
     '</div>'+
     '<div class="doc-subnav no-print" id="add-doc-source-toggle" style="margin:12px 0">'+
       '<button type="button" class="subtab active" data-source="file">Upload file</button>'+
@@ -1543,7 +1442,11 @@ function openAddDocumentModal(){
       saveBtn.disabled=false;
     }, 400);
   });
-  typeSelect.addEventListener('change', refreshSupplierGuess);
+  function toggleReqByVisibility(){
+    document.getElementById('add-doc-reqby-wrap').classList.toggle('hidden', typeSelect.value==='quote');
+  }
+  toggleReqByVisibility();
+  typeSelect.addEventListener('change', ()=>{ refreshSupplierGuess(); toggleReqByVisibility(); });
   document.getElementById('add-doc-cancel').addEventListener('click', closeModal);
   saveBtn.addEventListener('click',()=>{
     if(!pendingName) return;
@@ -1568,6 +1471,7 @@ function openAddDocumentModal(){
       const r={
         id:uid(), receiptNumber:guess.receiptNumber||'', supplierId:chosenSupplierId,
         receiptDate:guess.receiptDate||todayISO(), poId:'', orderLink:pendingLink||'',
+        requestedBy:(document.getElementById('add-doc-reqby')||{}).value||'',
         lines:lines, docs:docs, notes:notes, appliedToStock:false, appliedAt:null
       };
       DB.receipts.unshift(r);
@@ -1576,7 +1480,8 @@ function openAddDocumentModal(){
       const po={
         id:uid(), poNumber:guess.poNumber||'', supplierId:chosenSupplierId,
         orderDate:guess.orderDate||todayISO(), expectedDate:addDays(guess.orderDate||todayISO(),14),
-        status:DB.lists.poStatus[0], lines:lines, docs:docs, notes: source==='link'&&pendingLink? (notes+' Link: '+pendingLink) : notes
+        status:DB.lists.poStatus[0], requestedBy:(document.getElementById('add-doc-reqby')||{}).value||'', approvedBy:'',
+        lines:lines, docs:docs, notes: source==='link'&&pendingLink? (notes+' Link: '+pendingLink) : notes
       };
       DB.purchaseOrders.unshift(po);
       save(); closeModal(); currentTab='po'; setTab('po'); renderCounts();
@@ -1773,7 +1678,6 @@ const TAB_LABELS={
   bom:['BOM / Products','Products broken down by section'],
   links:['Links','Supplier links per item — multiple allowed'],
   suppliers:['Suppliers','Vendor reference'],
-  calendar:['Availability Calendar','Equipment on-hand vs. booked, by day'],
   demand:['Demand Plan','Planned builds driving requirements'],
   plan:['Planned Orders','What to order, and when'],
   docs:['Documents','Purchase orders, quotes & receipts — one place for all supplier paperwork'],
@@ -1782,9 +1686,9 @@ const TAB_LABELS={
 };
 /* Sub-tab labels for the merged Purchase Orders / Quotes / Receipts page. */
 const DOC_SUBTAB_LABELS={
-  po:'Purchase Orders — open/close orders, price history, file import',
+  po:'Purchase Orders — request → finance approval → open/close, price history, file import',
   quotes:'Quotes — supplier quotes & estimates, pricing signal before you commit',
-  receipts:'Receipts — what was actually paid, most trustworthy price history',
+  receipts:'Receipts — what was actually paid, who bought it, most trustworthy price history',
   deliveries:'Deliveries / Load-Outs — what left the shop on a truck or trailer, so usage comes out of stock'
 };
 let docSubTab='po';
@@ -1796,6 +1700,9 @@ const BOM_SUBTAB_LABELS={
 let bomSubTab='recipes';
 /* Each value is an array of supplier IDs to include; an empty array means "all suppliers". */
 let docSupplierFilter={po:[], quotes:[], receipts:[]};
+let collapsedItemGroups={}; // transient UI state (not saved) — which Items-tab category sections are collapsed
+let collapsedBomProducts={}; // transient UI state (not saved) — which BOM/Products cards are collapsed
+let collapsedBomNests={}; // transient UI state (not saved) — which nested sub-assembly sections are collapsed, keyed by "parentId::childId"
 function filterBySupplier(list, supplierIds, getSupplierId){
   if(!supplierIds || supplierIds.length===0) return list.slice();
   return list.filter(x=>supplierIds.includes(getSupplierId(x)));
@@ -1899,7 +1806,6 @@ function renderCounts(){
   document.getElementById('cnt-receipts').textContent=pendingReceiptCount;
   document.getElementById('cnt-deliveries').textContent=pendingDeliveryCount;
   document.getElementById('cnt-docs').textContent=openPoCount+openQuoteCount+pendingReceiptCount+pendingDeliveryCount;
-  document.getElementById('cnt-bookings').textContent=DB.bookings.length;
   document.getElementById('cnt-feedback').textContent=loadFeedbackList().filter(f=>!f.resolved).length;
 }
 
@@ -1909,7 +1815,6 @@ function renderTab(which){
   else if(which==='bom') setBomSubTab(bomSubTab);
   else if(which==='links') renderLinks();
   else if(which==='suppliers') renderSuppliers();
-  else if(which==='calendar') renderCalendar();
   else if(which==='demand') renderDemand();
   else if(which==='plan') renderPlan();
   else if(which==='po') renderPO();
@@ -1975,6 +1880,8 @@ function renderDash(){
   const needsReview=DB.items.filter(i=>!i.isProduct && !i.leadTimeDays).length;
   const closed=closedStatusName();
   const openPOs=DB.purchaseOrders.filter(po=>po.status!==closed).length;
+  const awaitingApproval=DB.purchaseOrders.filter(po=>po.status==='Awaiting Approval').length;
+  const noPoReceipts=DB.receipts.filter(r=>!r.poId).length;
   const openQuotes=DB.quotes.filter(q=>q.status==='Open').length;
   const missingLinks=DB.items.filter(i=>!i.isProduct && (!i.links||!i.links.length)).length;
   const pendingReceipts=DB.receipts.filter(r=>!r.appliedToStock).slice().sort((a,b)=>(b.receiptDate||'')<(a.receiptDate||'')?-1:1);
@@ -1991,16 +1898,18 @@ function renderDash(){
       statCard(late,'Parts past due to order', late?'warn':'good')+
       statCard(soon,'Order within 14 days', soon?'amber':'good')+
       statCard(openPOs,'Open purchase orders','')+
+      statCard(awaitingApproval,'POs awaiting finance approval', awaitingApproval?'amber':'good')+
+      statCard(noPoReceipts,'Purchases on file with no PO', noPoReceipts?'amber':'good')+
       statCard(openQuotes,'Open quotes','')+
       statCard(missingLinks,'Items with no supplier link', missingLinks?'amber':'good')+
     '</div>'+
     (needsReview? '<div class="callout">Some items have no lead time set, so order-by dates default to their due date. Set a lead time on the <b>Items</b> tab (plain text is fine, e.g. "2 weeks" or "10 days") for accurate planning.</div>':'')+
     (pendingReceipts.length? '<div class="dash-section-title">Receipts waiting to be added to inventory</div>'+
       '<div class="card"><div class="card-body">'+
-      '<table><colgroup><col style="width:20%"><col style="width:22%"><col style="width:16%"><col style="width:12%"><col style="width:30%"></colgroup>'+
-      '<thead><tr><th>Receipt</th><th>Supplier</th><th>Date</th><th class="num">Lines</th><th></th></tr></thead>'+
+      '<table><colgroup><col style="width:18%"><col style="width:16%"><col style="width:18%"><col style="width:12%"><col style="width:11%"><col style="width:25%"></colgroup>'+
+      '<thead><tr><th>Receipt</th><th>Supplier</th><th>Requested by</th><th>Date</th><th class="num">Lines</th><th></th></tr></thead>'+
       '<tbody>'+pendingReceipts.slice(0,6).map(r=>
-        '<tr><td>'+escAttr(r.receiptNumber||'(no number)')+'</td><td>'+escAttr((supplierById(r.supplierId)||{}).name||'—')+'</td><td class="mono">'+fmtDate(r.receiptDate)+'</td><td class="num mono">'+(r.lines||[]).length+'</td>'+
+        '<tr><td>'+escAttr(r.receiptNumber||'(no number)')+'</td><td>'+escAttr((supplierById(r.supplierId)||{}).name||'—')+'</td><td>'+escAttr(r.requestedBy||'—')+'</td><td class="mono">'+fmtDate(r.receiptDate)+'</td><td class="num mono">'+(r.lines||[]).length+'</td>'+
         '<td class="col-actions no-print"><button class="btn sm receipt-jump" data-id="'+r.id+'">Review &amp; add to stock</button></td></tr>').join('')+
       '</tbody></table>'+
       (pendingReceipts.length>6? '<p class="note">+'+(pendingReceipts.length-6)+' more on the Receipts tab.</p>':'')+
@@ -2017,41 +1926,12 @@ function renderDash(){
       '<table><colgroup><col style="width:35%"><col style="width:12%"><col style="width:18%"><col style="width:35%"></colgroup>'+
       '<thead><tr><th>Product</th><th class="num">Qty</th><th>Need By</th><th>Label</th></tr></thead>'+
       '<tbody>'+(upcoming.map(d=>{ const p=itemById(d.productId); return '<tr><td>'+(p?p.name:'?')+'</td><td class="num mono">'+d.qty+'</td><td class="mono">'+fmtDate(d.needDate)+'</td><td class="demand-src">'+(d.label||'')+'</td></tr>'; }).join('') || '<tr><td colspan="4" class="note">Nothing scheduled.</td></tr>')+'</tbody></table>'+
-    '</div></div>'+
-    renderEquipmentTodayDash();
-  el.querySelectorAll('.cal-jump').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      CAL_ITEM_ID=btn.dataset.item;
-      const d=new Date(); CAL_YEAR=d.getFullYear(); CAL_MONTH=d.getMonth();
-      currentTab='calendar'; setTab('calendar'); renderCounts();
-    });
-  });
+    '</div></div>';
   el.querySelectorAll('.receipt-jump').forEach(btn=>{
     btn.addEventListener('click',()=>{
       currentTab='receipts'; setTab('receipts'); renderCounts();
     });
   });
-}
-
-function renderEquipmentTodayDash(){
-  const eq=equipmentItems();
-  if(!eq.length) return '';
-  const today=todayISO();
-  const rows=eq.map(it=>{
-    const total=equipmentTotal(it);
-    const out=bookedQtyOnDate(it.id, today);
-    const avail=total-out;
-    const status=availStatus(avail, total);
-    const badge = status==='red'?'<span class="badge late">Oversubscribed</span>':status==='amber'?'<span class="badge soon">Running low</span>':'<span class="badge ok">Available</span>';
-    return {it, total, out, avail, status, badge};
-  }).sort((a,b)=>{ const rank={red:0,amber:1,ok:2}; return rank[a.status]-rank[b.status]; });
-  return '<div class="dash-section-title">Equipment availability — today</div>'+
-    '<div class="card"><div class="card-body">'+
-    '<table><colgroup><col style="width:28%"><col style="width:14%"><col style="width:14%"><col style="width:14%"><col style="width:15%"><col style="width:15%"></colgroup>'+
-    '<thead><tr><th>Equipment</th><th class="num">Total</th><th class="num">Out Today</th><th class="num">Available</th><th>Status</th><th></th></tr></thead>'+
-    '<tbody>'+rows.map(r=>'<tr><td>'+escAttr(r.it.name)+'</td><td class="num mono">'+r.total+'</td><td class="num mono">'+r.out+'</td><td class="num mono">'+r.avail+'</td><td>'+r.badge+'</td><td class="col-actions no-print"><button class="btn sm cal-jump" data-item="'+r.it.id+'">View calendar</button></td></tr>').join('')+
-    '</tbody></table>'+
-    '</div></div>';
 }
 
 function rowPlan(r){
@@ -2074,47 +1954,92 @@ function deleteItemEverywhere(id){
   DB.items.forEach(x=>{ x.lines=(x.lines||[]).filter(l=>l.childId!==id); });
   DB.demandPlan=DB.demandPlan.filter(d=>d.productId!==id);
   DB.purchaseOrders.forEach(po=>{ po.lines=(po.lines||[]).filter(l=>l.itemId!==id); });
+  (DB.quotes||[]).forEach(q=>{ q.lines=(q.lines||[]).filter(l=>l.itemId!==id); });
+  (DB.receipts||[]).forEach(r=>{ r.lines=(r.lines||[]).filter(l=>l.itemId!==id); });
   DB.bookings=DB.bookings.filter(b=>b.itemId!==id);
+}
+/* One-time cleanup: the shader line and the whole Equipment/Availability Calendar/bookings
+   feature were retired. Runs on every load (harmless no-op once the items are gone) so it
+   also strips this data out of a browser that already had it saved from before, not just
+   out of the sample data. */
+function purgeRetiredEquipment(){
+  const retiredIds=DB.items.filter(i=>i.category==='equipment').map(i=>i.id);
+  retiredIds.forEach(id=>deleteItemEverywhere(id));
+}
+function itemGroupSelect(selId){
+  const known=DB.lists.itemGroups||[];
+  const opts=known.slice();
+  if(selId && !opts.includes(selId)) opts.push(selId); // preserve a stale value even if removed from the list in Settings
+  return '<select class="f-itemgroup" title="'+escAttr(selId||'— none —')+'">'+
+    '<option value="">— none —</option>'+
+    opts.map(g=>'<option value="'+escAttr(g)+'" '+(g===selId?'selected':'')+'>'+escAttr(g)+'</option>').join('')+
+    '</select>';
 }
 function renderItems(){
   const el=document.getElementById('panel-items');
   el.innerHTML=
-    '<div class="toolbar no-print"><button class="btn accent" id="add-item">+ New item</button><button class="btn accent" id="add-equipment">+ New equipment</button><button class="btn" id="export-pdf-items">Export PDF</button></div>'+
-    '<p class="note">Components and raw materials only — products live on the <b>BOM / Products</b> tab instead, so they don\'t clutter this list.</p>'+
+    '<div class="toolbar no-print"><button class="btn accent" id="add-item">+ New item</button><button class="btn" id="export-pdf-items">Export PDF</button><button class="btn" id="toggle-all-groups"></button></div>'+
+    '<p class="note">Components and raw materials only — products live on the <b>BOM / Products</b> tab instead, so they don\'t clutter this list. Group items with the <b>Category</b> dropdown on each row; manage the category list itself on the <b>Settings</b> tab.</p>'+
     '<div class="card"><div class="card-body">'+
-    '<table><colgroup><col style="width:17%"><col style="width:5%"><col style="width:7%"><col style="width:9%"><col style="width:10.5%"><col style="width:11.5%"><col style="width:13%"><col style="width:9%"><col style="width:9%"><col style="width:9%"></colgroup>'+
-    '<thead><tr><th>Name</th><th>UoM</th><th class="num">On Hand</th><th>Lead Time</th><th class="num">Safety Stock</th><th class="num">Standard Cost</th><th>Notes</th><th>Files</th><th></th><th></th></tr></thead>'+
+    '<table><colgroup><col style="width:15%"><col style="width:13%"><col style="width:5%"><col style="width:8%"><col style="width:18%"><col style="width:15%"><col style="width:14%"><col style="width:12%"></colgroup>'+
+    '<thead><tr><th>Name</th><th>Category</th><th>UoM</th><th class="num">On Hand</th><th>Last Ordered</th><th>Reorder</th><th>Notes</th><th></th></tr></thead>'+
     '<tbody id="items-tbody"></tbody></table>'+
-    '</div></div>'+
-    '<div class="dash-section-title">Equipment Inventory</div>'+
-    '<p class="note">Shaders, AC units, heaters, nozzles, and similar bookable equipment — tracked by location. Use <b>Bookings</b> to reserve units for a team/event over a date range; see the <b>Availability Calendar</b> tab for the day-by-day picture.</p>'+
-    '<div class="card"><div class="card-body">'+
-    '<table><colgroup><col style="width:19%"><col style="width:5%"><col style="width:8%"><col style="width:8%"><col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:7%"><col style="width:16%"><col style="width:5%"><col style="width:9%"><col style="width:5%"></colgroup>'+
-    '<thead><tr><th>Name</th><th>UoM</th><th class="num">CLE</th><th class="num">JAX</th><th class="num">KC</th><th class="num">Patrick</th><th class="num">Total</th><th class="num">Needed</th><th>Notes</th><th>Files</th><th></th><th></th></tr></thead>'+
-    '<tbody id="equip-tbody"></tbody></table>'+
     '</div></div>';
   const tb=document.getElementById('items-tbody');
-  tb.innerHTML = DB.items.filter(it=>!it.isProduct && it.category!=='equipment').map(it=>
-    '<tr data-id="'+it.id+'">'+
+  const parts=DB.items.filter(it=>!it.isProduct && it.category!=='equipment');
+  const knownGroups=DB.lists.itemGroups||[];
+  const groupOrder=knownGroups.concat(['']); // '' = Uncategorized / any stale value not in the list, rendered last
+  function rowHtml(it){
+    const fileChips=(it.docs&&it.docs.length)? docChips(it.docs) : '';
+    const s=cadenceStatus(it);
+    const statusHtml = s.cls==='none' ? '<span class="note" title="'+escAttr(s.title||'')+'">'+s.text+'</span>' : '<span class="badge '+s.cls+'" title="'+escAttr(s.title||'')+'">'+s.text+'</span>';
+    return '<tr data-id="'+it.id+'">'+
       '<td><input class="f-name" value="'+escAttr(it.name)+'"></td>'+
+      '<td>'+itemGroupSelect(it.itemGroup)+'</td>'+
       '<td><input class="f-uom" value="'+escAttr(it.uom)+'"></td>'+
       '<td class="num"><input class="f-onhand num" type="number" value="'+it.onHand+'"></td>'+
-      '<td><input class="f-lead" type="text" value="'+escAttr(String(it.leadTimeDays||''))+'" placeholder="e.g. 2 weeks, 10 days"></td>'+
-      '<td class="num"><input class="f-ss num" type="number" value="'+it.safetyStock+'"></td>'+
-      '<td class="num">'+costCellHtml(it)+'</td>'+
-      '<td><input class="f-notes" value="'+escAttr(it.notes||'')+'"></td>'+
-      '<td>'+docChips(it.docs)+'<label class="btn sm file-btn no-print">+ file<input type="file" class="f-file"></label></td>'+
-      '<td class="col-actions no-print"><button class="btn sm history-btn">History</button></td>'+
-      '<td class="col-actions no-print"><button class="btn sm danger del-item">Delete</button></td>'+
-    '</tr>').join('');
-  tb.querySelectorAll('tr').forEach(tr=>{
+      '<td><div class="lastordered-cell"><input class="f-lastdate" type="date" value="'+(it.lastPurchaseDate||'')+'" title="Last purchase date"><input class="f-lastqty num" type="number" min="0" value="'+(it.lastPurchaseQty==null?'':it.lastPurchaseQty)+'" placeholder="qty" title="Qty on that order"></div></td>'+
+      '<td><div class="reorder-cell"><span class="cadence-days-wrap"><input class="f-cadence num" type="number" min="0" step="1" value="'+(it.reorderCadenceDays==null?'':it.reorderCadenceDays)+'" placeholder="—"> <span class="note" style="font-size:10px">days</span></span>'+statusHtml+'</div></td>'+
+      '<td><input class="f-notes" value="'+escAttr(it.notes||'')+'" placeholder="—"></td>'+
+      '<td class="col-actions no-print">'+fileChips+'<div class="row-actions">'+
+        '<label class="btn sm icon-btn file-btn" title="Attach a file">📎<input type="file" class="f-file"></label>'+
+        '<button class="btn sm icon-btn history-btn" title="Price history">🕘</button>'+
+        '<button class="btn sm icon-btn danger del-item" title="Delete item">🗑</button>'+
+      '</div></td>'+
+    '</tr>';
+  }
+  const visibleGroups=groupOrder.filter(g=>parts.some(it=> g==='' ? (!it.itemGroup || !knownGroups.includes(it.itemGroup)) : it.itemGroup===g));
+  tb.innerHTML = visibleGroups.map(g=>{
+    const rows=parts.filter(it=> g==='' ? (!it.itemGroup || !knownGroups.includes(it.itemGroup)) : it.itemGroup===g);
+    const label=g||'Uncategorized';
+    const key=g||'__uncategorized__';
+    const collapsed=!!collapsedItemGroups[key];
+    return '<tr class="item-group-row" data-key="'+escAttr(key)+'" style="cursor:pointer"><td colspan="8"><button type="button" class="cost-collapse-toggle group-toggle'+(collapsed?' is-collapsed':'')+'" title="'+(collapsed?'Expand':'Collapse')+'" aria-expanded="'+(!collapsed)+'">▾</button> '+escAttr(label)+' <span class="note" style="text-transform:none;font-weight:400">('+rows.length+')</span></td></tr>'+
+      (collapsed? '' : rows.map(rowHtml).join(''));
+  }).join('') || '<tr><td colspan="8" class="note">No items yet.</td></tr>';
+  const toggleAllBtn=document.getElementById('toggle-all-groups');
+  const allCollapsed=visibleGroups.length>0 && visibleGroups.every(g=>collapsedItemGroups[g||'__uncategorized__']);
+  toggleAllBtn.textContent=allCollapsed?'Expand all':'Collapse all';
+  toggleAllBtn.addEventListener('click',()=>{
+    visibleGroups.forEach(g=>{ collapsedItemGroups[g||'__uncategorized__']=!allCollapsed; });
+    renderItems();
+  });
+  tb.querySelectorAll('tr.item-group-row').forEach(row=>{
+    row.addEventListener('click',()=>{
+      const key=row.dataset.key;
+      collapsedItemGroups[key]=!collapsedItemGroups[key];
+      renderItems();
+    });
+  });
+  tb.querySelectorAll('tr[data-id]').forEach(tr=>{
     const id=tr.dataset.id; const it=itemById(id);
     tr.querySelector('.f-name').addEventListener('change',e=>{it.name=e.target.value; save(); renderCounts();});
+    tr.querySelector('.f-itemgroup').addEventListener('change',e=>{it.itemGroup=e.target.value; save(); renderItems();});
     tr.querySelector('.f-uom').addEventListener('change',e=>{it.uom=e.target.value; save();});
     tr.querySelector('.f-onhand').addEventListener('change',e=>{it.onHand=Number(e.target.value)||0; save();});
-    tr.querySelector('.f-lead').addEventListener('change',e=>{it.leadTimeDays=e.target.value; save();});
-    tr.querySelector('.f-ss').addEventListener('change',e=>{it.safetyStock=Number(e.target.value)||0; save();});
-    wireCostCell(tr.querySelector('.cost-cell'), renderItems);
+    tr.querySelector('.f-lastdate').addEventListener('change',e=>{it.lastPurchaseDate=e.target.value||null; save(); renderItems();});
+    tr.querySelector('.f-lastqty').addEventListener('change',e=>{it.lastPurchaseQty=e.target.value===''?null:(Number(e.target.value)||0); save();});
+    tr.querySelector('.f-cadence').addEventListener('change',e=>{it.reorderCadenceDays=e.target.value===''?null:(Number(e.target.value)||0); save(); renderItems();});
     tr.querySelector('.f-notes').addEventListener('change',e=>{it.notes=e.target.value; save();});
     enableFileDrop(tr.querySelector('.file-btn'), tr.querySelector('.f-file'));
     tr.querySelector('.f-file').addEventListener('change', async e=>{
@@ -2139,336 +2064,16 @@ function renderItems(){
     DB.items.push(mkItem(uid(),'New Item','ea',{}));
     save(); renderItems(); renderCounts();
   });
-  document.getElementById('add-equipment').addEventListener('click',()=>{
-    DB.items.push(mkEquipment(uid(),'New Equipment','ea',{}));
-    save(); renderItems(); renderCounts();
-  });
   document.getElementById('export-pdf-items').addEventListener('click',()=>{
-    const head=['Name','UoM','On Hand','Lead Time','Safety Stock','Notes'];
-    const body=DB.items.filter(it=>!it.isProduct).map(it=>[it.name, it.uom, it.onHand, it.leadTimeDays, it.safetyStock, it.notes||'']);
+    const head=['Name','Category','UoM','On Hand','Last Ordered','Qty','Reorder Every','Status','Notes'];
+    const body=DB.items.filter(it=>!it.isProduct).map(it=>{
+      const lastOrderedCol = it.lastPurchaseDate? fmtDate(it.lastPurchaseDate) : '—';
+      const qtyCol = it.lastPurchaseQty==null? '—' : it.lastPurchaseQty;
+      const reorderCol = it.reorderCadenceDays? it.reorderCadenceDays+' days' : '—';
+      return [it.name, it.itemGroup||'Uncategorized', it.uom, it.onHand, lastOrderedCol, qtyCol, reorderCol, cadenceStatus(it).text, it.notes||''];
+    });
     exportTablePDF('Dragon Seats - Items Catalog', head, body);
   });
-  renderEquipmentTable();
-}
-
-function renderEquipmentTable(){
-  const tb=document.getElementById('equip-tbody');
-  if(!tb) return;
-  tb.innerHTML = equipmentItems().map(it=>{
-    const loc=it.locations||{CLE:0,JAX:0,KC:0,Patrick:0};
-    return '<tr data-id="'+it.id+'">'+
-      '<td><input class="f-name" value="'+escAttr(it.name)+'"></td>'+
-      '<td><input class="f-uom" value="'+escAttr(it.uom)+'"></td>'+
-      '<td class="num"><input class="loc-input num" data-loc="CLE" type="number" value="'+loc.CLE+'"></td>'+
-      '<td class="num"><input class="loc-input num" data-loc="JAX" type="number" value="'+loc.JAX+'"></td>'+
-      '<td class="num"><input class="loc-input num" data-loc="KC" type="number" value="'+loc.KC+'"></td>'+
-      '<td class="num"><input class="loc-input num" data-loc="Patrick" type="number" value="'+loc.Patrick+'"></td>'+
-      '<td class="num loc-total">'+locationsTotal(loc)+'</td>'+
-      '<td class="num"><input class="f-ss num" type="number" value="'+it.safetyStock+'"></td>'+
-      '<td><input class="f-notes" value="'+escAttr(it.notes||'')+'"></td>'+
-      '<td>'+docChips(it.docs)+'<label class="btn sm file-btn no-print">+ file<input type="file" class="f-file"></label></td>'+
-      '<td class="col-actions no-print"><button class="btn sm bookings-btn">Bookings ('+bookingsForItem(it.id).length+')</button></td>'+
-      '<td class="col-actions no-print"><button class="btn sm danger del-item">Delete</button></td>'+
-    '</tr>';
-  }).join('') || '<tr><td colspan="12" class="note">No equipment yet — add one above.</td></tr>';
-  tb.querySelectorAll('tr[data-id]').forEach(tr=>{
-    const id=tr.dataset.id; const it=itemById(id);
-    tr.querySelector('.f-name').addEventListener('change',e=>{it.name=e.target.value; save(); renderCounts();});
-    tr.querySelector('.f-uom').addEventListener('change',e=>{it.uom=e.target.value; save();});
-    tr.querySelectorAll('.loc-input').forEach(inp=>{
-      inp.addEventListener('change',e=>{
-        it.locations[inp.dataset.loc]=Number(e.target.value)||0;
-        syncItemOnHand(it);
-        tr.querySelector('.loc-total').textContent=it.onHand;
-        save(); renderCounts();
-      });
-    });
-    tr.querySelector('.f-ss').addEventListener('change',e=>{it.safetyStock=Number(e.target.value)||0; save();});
-    tr.querySelector('.f-notes').addEventListener('change',e=>{it.notes=e.target.value; save();});
-    enableFileDrop(tr.querySelector('.file-btn'), tr.querySelector('.f-file'));
-    tr.querySelector('.f-file').addEventListener('change', async e=>{
-      const f=e.target.files[0]; if(!f) return;
-      const dataUrl=await readFileAsDataURL(f);
-      it.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
-      save(); renderItems();
-    });
-    tr.querySelector('.bookings-btn').addEventListener('click',()=>{ openBookingsModal(it.id, ()=>{ renderEquipmentTable(); renderCounts(); }); });
-    tr.querySelector('.del-item').addEventListener('click',()=>{
-      confirmModal('Delete '+it.name+'? This also removes any bookings for it.', ()=>{
-        deleteItemEverywhere(id);
-        save(); renderItems(); renderCounts();
-      });
-    });
-  });
-}
-
-/* ---------------- Bookings modal (shared by Items tab + Calendar tab) ---------------- */
-function openBookingsModal(itemId, onChange){
-  const item=itemById(itemId);
-  if(!item) return;
-  openModal('Bookings — '+item.name, renderBookingsModalBody(item));
-  wireBookingsModal(item, onChange, document.querySelector('#modal-root .modal-body'));
-}
-function renderBookingsModalBody(item){
-  const rows=bookingsForItem(item.id);
-  const unassigned=unassignedBookingsFor(item.id);
-  return '<p class="note">Total on hand: <b>'+equipmentTotal(item)+'</b> '+escAttr(item.uom)+' across all locations. Each booking below reserves a quantity for a date range (e.g. a team/event) — the Availability Calendar subtracts overlapping bookings from total stock.'+
-    (item.locations? ' Set a <b>ship-from location</b> on each booking so per-location availability is accurate.' : '')+'</p>'+
-    (unassigned.length? '<p class="note warn">⚠ '+unassigned.length+' booking(s) for this item have no ship-from location set and will not be reflected in per-location availability — set one below.</p>' : '')+
-    '<div class="bookings-list">'+
-    (rows.map(b=>renderBookingRow(b,item)).join('') || '<p class="note">No bookings yet.</p>')+
-    '</div>'+
-    '<button class="btn sm accent add-booking-btn">+ Add booking</button>';
-}
-function renderBookingRow(b,item){
-  const needsLoc = item && item.locations;
-  const locSelect = needsLoc ?
-    '<select class="bk-loc">'+
-      '<option value="" '+(!b.location?'selected':'')+'>Location? (unset)</option>'+
-      EQUIP_LOCATIONS.map(k=>'<option value="'+k+'" '+(b.location===k?'selected':'')+'>'+k+'</option>').join('')+
-    '</select>' : '';
-  const confs=(DB.lists && DB.lists.conferences) || [];
-  const confSelect='<select class="bk-conf">'+
-      '<option value="" '+(!b.conference?'selected':'')+'>Conference? (unset)</option>'+
-      confs.map(c=>'<option value="'+escAttr(c)+'" '+(b.conference===c?'selected':'')+'>'+escAttr(c)+'</option>').join('')+
-    '</select>';
-  const typeSelect='<select class="bk-type">'+
-      '<option value="" '+(!b.type?'selected':'')+'>Home/Visiting?</option>'+
-      '<option value="Home" '+(b.type==='Home'?'selected':'')+'>Home</option>'+
-      '<option value="Visiting" '+(b.type==='Visiting'?'selected':'')+'>Visiting</option>'+
-    '</select>';
-  return '<div class="booking-row" data-id="'+b.id+'">'+
-    '<input class="bk-label" placeholder="Team / event label" value="'+escAttr(b.label||'')+'">'+
-    confSelect+
-    typeSelect+
-    locSelect+
-    '<input class="bk-start" type="date" value="'+(b.startDate||'')+'">'+
-    '<input class="bk-end" type="date" value="'+(b.endDate||'')+'">'+
-    '<input class="bk-qty num" type="number" value="'+b.qty+'">'+
-    '<button class="btn sm danger bk-del">Delete</button>'+
-  '</div>';
-}
-function wireBookingsModal(item, onChange, container){
-  container = container || document;
-  const list=container.querySelector('.bookings-list');
-  if(!list) return;
-  function refresh(){
-    list.innerHTML = bookingsForItem(item.id).map(b=>renderBookingRow(b,item)).join('') || '<p class="note">No bookings yet.</p>';
-    wireRows();
-    save(); renderCounts(); if(onChange) onChange();
-  }
-  function wireRows(){
-    list.querySelectorAll('.booking-row').forEach(row=>{
-      const id=row.dataset.id; const b=DB.bookings.find(x=>x.id===id);
-      row.querySelector('.bk-label').addEventListener('change',e=>{ b.label=e.target.value; save(); if(onChange) onChange(); });
-      row.querySelector('.bk-start').addEventListener('change',e=>{ b.startDate=e.target.value; save(); if(onChange) onChange(); });
-      row.querySelector('.bk-end').addEventListener('change',e=>{ b.endDate=e.target.value; save(); if(onChange) onChange(); });
-      row.querySelector('.bk-qty').addEventListener('change',e=>{ b.qty=Number(e.target.value)||0; save(); if(onChange) onChange(); });
-      const locEl=row.querySelector('.bk-loc');
-      if(locEl) locEl.addEventListener('change',e=>{ b.location=e.target.value; save(); if(onChange) onChange(); });
-      const confEl=row.querySelector('.bk-conf');
-      if(confEl) confEl.addEventListener('change',e=>{ b.conference=e.target.value; save(); if(onChange) onChange(); });
-      const typeEl=row.querySelector('.bk-type');
-      if(typeEl) typeEl.addEventListener('change',e=>{ b.type=e.target.value; save(); if(onChange) onChange(); });
-      row.querySelector('.bk-del').addEventListener('click',()=>{
-        DB.bookings=DB.bookings.filter(x=>x.id!==id);
-        refresh();
-      });
-    });
-  }
-  wireRows();
-  const addBtn=container.querySelector('.add-booking-btn');
-  if(addBtn) addBtn.addEventListener('click',()=>{
-    const t=todayISO();
-    DB.bookings.push({id:uid(), itemId:item.id, qty:1, startDate:t, endDate:t, label:'', location:'', conference:'', type:''});
-    refresh();
-  });
-}
-
-/* ---------------- Calendar tab ---------------- */
-let CAL_ITEM_ID=null;
-let CAL_YEAR=null, CAL_MONTH=null; // CAL_MONTH is 0-indexed
-let CAL_LOCATION='all';
-
-function calInitState(){
-  const eq=equipmentItems();
-  if(!CAL_ITEM_ID || !eq.find(i=>i.id===CAL_ITEM_ID)) CAL_ITEM_ID = eq.length? eq[0].id : null;
-  if(CAL_YEAR===null){ const d=new Date(); CAL_YEAR=d.getFullYear(); CAL_MONTH=d.getMonth(); }
-}
-function isoFor(y,m,d){ return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
-function availStatus(avail, total){
-  if(avail<0) return 'red';
-  if(total>0 && avail<=Math.ceil(total*0.15)) return 'amber';
-  return 'ok';
-}
-function renderCalendar(){
-  calInitState();
-  const el=document.getElementById('panel-calendar');
-  const eq=equipmentItems();
-  if(!eq.length){
-    el.innerHTML='<p class="note">No equipment items yet. Add some on the <b>Items</b> tab (Equipment Inventory section) first.</p>';
-    return;
-  }
-  const item=itemById(CAL_ITEM_ID);
-  if(!item.locations && CAL_LOCATION!=='all') CAL_LOCATION='all';
-  const usingLoc = item.locations && CAL_LOCATION!=='all';
-  const total = usingLoc ? (Number(item.locations[CAL_LOCATION])||0) : equipmentTotal(item);
-  const monthLabel=new Date(CAL_YEAR, CAL_MONTH, 1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
-  const locSelect = item.locations ?
-    '<select id="cal-loc-select">'+
-      '<option value="all" '+(CAL_LOCATION==='all'?'selected':'')+'>All locations (combined)</option>'+
-      EQUIP_LOCATIONS.map(k=>'<option value="'+k+'" '+(CAL_LOCATION===k?'selected':'')+'>'+k+' only</option>').join('')+
-    '</select>' : '';
-  const unassigned=unassignedBookingsFor(item.id);
-  const unassignedWarning = (usingLoc && unassigned.length) ?
-    '<p class="note warn">⚠ '+unassigned.length+' booking(s) for this item have no ship-from location and are excluded from this '+CAL_LOCATION+'-only view — see Bookings below.</p>' : '';
-  el.innerHTML=
-    '<div class="cal-toolbar">'+
-      '<select id="cal-item-select">'+eq.map(i=>'<option value="'+i.id+'" '+(i.id===CAL_ITEM_ID?'selected':'')+'>'+escAttr(i.name)+'</option>').join('')+'</select>'+
-      locSelect+
-      '<span class="note">'+(usingLoc?('On hand at '+CAL_LOCATION+': '):'Total on hand: ')+'<b class="mono">'+total+'</b> '+escAttr(item.uom)+'</span>'+
-      '<div class="cal-nav">'+
-        '<button class="btn sm" id="cal-prev">‹ Prev</button>'+
-        '<span class="cal-month-label">'+monthLabel+'</span>'+
-        '<button class="btn sm" id="cal-today">Today</button>'+
-        '<button class="btn sm" id="cal-next">Next ›</button>'+
-      '</div>'+
-    '</div>'+
-    unassignedWarning+
-    '<div class="card"><div class="card-body">'+renderCalGrid(item, total, usingLoc?CAL_LOCATION:'all')+
-      '<div class="cal-legend">'+
-        '<span><i class="dot-ok"></i> Plenty available</span>'+
-        '<span><i class="dot-amber"></i> Running low</span>'+
-        '<span><i class="dot-red"></i> Oversubscribed</span>'+
-      '</div>'+
-    '</div></div>'+
-    '<div class="dash-section-title">Team Allocation — '+escAttr(item.name)+'</div>'+
-    '<div class="card"><div class="card-body" id="cal-alloc-body">'+renderAllocationSummary(item)+'</div></div>';
-
-  document.getElementById('cal-item-select').addEventListener('change',e=>{ CAL_ITEM_ID=e.target.value; CAL_LOCATION='all'; renderCalendar(); });
-  const locEl=document.getElementById('cal-loc-select');
-  if(locEl) locEl.addEventListener('change',e=>{ CAL_LOCATION=e.target.value; renderCalendar(); });
-  document.getElementById('cal-prev').addEventListener('click',()=>{ CAL_MONTH--; if(CAL_MONTH<0){CAL_MONTH=11; CAL_YEAR--;} renderCalendar(); });
-  document.getElementById('cal-next').addEventListener('click',()=>{ CAL_MONTH++; if(CAL_MONTH>11){CAL_MONTH=0; CAL_YEAR++;} renderCalendar(); });
-  document.getElementById('cal-today').addEventListener('click',()=>{ const d=new Date(); CAL_YEAR=d.getFullYear(); CAL_MONTH=d.getMonth(); renderCalendar(); });
-  wireAllocationSummary(item, document.getElementById('cal-alloc-body'));
-}
-function renderAllocationSummary(item){
-  const rows=bookingsForItem(item.id);
-  const onHand=equipmentTotal(item);
-  const totalAllocated=rows.reduce((s,b)=>s+(Number(b.qty)||0),0);
-  const remaining=onHand-totalAllocated;
-  const remClass = remaining<0 ? 'warn' : (onHand>0 && remaining<=Math.ceil(onHand*0.15) ? 'amber' : '');
-  let html='<p class="note">Season-level total — every team allocation counts against on-hand stock regardless of date, matching how the inventory workbook tracks it. The day-by-day calendar above is separate and shows overlap on specific dates. Edit any field below directly — changes save immediately.</p>'+
-    '<div class="kpi-strip">'+
-      '<div class="kpi"><b>'+onHand+'</b><span>On hand (all locations)</span></div>'+
-      '<div class="kpi"><b>'+totalAllocated+'</b><span>Total allocated to teams</span></div>'+
-      '<div class="kpi '+remClass+'"><b>'+remaining+'</b><span>Remaining to allocate</span></div>'+
-    '</div>'+
-    '<div class="toolbar no-print" style="margin:10px 0"><button class="btn sm accent add-alloc-btn">+ Add team allocation</button></div>';
-  if(!rows.length){
-    html+='<p class="note">No team allocations recorded yet for '+escAttr(item.name)+'. Click "+ Add team allocation" to start.</p>';
-    return html;
-  }
-  const groups={};
-  rows.forEach(b=>{ const key=b.conference||'Unassigned conference'; (groups[key]=groups[key]||[]).push(b); });
-  const confOrder=Object.keys(groups).sort((a,b)=>{
-    if(a==='Unassigned conference') return 1;
-    if(b==='Unassigned conference') return -1;
-    return a.localeCompare(b);
-  });
-  const confs=(DB.lists && DB.lists.conferences) || [];
-  confOrder.forEach(conf=>{
-    const list=groups[conf];
-    const subtotal=list.reduce((s,b)=>s+(Number(b.qty)||0),0);
-    const homeSub=list.filter(b=>b.type==='Home').reduce((s,b)=>s+(Number(b.qty)||0),0);
-    const visSub=list.filter(b=>b.type==='Visiting').reduce((s,b)=>s+(Number(b.qty)||0),0);
-    html+='<div class="dash-section-title" style="margin-top:14px">'+escAttr(conf)+' — '+subtotal+' '+escAttr(item.uom)+' (Home '+homeSub+' / Visiting '+visSub+')</div>'+
-      '<table class="alloc-table"><colgroup><col style="width:26%"><col style="width:11%"><col style="width:11%"><col style="width:10%"><col style="width:12%"><col style="width:12%"><col style="width:10%"><col style="width:4%"></colgroup>'+
-      '<thead><tr><th>Team / label</th><th>Conference</th><th>Home/Visiting</th><th>Location</th><th>Start</th><th>End</th><th class="num">Qty</th><th></th></tr></thead><tbody>'+
-      list.map(b=>renderAllocRow(b,item,confs)).join('')+
-      '</tbody></table>';
-  });
-  return html;
-}
-function renderAllocRow(b,item,confs){
-  const confSelect='<select class="bk-conf">'+
-      '<option value="" '+(!b.conference?'selected':'')+'>(unset)</option>'+
-      confs.map(c=>'<option value="'+escAttr(c)+'" '+(b.conference===c?'selected':'')+'>'+escAttr(c)+'</option>').join('')+
-    '</select>';
-  const typeSelect='<select class="bk-type">'+
-      '<option value="" '+(!b.type?'selected':'')+'>?</option>'+
-      '<option value="Home" '+(b.type==='Home'?'selected':'')+'>Home</option>'+
-      '<option value="Visiting" '+(b.type==='Visiting'?'selected':'')+'>Visiting</option>'+
-    '</select>';
-  const locSelect = item.locations ?
-    '<select class="bk-loc">'+
-      '<option value="" '+(!b.location?'selected':'')+'>(unset)</option>'+
-      EQUIP_LOCATIONS.map(k=>'<option value="'+k+'" '+(b.location===k?'selected':'')+'>'+k+'</option>').join('')+
-    '</select>' : '<span class="note">n/a</span>';
-  return '<tr data-id="'+b.id+'">'+
-    '<td><input class="bk-label" value="'+escAttr(b.label||'')+'"></td>'+
-    '<td>'+confSelect+'</td>'+
-    '<td>'+typeSelect+'</td>'+
-    '<td>'+locSelect+'</td>'+
-    '<td><input class="bk-start" type="date" value="'+(b.startDate||'')+'"></td>'+
-    '<td><input class="bk-end" type="date" value="'+(b.endDate||'')+'"></td>'+
-    '<td class="num"><input class="bk-qty num" type="number" value="'+b.qty+'"></td>'+
-    '<td><button class="btn sm danger bk-del" title="Delete">×</button></td>'+
-  '</tr>';
-}
-function wireAllocationSummary(item, container){
-  container = container || document;
-  container.querySelectorAll('.alloc-table tr[data-id]').forEach(row=>{
-    const id=row.dataset.id; const b=DB.bookings.find(x=>x.id===id);
-    if(!b) return;
-    const bind=(sel,field,cast)=>{
-      const el=row.querySelector(sel);
-      if(el) el.addEventListener('change',e=>{ b[field]=cast?cast(e.target.value):e.target.value; save(); renderCalendar(); });
-    };
-    bind('.bk-label','label');
-    bind('.bk-conf','conference');
-    bind('.bk-type','type');
-    bind('.bk-loc','location');
-    bind('.bk-start','startDate');
-    bind('.bk-end','endDate');
-    bind('.bk-qty','qty',v=>Number(v)||0);
-    const delBtn=row.querySelector('.bk-del');
-    if(delBtn) delBtn.addEventListener('click',()=>{
-      confirmModal('Delete this team allocation?', ()=>{
-        DB.bookings=DB.bookings.filter(x=>x.id!==id); save(); renderCalendar();
-      });
-    });
-  });
-  const addBtn=container.querySelector('.add-alloc-btn');
-  if(addBtn) addBtn.addEventListener('click',()=>{
-    const t=todayISO();
-    DB.bookings.push({id:uid(), itemId:item.id, qty:1, startDate:t, endDate:t, label:'', location:'', conference:'', type:''});
-    save(); renderCalendar();
-  });
-}
-function renderCalGrid(item, total, location){
-  const first=new Date(CAL_YEAR, CAL_MONTH, 1);
-  const startDow=first.getDay();
-  const daysInMonth=new Date(CAL_YEAR, CAL_MONTH+1, 0).getDate();
-  const todayIso=todayISO();
-  const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  let html='<div class="cal-grid">'+dows.map(d=>'<div class="cal-dow">'+d+'</div>').join('');
-  for(let i=0;i<startDow;i++) html+='<div class="cal-cell empty"></div>';
-  for(let d=1; d<=daysInMonth; d++){
-    const iso=isoFor(CAL_YEAR, CAL_MONTH, d);
-    const out=bookedQtyOnDate(item.id, iso, location);
-    const avail=total-out;
-    const status=availStatus(avail, total);
-    const isToday=iso===todayIso;
-    html+='<div class="cal-cell'+(isToday?' today':'')+'">'+
-      '<div class="cal-daynum">'+d+'</div>'+
-      '<div class="cal-avail '+status+'">'+avail+' avail</div>'+
-      (out>0? '<div class="cal-out">'+out+' out</div>' : '')+
-    '</div>';
-  }
-  html+='</div>';
-  return html;
 }
 
 /* ---------------- BOM tab ---------------- */
@@ -2485,32 +2090,46 @@ function renderBOM(){
   const el=document.getElementById('panel-bom-recipes');
   const roots=DB.items.filter(i=>i.isProduct);
   el.innerHTML=
-    '<div class="toolbar no-print"><button class="btn accent" id="add-bom-product">+ New product</button></div>'+
+    '<div class="toolbar no-print"><button class="btn accent" id="add-bom-product">+ New product</button><button class="btn" id="toggle-all-bom"></button></div>'+
     '<p class="note">Products are built from components below. If a component has its own recipe (like Wheel Set), its required parts nest underneath — the planner cascades demand all the way down through every level.</p>'+
     '<div id="bom-list">'+(roots.map(r=>renderBomProduct(r)).join('') || '<p class="note">No products yet — add one.</p>')+'</div>';
   document.getElementById('add-bom-product').addEventListener('click',()=>{
     DB.items.push(mkItem(uid(),'New Product','ea',{isProduct:true}));
     save(); renderBOM(); renderCounts();
   });
+  const toggleAllBtn=document.getElementById('toggle-all-bom');
+  const allCollapsed = roots.length>0 && roots.every(r=>collapsedBomProducts[r.id]);
+  toggleAllBtn.textContent = allCollapsed ? 'Expand all' : 'Collapse all';
+  toggleAllBtn.addEventListener('click',()=>{
+    roots.forEach(r=>{ collapsedBomProducts[r.id]=!allCollapsed; });
+    renderBOM();
+  });
   wireBOM();
 }
 function renderBomProduct(product){
+  const collapsed=!!collapsedBomProducts[product.id];
   return '<div class="card bom-product" data-id="'+product.id+'">'+
-    '<div class="card-head"><h3><input class="f-pname" value="'+escAttr(product.name)+'" style="font:inherit;font-weight:600;border:none;background:transparent"></h3>'+
+    '<div class="card-head"><h3><button type="button" class="cost-collapse-toggle bom-product-toggle'+(collapsed?' is-collapsed':'')+'" title="'+(collapsed?'Expand':'Collapse')+'" aria-expanded="'+(!collapsed)+'">▾</button> <input class="f-pname" value="'+escAttr(product.name)+'" style="font:inherit;font-weight:600;border:none;background:transparent"></h3>'+
     '<div class="row-actions no-print"><button class="btn sm danger del-product">Delete product</button></div></div>'+
-    '<div class="card-body">'+renderBomLines(product, [product.id])+'</div></div>';
+    (collapsed ? '' : '<div class="card-body">'+renderBomLines(product, [product.id])+'</div>')+'</div>';
 }
 function renderBomLines(parent, ancestry){
   const rows=(parent.lines||[]).map((line,i)=>{
     const child=itemById(line.childId);
     const cycle = child && ancestry.indexOf(child.id)!==-1;
-    let nested='';
-    if(child && !cycle && child.lines && child.lines.length){ nested='<div class="bom-nest">'+renderBomLines(child, ancestry.concat(child.id))+'</div>'; }
+    let nested='', nestToggle='';
+    if(child && !cycle && child.lines && child.lines.length){
+      const nestKey=parent.id+'::'+child.id;
+      const nestCollapsed=!!collapsedBomNests[nestKey];
+      nestToggle='<button type="button" class="cost-collapse-toggle bom-nest-toggle'+(nestCollapsed?' is-collapsed':'')+'" data-key="'+escAttr(nestKey)+'" title="'+(nestCollapsed?'Expand sub-assembly':'Collapse sub-assembly')+'" aria-expanded="'+(!nestCollapsed)+'">▾</button>';
+      nested = nestCollapsed ? '' : '<div class="bom-nest">'+renderBomLines(child, ancestry.concat(child.id))+'</div>';
+    }
     else if(cycle){ nested='<div class="bom-nest"><span class="note" style="color:var(--red)">circular reference — not expanding further</span></div>'; }
-    return '<div class="bom-row" data-owner="'+parent.id+'" data-i="'+i+'">'+
+    return '<div class="bom-row" data-owner="'+parent.id+'" data-i="'+i+'" data-child="'+(child?child.id:'')+'">'+
       itemSelectForBomLine(line.childId, ancestry)+
       '<span class="bom-qty-wrap"><span class="bom-qty-label">Qty</span><input class="bom-qtyper num" type="number" min="0" step="any" value="'+line.qtyPer+'"></span>'+
       '<span class="bom-links">'+(child?linkChipsFor(child):'')+'</span>'+
+      nestToggle+
       '<button class="btn sm danger bom-del">Remove</button>'+
     '</div>'+nested;
   }).join('');
@@ -2527,6 +2146,17 @@ function wireBOM(){
         DB.demandPlan=DB.demandPlan.filter(d=>d.productId!==id);
         save(); renderBOM(); renderCounts();
       });
+    });
+    card.querySelector('.bom-product-toggle').addEventListener('click',()=>{
+      collapsedBomProducts[id]=!collapsedBomProducts[id];
+      renderBOM();
+    });
+  });
+  list.querySelectorAll('.bom-nest-toggle').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const key=btn.dataset.key;
+      collapsedBomNests[key]=!collapsedBomNests[key];
+      renderBOM();
     });
   });
   list.querySelectorAll('.bom-row').forEach(row=>{
@@ -3037,6 +2667,7 @@ function supplierSelectOptional(selId){
 }
 
 let LINKS_SELECTED=null;
+let LINKS_SEARCH=''; // transient UI state (not saved) — filter text for the Links item picker
 
 function renderLinks(){
   const el=document.getElementById('panel-links');
@@ -3045,19 +2676,40 @@ function renderLinks(){
     LINKS_SELECTED = (selectable[0]||{}).id || '';
   }
   const item = itemById(LINKS_SELECTED);
+  const knownGroups=DB.lists.itemGroups||[];
+  const groupOrder=knownGroups.concat(['']); // '' = Uncategorized / any stale value not in the list, rendered last
+  const q=LINKS_SEARCH.trim().toLowerCase();
+  const matches = q ? selectable.filter(i=>i.name.toLowerCase().includes(q)) : selectable;
+  const visibleGroups=groupOrder.filter(g=>matches.some(it=> g==='' ? (!it.itemGroup || !knownGroups.includes(it.itemGroup)) : it.itemGroup===g));
+  const pickerHtml = visibleGroups.length
+    ? visibleGroups.map(g=>{
+        const rows=matches.filter(it=> g==='' ? (!it.itemGroup || !knownGroups.includes(it.itemGroup)) : it.itemGroup===g);
+        return '<div class="links-picker-group">'+escAttr(g||'Uncategorized')+'</div>'+
+          rows.map(it=>'<button type="button" class="links-picker-item'+(it.id===LINKS_SELECTED?' active':'')+'" data-id="'+it.id+'">'+escAttr(it.name)+'</button>').join('');
+      }).join('')
+    : '<p class="links-picker-empty">No parts match "'+escAttr(LINKS_SEARCH)+'".</p>';
   el.innerHTML=
     '<p class="note" style="margin:0 0 12px">Pick a part, then add the links or phone numbers you use to order it.</p>'+
-    '<div class="toolbar no-print">'+
-      '<label class="note" style="margin-right:6px">Item</label>'+
-      '<select id="links-select" style="width:280px">'+
-        selectable.map(i=>'<option value="'+i.id+'" '+(i.id===LINKS_SELECTED?'selected':'')+'>'+escAttr(i.name)+'</option>').join('')+
-      '</select>'+
-    '</div>'+
-    '<div id="links-detail">'+(item? renderLinksDetail(item) : '<p class="note">No items yet — add one on the Items tab first.</p>')+'</div>';
+    '<div class="links-layout">'+
+      '<div class="links-picker no-print">'+
+        '<div class="links-picker-search"><input type="text" id="links-search" placeholder="Search parts…" value="'+escAttr(LINKS_SEARCH)+'"></div>'+
+        '<div class="links-picker-list" id="links-picker-list">'+pickerHtml+'</div>'+
+      '</div>'+
+      '<div class="links-detail-wrap" id="links-detail">'+(item? renderLinksDetail(item) : '<p class="note">No items yet — add one on the Items tab first.</p>')+'</div>'+
+    '</div>';
 
-  document.getElementById('links-select').addEventListener('change',e=>{
-    LINKS_SELECTED=e.target.value;
+  const searchInput=document.getElementById('links-search');
+  searchInput.addEventListener('input',e=>{
+    LINKS_SEARCH=e.target.value;
     renderLinks();
+    const reFocus=document.getElementById('links-search');
+    reFocus.focus(); reFocus.setSelectionRange(reFocus.value.length, reFocus.value.length);
+  });
+  document.querySelectorAll('#links-picker-list .links-picker-item').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      LINKS_SELECTED=btn.dataset.id;
+      renderLinks();
+    });
   });
   wireLinksDetail();
 }
@@ -3073,6 +2725,7 @@ function renderLinksDetail(item){
       '<div class="row-actions no-print"><button class="btn sm subtle danger del-item-here" data-id="'+item.id+'">Delete this item</button></div>'+
     '</div>'+
     '<div class="card-body">'+
+      '<div class="links-cost-row"><span class="note" style="margin-right:8px">Standard cost</span>'+costCellHtml(item)+'</div>'+
       '<div id="links-rows">'+rows+'</div>'+
       '<button class="btn sm accent add-link-here no-print" data-id="'+item.id+'" style="margin-top:10px">+ Add link or phone</button>'+
     '</div>'+
@@ -3107,6 +2760,8 @@ function renderLinkRow(item, link){
 function wireLinksDetail(){
   const root=document.getElementById('links-detail');
   if(!root) return;
+
+  wireCostCell(root.querySelector('.cost-cell'), renderLinks);
 
   const delItemBtn=root.querySelector('.del-item-here');
   if(delItemBtn) delItemBtn.addEventListener('click',()=>{
@@ -3315,8 +2970,8 @@ function renderPlan(){
   const res=runMRP();
   const el=document.getElementById('panel-plan');
   el.innerHTML=
-    '<div class="toolbar no-print"><button class="btn" id="export-csv">Export CSV</button><button class="btn" id="export-pdf-plan">Export PDF</button><button class="btn" id="print-plan">Print</button></div>'+
-    '<p class="note">Every item appears here. <b>Total Needed</b> is the raw quantity your Demand Plan calls for (gross demand). <b>On Hand</b> and <b>Safety Stock</b> show what you\'ve got and your buffer. <b>Order Qty</b> is what\'s left to order after netting those against Total Needed — it can be less than Total Needed, or "—" if stock already covers it. <b>Covered by stock</b> means it has demand from your build plan but on-hand + safety stock already covers it — nothing to order yet. <b>No demand</b> means it isn\'t needed by anything currently in the Demand Plan.</p>'+
+    '<div class="toolbar no-print"><button class="btn" id="export-csv">Export CSV</button><button class="btn accent" id="export-pdf-plan">Export PO Request (PDF)</button><button class="btn" id="print-plan">Print</button></div>'+
+    '<p class="note">Every item appears here. <b>Total Needed</b> is the raw quantity your Demand Plan calls for (gross demand). <b>On Hand</b> and <b>Safety Stock</b> show what you\'ve got and your buffer. <b>Order Qty</b> is what\'s left to order after netting those against Total Needed — it can be less than Total Needed, or "—" if stock already covers it. <b>Covered by stock</b> means it has demand from your build plan but on-hand + safety stock already covers it — nothing to order yet. <b>No demand</b> means it isn\'t needed by anything currently in the Demand Plan. This detailed table is for planning — for something to actually send out, use <b>Export PO Request (PDF)</b> below: a clean, supplier-grouped sheet with estimated costs and a spot for finance to sign off.</p>'+
     '<div class="card"><div class="card-body">'+
     '<table><colgroup><col style="width:15%"><col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:9%"><col style="width:9%"><col style="width:10%"><col style="width:10%"><col style="width:21%"></colgroup>'+
     '<thead><tr><th>Part</th><th>Status</th><th class="num">Total Needed</th><th class="num">On Hand</th><th class="num">Safety Stock</th><th class="num">Order Qty</th><th>Order By</th><th>Needed By</th><th>Driven By</th></tr></thead>'+
@@ -3338,12 +2993,111 @@ function renderPlan(){
       }).join('')+'</tbody></table>'+
     '</div></div>';
   document.getElementById('export-csv').addEventListener('click',()=>exportPlanCSV(res));
-  document.getElementById('export-pdf-plan').addEventListener('click',()=>{
-    const head=['Part','Status','Total Needed','On Hand','Safety Stock','Order Qty','Order By','Needed By','Driven By'];
-    const body=res.map(r=>[r.item.name, r.status, r.totalGross||0, r.item.onHand, r.item.safetyStock, r.suggestedQty||0, r.earliestRelease?fmtDate(r.earliestRelease):'—', r.plannedOrders[0]?fmtDate(r.plannedOrders[0].dueDate):'—', (r.plannedOrders.length?r.plannedOrders.map(o=>o.source).join('; '):(r.needSources||[]).join('; '))||'—']);
-    exportTablePDF('Dragon Seats - Planned Orders', head, body);
-  });
+  document.getElementById('export-pdf-plan').addEventListener('click',()=>exportPlanRequestPDF(res));
   document.getElementById('print-plan').addEventListener('click',()=>window.print());
+}
+/* Picks the supplier to group a planned-order line under: the link with the lowest known
+   cost, falling back to the first link on file, or null if the item has no supplier link yet. */
+function primarySupplierForItem(item){
+  if(!item || !item.links || !item.links.length) return null;
+  const withCost=item.links.filter(l=>Number(l.cost)>0).slice().sort((a,b)=>Number(a.cost)-Number(b.cost));
+  const link=withCost[0]||item.links[0];
+  return link ? supplierById(link.supplierId) : null;
+}
+/* A clean, supplier-grouped purchase-request PDF meant to be sent out (to a supplier, or to
+   finance to get a PO approved) — not the dense internal MRP table above. Only includes rows
+   that actually have something to order, grouped by supplier with an estimated cost per line,
+   a subtotal per supplier, and a blank approval/PO# line at the end. */
+function exportPlanRequestPDF(res){
+  if(!pdfAvailable()){ alertModal("PDF library didn't load — try Print instead."); return; }
+  const actionable=res.filter(r=>Number(r.suggestedQty)>0);
+  if(!actionable.length){ alertModal('Nothing to order right now — every part is covered by stock or has no demand.'); return; }
+  const rank={late:0,soon:1,ok:2};
+  actionable.sort((a,b)=>(rank[a.status]??3)-(rank[b.status]??3));
+
+  const groups={}; const groupKeys=[];
+  actionable.forEach(r=>{
+    const supplier=primarySupplierForItem(r.item);
+    const key=supplier?supplier.id:'__none__';
+    if(!groups[key]){ groups[key]={supplier, rows:[]}; groupKeys.push(key); }
+    groups[key].rows.push(r);
+  });
+  groupKeys.sort((a,b)=>{
+    if(a==='__none__') return 1; if(b==='__none__') return -1;
+    return (groups[a].supplier.name||'').localeCompare(groups[b].supplier.name||'');
+  });
+
+  const jsPDFCtor=window.jspdf.jsPDF;
+  const doc=new jsPDFCtor({orientation:'portrait'});
+  const pageH=doc.internal.pageSize.getHeight();
+  const margin=14;
+  let y=18;
+  doc.setFontSize(16); doc.text('Dragon Seats — Purchase Request', margin, y);
+  y+=7;
+  doc.setFontSize(9); doc.setTextColor(110);
+  doc.text('Prepared by John — Dragon Seats · '+new Date().toLocaleString(), margin, y);
+  doc.setTextColor(0);
+
+  let grandTotal=0;
+  groupKeys.forEach(key=>{
+    const g=groups[key];
+    const supplierLabel=g.supplier ? g.supplier.name : 'No supplier on file — add one on the Links tab';
+    const contactBits=[];
+    if(g.supplier && g.supplier.contact) contactBits.push(g.supplier.contact);
+    if(g.supplier && g.supplier.phone) contactBits.push(g.supplier.phone);
+    if(g.supplier && g.supplier.email) contactBits.push(g.supplier.email);
+
+    if(y>pageH-45){ doc.addPage(); y=18; }
+    y+=10;
+    doc.setFontSize(12); doc.setFont(undefined,'bold');
+    doc.text(supplierLabel, margin, y);
+    doc.setFont(undefined,'normal');
+    if(contactBits.length){
+      doc.setFontSize(9); doc.setTextColor(110);
+      doc.text(contactBits.join('   ·   '), margin, y+5);
+      doc.setTextColor(0);
+    }
+    y+=contactBits.length?9:4;
+
+    let subtotal=0;
+    const body=g.rows.map(r=>{
+      const costInfo=resolvePartCost(r.item);
+      const qty=Number(r.suggestedQty)||0;
+      const lineTotal=costInfo.cost*qty;
+      subtotal+=lineTotal;
+      const urgency = r.status==='late'?'Past due':r.status==='soon'?'Order soon':'Order';
+      return [r.item.name, urgency, fmtQty(qty), costInfo.cost?('$'+costInfo.cost.toFixed(2)):'—', costInfo.cost?('$'+lineTotal.toFixed(2)):'—', fmtDate(r.earliestRelease)];
+    });
+    grandTotal+=subtotal;
+
+    doc.autoTable({
+      head:[['Item','Urgency','Qty to Order','Est. Unit Cost','Est. Total','Order By']],
+      body,
+      startY:y,
+      margin:{left:margin, right:margin},
+      styles:{fontSize:9},
+      headStyles:{fillColor:[170,2,1]},
+      foot:[['','','','','Subtotal: $'+subtotal.toFixed(2),'']],
+      footStyles:{fillColor:[247,246,244], textColor:[23,24,26], fontStyle:'bold'}
+    });
+    y=doc.lastAutoTable.finalY+4;
+  });
+
+  if(y>pageH-40){ doc.addPage(); y=18; }
+  y+=10;
+  doc.setFontSize(12); doc.setFont(undefined,'bold');
+  doc.text('Total estimated: $'+grandTotal.toFixed(2), margin, y);
+  doc.setFont(undefined,'normal');
+  y+=16;
+  doc.setFontSize(9); doc.setTextColor(110);
+  doc.text('Estimated costs are based on the best price data on file (recent PO/receipt, standard cost, or a supplier link) — confirm actual pricing when the PO is placed.', margin, y, {maxWidth:180});
+  doc.setTextColor(0);
+  y+=14;
+  doc.text('Approved by (Finance): _______________________     Date: ____________', margin, y);
+  y+=10;
+  doc.text('PO #: ____________________', margin, y);
+
+  doc.save('dragon-seats-purchase-request.pdf');
 }
 function exportPlanCSV(res){
   const rows=[['Part','Status','Total Needed','On Hand','Safety Stock','Order Qty','Order By','Needed By','Driven By']];
@@ -3363,19 +3117,19 @@ function renderPO(){
       '<button class="btn" id="export-pdf-po">Export PDF</button>'+
       filterDropdownHtml('filter-po', docSupplierFilter.po)+
     '</div>'+
-    '<p class="note">Auto-fill from PDF/Word/text files is best-effort — it reads the file\'s text and guesses the PO #, date, supplier, and line items. Always double-check before saving; manual entry always works even if a file can\'t be read.</p>'+
+    '<p class="note">New POs start as <b>Awaiting Approval</b> — get sign-off from the finance manager and record it in <b>Approved by</b> before moving the status to Open and placing the order. Auto-fill from PDF/Word/text files is best-effort — it reads the file\'s text and guesses the PO #, date, supplier, and line items. Always double-check before saving; manual entry always works even if a file can\'t be read.</p>'+
     '<div id="po-list">'+(filteredPOs.map(po=>renderPoCard(po)).join('') || '<p class="note">'+(DB.purchaseOrders.length?'No purchase orders match this filter.':'No purchase orders yet.')+'</p>')+'</div>';
   wirePO();
   wireFilterDropdown('filter-po','po',renderPO);
   document.getElementById('add-po').addEventListener('click',()=>{
-    DB.purchaseOrders.push({id:uid(), poNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', orderDate:todayISO(), expectedDate:addDays(todayISO(),14), status:DB.lists.poStatus[0], lines:[], docs:[], notes:''});
+    DB.purchaseOrders.push({id:uid(), poNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', orderDate:todayISO(), expectedDate:addDays(todayISO(),14), status:DB.lists.poStatus[0], requestedBy:'', approvedBy:'', lines:[], docs:[], notes:''});
     save(); renderPO(); renderCounts();
   });
   document.getElementById('export-pdf-po').addEventListener('click',()=>{
-    const head=['PO #','Supplier','Status','Order Date','Expected Date','Total $'];
+    const head=['PO #','Supplier','Status','Order Date','Expected Date','Requested By','Approved By','Total $'];
     const body=filteredPOs.map(po=>{
       const total=(po.lines||[]).reduce((s,l)=>s+Number(l.qty||0)*Number(l.unitPrice||0),0);
-      return [po.poNumber||'', (supplierById(po.supplierId)||{}).name||'', po.status, fmtDate(po.orderDate), fmtDate(po.expectedDate), '$'+total.toFixed(2)];
+      return [po.poNumber||'', (supplierById(po.supplierId)||{}).name||'', po.status, fmtDate(po.orderDate), fmtDate(po.expectedDate), po.requestedBy||'', po.approvedBy||'', '$'+total.toFixed(2)];
     });
     exportTablePDF('Dragon Seats - Purchase Orders', head, body);
   });
@@ -3392,6 +3146,8 @@ function renderPoCard(po){
         '<div><label>Order date</label><input class="f-odate" type="date" value="'+(po.orderDate||'')+'"></div>'+
         '<div><label>Expected date</label><input class="f-edate" type="date" value="'+(po.expectedDate||'')+'"></div>'+
         '<div><label>Status</label><select class="f-status">'+DB.lists.poStatus.map(s=>'<option value="'+escAttr(s)+'" '+(s===po.status?'selected':'')+'>'+escAttr(s)+'</option>').join('')+'</select></div>'+
+        '<div><label>Requested by</label><input class="f-reqby" placeholder="Who needs this" value="'+escAttr(po.requestedBy||'')+'"></div>'+
+        '<div><label>Approved by (Finance)</label><input class="f-approvedby" placeholder="Finance sign-off name" value="'+escAttr(po.approvedBy||'')+'"></div>'+
       '</div>'+
       '<table><colgroup><col style="width:45%"><col style="width:18%"><col style="width:20%"><col style="width:17%"></colgroup>'+
       '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th></th></tr></thead>'+
@@ -3416,11 +3172,13 @@ function wirePO(){
     card.querySelector('.f-odate').addEventListener('change',e=>{po.orderDate=e.target.value; save();});
     card.querySelector('.f-edate').addEventListener('change',e=>{po.expectedDate=e.target.value; save();});
     card.querySelector('.f-status').addEventListener('change',e=>{po.status=e.target.value; save(); renderPO(); renderCounts();});
+    card.querySelector('.f-reqby').addEventListener('change',e=>{po.requestedBy=e.target.value; save();});
+    card.querySelector('.f-approvedby').addEventListener('change',e=>{po.approvedBy=e.target.value; save();});
     card.querySelector('.f-ponotes').addEventListener('change',e=>{po.notes=e.target.value; save();});
     const recv=card.querySelector('.receive-po');
     if(recv) recv.addEventListener('click',()=>{
       confirmModal('Add all line-item quantities to on-hand stock and mark this PO '+closedStatusName()+'?', ()=>{
-        (po.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it) it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); });
+        (po.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it){ it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); recordPurchase(it, l.qty, todayISO()); } });
         po.status=closedStatusName();
         save(); renderPO(); renderCounts(); runMRP();
       }, {okLabel:'Receive'});
@@ -3557,20 +3315,20 @@ function renderReceipts(){
       '<button class="btn" id="export-pdf-receipts">Export PDF</button>'+
       filterDropdownHtml('filter-receipts', docSupplierFilter.receipts)+
     '</div>'+
-    '<p class="note">This is the intake point for everything the team buys — a physical receipt, a packing slip, or just a link to a web order — whether or not it was ever tied to a formal PO. Save it here, then use <b>Add to inventory</b> on each receipt once the items are actually in hand, so on-hand stock stays current. Auto-fill from PDF/Word/text files is best-effort; always double-check before saving.</p>'+
+    '<p class="note">This is the intake point for everything the team buys — a physical receipt, a packing slip, or just a link to a web order — whether or not it was ever tied to a formal PO. When the service team or front office hands you a receipt, log it here and fill in <b>Requested by / bought by</b> so there\'s a record of who bought it, even without a PO. Then use <b>Add to inventory</b> on each receipt once the items are actually in hand, so on-hand stock stays current. Auto-fill from PDF/Word/text files is best-effort; always double-check before saving.</p>'+
     (pendingCount? '<div class="callout">'+pendingCount+' receipt'+(pendingCount===1?'':'s')+' not yet added to inventory — items may already be on the shelf but not reflected in stock counts until you click <b>Add to inventory</b> below.</div>' : '')+
     '<div id="receipt-list">'+(filteredReceipts.map(r=>renderReceiptCard(r)).join('') || '<p class="note">'+(DB.receipts.length?'No receipts match this filter.':'No receipts yet.')+'</p>')+'</div>';
   wireReceipts();
   wireFilterDropdown('filter-receipts','receipts',renderReceipts);
   document.getElementById('add-receipt').addEventListener('click',()=>{
-    DB.receipts.unshift({id:uid(), receiptNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', receiptDate:todayISO(), poId:'', orderLink:'', lines:[], docs:[], notes:'', appliedToStock:false, appliedAt:null});
+    DB.receipts.unshift({id:uid(), receiptNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', receiptDate:todayISO(), poId:'', orderLink:'', requestedBy:'', lines:[], docs:[], notes:'', appliedToStock:false, appliedAt:null});
     save(); renderReceipts(); renderCounts();
   });
   document.getElementById('export-pdf-receipts').addEventListener('click',()=>{
-    const head=['Receipt #','Supplier','Receipt Date','Linked PO','In Stock?','Total $'];
+    const head=['Receipt #','Supplier','Requested By','Receipt Date','Linked PO','In Stock?','Total $'];
     const body=filteredReceipts.map(r=>{
       const total=(r.lines||[]).reduce((s,l)=>s+Number(l.qty||0)*Number(l.unitPrice||0),0);
-      return [r.receiptNumber||'', (supplierById(r.supplierId)||{}).name||'', fmtDate(r.receiptDate), (poById(r.poId)||{}).poNumber||'', r.appliedToStock?'Yes':'Pending', '$'+total.toFixed(2)];
+      return [r.receiptNumber||'', (supplierById(r.supplierId)||{}).name||'', r.requestedBy||'', fmtDate(r.receiptDate), (poById(r.poId)||{}).poNumber||'', r.appliedToStock?'Yes':'Pending', '$'+total.toFixed(2)];
     });
     exportTablePDF('Dragon Seats - Receipts', head, body);
   });
@@ -3592,6 +3350,7 @@ function renderReceiptCard(r){
         '<div><label>Supplier</label>'+supplierSelectSimple(r.supplierId)+'</div>'+
         '<div><label>Receipt date</label><input class="f-rdate" type="date" value="'+(r.receiptDate||'')+'"></div>'+
         '<div><label>Linked PO (optional)</label><select class="f-poid"><option value="">— none —</option>'+DB.purchaseOrders.map(po=>'<option value="'+po.id+'" '+(po.id===r.poId?'selected':'')+'>PO '+escAttr(po.poNumber||po.id)+'</option>').join('')+'</select></div>'+
+        '<div><label>Requested by / bought by</label><input class="f-reqby" placeholder="e.g. a service tech or front office" value="'+escAttr(r.requestedBy||'')+'"></div>'+
       '</div>'+
       '<div><label class="note">Order link (optional)</label><br><input class="f-rlink" style="width:100%;box-sizing:border-box" placeholder="Link to the web order / order confirmation, if there is no file" value="'+escAttr(r.orderLink||'')+'">'+
         (linkHref? ' <a href="'+escAttr(linkHref)+'" target="_blank" rel="noopener" class="btn sm" style="margin-top:6px;display:inline-block">Open link</a>' : '')+
@@ -3618,6 +3377,7 @@ function wireReceipts(){
     card.querySelector('.supplier-select').addEventListener('change',e=>{r.supplierId=e.target.value; save();});
     card.querySelector('.f-rdate').addEventListener('change',e=>{r.receiptDate=e.target.value; save(); renderReceipts();});
     card.querySelector('.f-poid').addEventListener('change',e=>{r.poId=e.target.value; save();});
+    card.querySelector('.f-reqby').addEventListener('change',e=>{r.requestedBy=e.target.value; save(); renderReceipts();});
     card.querySelector('.f-rlink').addEventListener('change',e=>{r.orderLink=e.target.value.trim(); save(); renderReceipts();});
     card.querySelector('.f-ponotes').addEventListener('change',e=>{r.notes=e.target.value; save();});
     card.querySelector('.del-receipt').addEventListener('click',()=>{ confirmModal('Delete this receipt?', ()=>{ DB.receipts=DB.receipts.filter(x=>x.id!==id); save(); renderReceipts(); renderCounts(); }); });
@@ -3625,7 +3385,7 @@ function wireReceipts(){
     if(applyBtn) applyBtn.addEventListener('click',()=>{
       const warn = r.poId ? ' This receipt is linked to a PO — if that PO was already received to stock, adding this too will double-count it.' : '';
       confirmModal('Add all line-item quantities on this receipt to on-hand stock?'+warn, ()=>{
-        (r.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it) it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); });
+        (r.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it){ it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); recordPurchase(it, l.qty, r.receiptDate||todayISO()); } });
         r.appliedToStock=true; r.appliedAt=todayISO();
         save(); renderReceipts(); renderCounts(); runMRP();
       }, {okLabel:'Add to inventory'});
@@ -3781,13 +3541,14 @@ function renderStatusList(){
     DB.lists.poStatus.splice(Number(b.dataset.i),1); save(); renderStatusList();
   }));
 }
-function renderConferenceList(){
-  const el=document.getElementById('conference-list');
+function renderItemGroupList(){
+  const el=document.getElementById('item-group-list');
   if(!el) return;
-  el.innerHTML = DB.lists.conferences.map((c,i)=>'<span class="chip">'+escAttr(c)+' <button class="btn sm danger conf-remove" data-i="'+i+'" style="padding:1px 6px;margin-left:4px">x</button></span>').join(' ');
-  el.querySelectorAll('.conf-remove').forEach(b=>b.addEventListener('click',()=>{
-    if(DB.lists.conferences.length<=1){ alertModal('Keep at least one conference.'); return; }
-    DB.lists.conferences.splice(Number(b.dataset.i),1); save(); renderConferenceList();
+  el.innerHTML = DB.lists.itemGroups.map((g,i)=>'<span class="chip">'+escAttr(g)+' <button class="btn sm danger item-group-remove" data-i="'+i+'" style="padding:1px 6px;margin-left:4px">x</button></span>').join(' ') || '<p class="note">No categories defined yet — everything shows under "Uncategorized" until you add some.</p>';
+  el.querySelectorAll('.item-group-remove').forEach(b=>b.addEventListener('click',()=>{
+    confirmModal('Remove this category? Items already set to it will show under "Uncategorized" instead — nothing is deleted.', ()=>{
+      DB.lists.itemGroups.splice(Number(b.dataset.i),1); save(); renderItemGroupList();
+    }, {okLabel:'Remove'});
   }));
 }
 function findDuplicateItems(){
@@ -3867,10 +3628,10 @@ function renderSettings(){
       '<div id="po-status-list"></div>'+
       '<div class="toolbar no-print"><input id="new-status-input" placeholder="New status name" style="width:220px"><button class="btn sm" id="add-status-btn">+ Add</button></div>'+
     '</div></div>'+
-    '<div class="card"><div class="card-head"><h3>Conferences</h3></div><div class="card-body">'+
-      '<p class="note">These are the conference options available on each equipment booking (e.g. NFL AFC, NFL NFC, SEC, ACC). Used to group the Team Allocation summary on the Availability Calendar tab.</p>'+
-      '<div id="conference-list"></div>'+
-      '<div class="toolbar no-print"><input id="new-conf-input" placeholder="New conference name" style="width:220px"><button class="btn sm" id="add-conf-btn">+ Add</button></div>'+
+    '<div class="card"><div class="card-head"><h3>Item categories</h3></div><div class="card-body">'+
+      '<p class="note">These are the category options available on each component/part on the <b>Items</b> tab — pick one per item from the dropdown there to group the list. Anything left blank shows under "Uncategorized".</p>'+
+      '<div id="item-group-list"></div>'+
+      '<div class="toolbar no-print"><input id="new-item-group-input" placeholder="New category name" style="width:220px"><button class="btn sm" id="add-item-group-btn">+ Add</button></div>'+
     '</div></div>';
   document.getElementById('export-data').addEventListener('click',()=>{
     const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
@@ -3894,12 +3655,12 @@ function renderSettings(){
     const v=inp.value.trim(); if(!v) return;
     DB.lists.poStatus.push(v); inp.value=''; save(); renderStatusList();
   });
-  renderConferenceList();
-  document.getElementById('add-conf-btn').addEventListener('click',()=>{
-    const inp=document.getElementById('new-conf-input');
+  renderItemGroupList();
+  document.getElementById('add-item-group-btn').addEventListener('click',()=>{
+    const inp=document.getElementById('new-item-group-input');
     const v=inp.value.trim(); if(!v) return;
-    if(!DB.lists.conferences.includes(v)) DB.lists.conferences.push(v);
-    inp.value=''; save(); renderConferenceList();
+    if(!DB.lists.itemGroups.includes(v)) DB.lists.itemGroups.push(v);
+    inp.value=''; save(); renderItemGroupList();
   });
 }
 
@@ -3913,7 +3674,6 @@ const FEEDBACK_SECTIONS=[
   {id:'bom',label:'BOM / Products'},
   {id:'links',label:'Links'},
   {id:'suppliers',label:'Suppliers'},
-  {id:'calendar',label:'Availability Calendar'},
   {id:'demand',label:'Demand Plan'},
   {id:'plan',label:'Planned Orders'},
   {id:'po',label:'Purchase Orders'},
