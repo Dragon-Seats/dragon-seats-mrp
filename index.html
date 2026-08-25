@@ -949,12 +949,12 @@ function sample(){
     {id:uid(), productId:'b-hadlock-holes', qty:6, needDate:addDays(t,35), label:'Sample build — edit me'},
   ];
   const purchaseOrders=[
-    {id:uid(), poNumber:'1468', supplierId:'s-mfg', orderDate:addDays(t,-90), expectedDate:addDays(t,-80), status:'Closed',
+    {id:uid(), poNumber:'1468', supplierId:'s-mfg', orderDate:addDays(t,-90), expectedDate:addDays(t,-80), status:'Received',
      requestedBy:'John', approvedBy:'',
      lines:[{id:uid(), itemId:'i-wheelset', qty:12, unitPrice:225}], docs:[], notes:'Sample historical order — edit or delete. Only tied to the LH Wheelbase Assembly; if this shipment actually included both LH and RH units, add a matching line for the RH side.'}
   ];
   const bookings=[];
-  return {items, suppliers, demandPlan, purchaseOrders, quotes:[], receipts:[], deliveries:[], bookings, lists:{poStatus:['Open','Partially Received','Closed'], quoteStatus:['Open','Expired','Converted to PO']}, horizonDays:90};
+  return {items, suppliers, demandPlan, purchaseOrders, quotes:[], receipts:[], deliveries:[], bookings, lists:{poStatus:['Requested','Sent to Finance','PO Issued','Ordered','Received'], quoteStatus:['Open','Expired','Converted to PO']}, horizonDays:90};
 }
 
 let DB=null;
@@ -975,7 +975,7 @@ function migrateToV2(db){
   });
   return {
     items, suppliers:db.suppliers||[], demandPlan:db.demandPlan||[],
-    purchaseOrders:[], quotes:[], receipts:[], deliveries:[], bookings:db.bookings||[], lists:{poStatus:['Open','Partially Received','Closed'], quoteStatus:['Open','Expired','Converted to PO']},
+    purchaseOrders:[], quotes:[], receipts:[], deliveries:[], bookings:db.bookings||[], lists:{poStatus:['Requested','Sent to Finance','PO Issued','Ordered','Received'], quoteStatus:['Open','Expired','Converted to PO']},
     horizonDays:db.horizonDays||90
   };
 }
@@ -1111,8 +1111,22 @@ function ensureShape(){
   purgeRetiredEquipment();
   if(!DB.lists || typeof DB.lists!=='object') DB.lists={};
   delete DB.lists.conferences; // retired with the Equipment/Availability Calendar feature
-  if(!Array.isArray(DB.lists.poStatus) || !DB.lists.poStatus.length) DB.lists.poStatus=['Open','Partially Received','Closed'];
-  if(!DB.lists.poStatus.includes('Awaiting Approval')) DB.lists.poStatus.unshift('Awaiting Approval');
+  var DEFAULT_PO_STATUS=['Requested','Sent to Finance','PO Issued','Ordered','Received'];
+  if(!Array.isArray(DB.lists.poStatus) || !DB.lists.poStatus.length) DB.lists.poStatus=DEFAULT_PO_STATUS.slice();
+  // One-time migration to the 5-stage request workflow (Requested -> Sent to Finance -> PO
+  // Issued -> Ordered -> Received). Runs once per saved DB: remaps any PO still sitting on an
+  // old stage name to its closest new equivalent, then swaps the status list itself. Guarded by
+  // a flag so it never re-runs and clobbers a status list the user has since customized on the
+  // Settings tab.
+  if(!DB._poStatusMigratedV2){
+    var OLD_TO_NEW_PO_STATUS={'Awaiting Approval':'Sent to Finance','Open':'Ordered','Partially Received':'Ordered','Closed':'Received'};
+    var hadOldStages=DB.lists.poStatus.some(function(s){return OLD_TO_NEW_PO_STATUS[s];});
+    if(hadOldStages){
+      DB.purchaseOrders.forEach(function(po){ if(OLD_TO_NEW_PO_STATUS[po.status]) po.status=OLD_TO_NEW_PO_STATUS[po.status]; });
+      DB.lists.poStatus=DEFAULT_PO_STATUS.slice();
+    }
+    DB._poStatusMigratedV2=true;
+  }
   if(!Array.isArray(DB.lists.quoteStatus) || !DB.lists.quoteStatus.length) DB.lists.quoteStatus=['Open','Expired','Converted to PO'];
   if(!Array.isArray(DB.lists.itemGroups)) DB.lists.itemGroups=['Wheel Assembly','Bench Hardware','MFG Parts','Hadlock Parts'];
   if(!DB.horizonDays) DB.horizonDays=90;
@@ -1833,8 +1847,8 @@ function statCard(value,label,cls){
 /* Horizontal segmented bar showing purchase orders grouped by status. No external charting
    library — kept as plain HTML/CSS so the app stays fully self-contained and offline-safe. */
 function poStatusChart(){
-  const statusColor={'Open':'var(--graphite)','Partially Received':'var(--amber)','Closed':'var(--green)'};
-  const statuses=(DB.lists.poStatus||[]).length?DB.lists.poStatus:['Open','Partially Received','Closed'];
+  const statusColor={'Requested':'var(--steel)','Sent to Finance':'var(--amber)','PO Issued':'var(--ink)','Ordered':'var(--graphite)','Received':'var(--green)'};
+  const statuses=(DB.lists.poStatus||[]).length?DB.lists.poStatus:['Requested','Sent to Finance','PO Issued','Ordered','Received'];
   const counts=statuses.map(s=>({label:s, value:DB.purchaseOrders.filter(po=>po.status===s).length, color:statusColor[s]||'#8a8d93'}));
   const total=counts.reduce((s,c)=>s+c.value,0);
   const segs=total
@@ -1880,7 +1894,7 @@ function renderDash(){
   const needsReview=DB.items.filter(i=>!i.isProduct && !i.leadTimeDays).length;
   const closed=closedStatusName();
   const openPOs=DB.purchaseOrders.filter(po=>po.status!==closed).length;
-  const awaitingApproval=DB.purchaseOrders.filter(po=>po.status==='Awaiting Approval').length;
+  const awaitingApproval=DB.purchaseOrders.filter(po=>po.status==='Requested'||po.status==='Sent to Finance').length;
   const noPoReceipts=DB.receipts.filter(r=>!r.poId).length;
   const openQuotes=DB.quotes.filter(q=>q.status==='Open').length;
   const missingLinks=DB.items.filter(i=>!i.isProduct && (!i.links||!i.links.length)).length;
@@ -1898,7 +1912,7 @@ function renderDash(){
       statCard(late,'Parts past due to order', late?'warn':'good')+
       statCard(soon,'Order within 14 days', soon?'amber':'good')+
       statCard(openPOs,'Open purchase orders','')+
-      statCard(awaitingApproval,'POs awaiting finance approval', awaitingApproval?'amber':'good')+
+      statCard(awaitingApproval,'Requests not yet sent to vendor', awaitingApproval?'amber':'good')+
       statCard(noPoReceipts,'Purchases on file with no PO', noPoReceipts?'amber':'good')+
       statCard(openQuotes,'Open quotes','')+
       statCard(missingLinks,'Items with no supplier link', missingLinks?'amber':'good')+
@@ -1966,6 +1980,25 @@ function purgeRetiredEquipment(){
   const retiredIds=DB.items.filter(i=>i.category==='equipment').map(i=>i.id);
   retiredIds.forEach(id=>deleteItemEverywhere(id));
 }
+/* Quick "+ New category" modal on the Items tab — adds straight to DB.lists.itemGroups
+   (the same list the Settings tab manages), so both places always stay in sync. */
+function openAddItemGroupModal(){
+  openModal('New category',
+    '<div><label>Category name</label><br><input type="text" id="new-cat-name" style="width:100%;font:inherit;box-sizing:border-box" placeholder="e.g. Fasteners"></div>'+
+    '<div class="toolbar" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="new-cat-cancel">Cancel</button><button class="btn accent" id="new-cat-save">Save</button></div>'
+  );
+  const inp=document.getElementById('new-cat-name');
+  inp.focus();
+  const commit=()=>{
+    const v=inp.value.trim();
+    if(!v) return;
+    if(!DB.lists.itemGroups.includes(v)) DB.lists.itemGroups.push(v);
+    save(); closeModal(); renderItems(); renderCounts();
+  };
+  document.getElementById('new-cat-save').addEventListener('click', commit);
+  document.getElementById('new-cat-cancel').addEventListener('click', closeModal);
+  inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
+}
 function itemGroupSelect(selId){
   const known=DB.lists.itemGroups||[];
   const opts=known.slice();
@@ -1978,8 +2011,8 @@ function itemGroupSelect(selId){
 function renderItems(){
   const el=document.getElementById('panel-items');
   el.innerHTML=
-    '<div class="toolbar no-print"><button class="btn accent" id="add-item">+ New item</button><button class="btn" id="export-pdf-items">Export PDF</button><button class="btn" id="toggle-all-groups"></button></div>'+
-    '<p class="note">Components and raw materials only — products live on the <b>BOM / Products</b> tab instead, so they don\'t clutter this list. Group items with the <b>Category</b> dropdown on each row; manage the category list itself on the <b>Settings</b> tab.</p>'+
+    '<div class="toolbar no-print"><button class="btn accent" id="add-item">+ New item</button><button class="btn" id="add-item-group">+ New category</button><button class="btn" id="export-pdf-items">Export PDF</button><button class="btn" id="toggle-all-groups"></button></div>'+
+    '<p class="note">Components and raw materials only — products live on the <b>BOM / Products</b> tab instead, so they don\'t clutter this list. Group items with the <b>Category</b> dropdown on each row — click <b>+ New category</b> above to add one, or manage the full list on the <b>Settings</b> tab.</p>'+
     '<div class="card"><div class="card-body">'+
     '<table><colgroup><col style="width:15%"><col style="width:13%"><col style="width:5%"><col style="width:8%"><col style="width:18%"><col style="width:15%"><col style="width:14%"><col style="width:12%"></colgroup>'+
     '<thead><tr><th>Name</th><th>Category</th><th>UoM</th><th class="num">On Hand</th><th>Last Ordered</th><th>Reorder</th><th>Notes</th><th></th></tr></thead>'+
@@ -2064,6 +2097,7 @@ function renderItems(){
     DB.items.push(mkItem(uid(),'New Item','ea',{}));
     save(); renderItems(); renderCounts();
   });
+  document.getElementById('add-item-group').addEventListener('click', openAddItemGroupModal);
   document.getElementById('export-pdf-items').addEventListener('click',()=>{
     const head=['Name','Category','UoM','On Hand','Last Ordered','Qty','Reorder Every','Status','Notes'];
     const body=DB.items.filter(it=>!it.isProduct).map(it=>{
@@ -3117,7 +3151,7 @@ function renderPO(){
       '<button class="btn" id="export-pdf-po">Export PDF</button>'+
       filterDropdownHtml('filter-po', docSupplierFilter.po)+
     '</div>'+
-    '<p class="note">New POs start as <b>Awaiting Approval</b> — get sign-off from the finance manager and record it in <b>Approved by</b> before moving the status to Open and placing the order. Auto-fill from PDF/Word/text files is best-effort — it reads the file\'s text and guesses the PO #, date, supplier, and line items. Always double-check before saving; manual entry always works even if a file can\'t be read.</p>'+
+    '<p class="note">New requests start as <b>Requested</b>. Move to <b>Sent to Finance</b> once you\'ve drafted it and sent it their way; once Finance sends back the actual PO, attach it under Files below and move to <b>PO Issued</b>; once you\'ve sent that PO to the vendor, move to <b>Ordered</b>. Logging a receipt against this PO on the Receipts tab (or using Receive below) moves it to <b>Received</b> automatically. Record Finance\'s sign-off in <b>Approved by</b> whenever that happens. Auto-fill from PDF/Word/text files is best-effort — it reads the file\'s text and guesses the PO #, date, supplier, and line items. Always double-check before saving; manual entry always works even if a file can\'t be read.</p>'+
     '<div id="po-list">'+(filteredPOs.map(po=>renderPoCard(po)).join('') || '<p class="note">'+(DB.purchaseOrders.length?'No purchase orders match this filter.':'No purchase orders yet.')+'</p>')+'</div>';
   wirePO();
   wireFilterDropdown('filter-po','po',renderPO);
@@ -3387,6 +3421,10 @@ function wireReceipts(){
       confirmModal('Add all line-item quantities on this receipt to on-hand stock?'+warn, ()=>{
         (r.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it){ it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); recordPurchase(it, l.qty, r.receiptDate||todayISO()); } });
         r.appliedToStock=true; r.appliedAt=todayISO();
+        // Matching this receipt to its PO is what closes the loop on the request — flip the
+        // linked PO straight to the terminal status so it doesn't have to be updated twice.
+        const linkedPo=r.poId?poById(r.poId):null;
+        if(linkedPo) linkedPo.status=closedStatusName();
         save(); renderReceipts(); renderCounts(); runMRP();
       }, {okLabel:'Add to inventory'});
     });
@@ -3395,6 +3433,10 @@ function wireReceipts(){
       confirmModal('Remove this receipt\'s quantities back out of on-hand stock? Only do this if it was applied by mistake.', ()=>{
         (r.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it) it.onHand=(Number(it.onHand)||0)-Number(l.qty||0); });
         r.appliedToStock=false; r.appliedAt=null;
+        // Reverse the auto-close too, so the PO doesn't sit marked Received with nothing behind it.
+        const linkedPo=r.poId?poById(r.poId):null;
+        const statuses=DB.lists.poStatus||[];
+        if(linkedPo && linkedPo.status===closedStatusName() && statuses.length>1) linkedPo.status=statuses[statuses.length-2];
         save(); renderReceipts(); renderCounts(); runMRP();
       }, {okLabel:'Undo'});
     });
