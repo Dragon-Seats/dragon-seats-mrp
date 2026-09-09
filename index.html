@@ -111,6 +111,23 @@ h1,h2,h3,.brand,.tab,.dash-section-title{font-family:'Space Grotesk',system-ui,s
 .links-picker-empty{padding:12px 14px;color:var(--steel);font-size:12.5px;margin:0}
 .links-detail-wrap{flex:1;min-width:0}
 @media (max-width:900px){.links-layout{flex-direction:column}.links-picker{flex:0 0 auto;width:100%}.links-picker-list{max-height:280px}}
+.bom-layout{display:flex;gap:18px;align-items:flex-start}
+.bom-picker{flex:0 0 260px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden;align-self:flex-start}
+.bom-picker-search{padding:10px;border-bottom:1px solid var(--line)}
+.bom-picker-search input{width:100%;box-sizing:border-box}
+.bom-picker-list{max-height:560px;overflow-y:auto;padding:6px 0}
+.bom-picker-item{all:unset;display:block;width:100%;box-sizing:border-box;cursor:pointer;padding:9px 14px;border-left:3px solid transparent}
+.bom-picker-item:hover{background:var(--steel-soft)}
+.bom-picker-item.active{background:var(--amber-tint);border-left-color:var(--amber)}
+.bom-picker-name{font-size:13px;font-weight:600;color:var(--ink)}
+.bom-picker-item.active .bom-picker-name{color:var(--amber-tint-text)}
+.bom-picker-meta{font-size:11.5px;color:var(--steel);margin-top:1px}
+.bom-picker-item.active .bom-picker-meta{color:var(--amber-tint-text)}
+.bom-picker-badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;background:var(--steel-soft);color:var(--graphite);border-radius:10px;padding:1px 7px;margin-top:4px}
+.bom-picker-item.active .bom-picker-badge{background:rgba(255,255,255,.55);color:var(--amber-tint-text)}
+.bom-picker-empty{padding:12px 14px;color:var(--steel);font-size:12.5px;margin:0}
+.bom-detail-wrap{flex:1;min-width:0}
+@media (max-width:900px){.bom-layout{flex-direction:column}.bom-picker{flex:0 0 auto;width:100%}.bom-picker-list{max-height:280px}}
 .card-head{padding:12px 16px;border-bottom:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:space-between}
 .card-head h3{margin:0;font-size:14.5px;font-weight:600}
 .card-body{padding:14px 16px}
@@ -381,6 +398,8 @@ tr.row-editing{background:#fbf7f0}
     <div class="sb-nav">
       <div class="sb-group-label" style="padding-top:2px">Overview</div>
       <button class="tab" data-tab="dash"><span class="tab-ico">&#9679;</span><span class="tab-label">Dashboard</span></button>
+      <div class="sb-group-label">Pipeline</div>
+      <button class="tab" data-tab="pipeline"><span class="tab-ico">&#9998;</span><span class="tab-label">Pipeline</span> <span class="count" id="cnt-pipeline">0</span></button>
       <div class="sb-group-label">Catalog</div>
       <button class="tab" data-tab="items"><span class="tab-ico">&#9633;</span><span class="tab-label">Items</span> <span class="count" id="cnt-items">0</span></button>
       <button class="tab" data-tab="bom"><span class="tab-ico">&#8862;</span><span class="tab-label">BOM / Products</span> <span class="count" id="cnt-products">0</span></button>
@@ -429,6 +448,7 @@ tr.row-editing{background:#fbf7f0}
         <div class="doc-subpanel hidden" id="panel-receipts"></div>
         <div class="doc-subpanel hidden" id="panel-deliveries"></div>
       </div>
+      <div class="panel hidden" id="panel-pipeline"></div>
       <div class="panel hidden" id="panel-settings"></div>
     </div>
   </div>
@@ -1214,6 +1234,7 @@ function ensureShape(){
   if(!Array.isArray(DB.receipts)) DB.receipts=[];
   if(!Array.isArray(DB.deliveries)) DB.deliveries=[];
   if(!Array.isArray(DB.bookings)) DB.bookings=[];
+  if(!Array.isArray(DB.pipeline)) DB.pipeline=[];
   purgeRetiredEquipment();
   if(!DB.lists || typeof DB.lists!=='object') DB.lists={};
   delete DB.lists.conferences; // retired with the Equipment/Availability Calendar feature
@@ -1697,6 +1718,7 @@ const TAB_LABELS={
   demand:['Demand Plan','Planned builds driving requirements'],
   plan:['Planned Orders','What to order, and when'],
   docs:['Documents','Purchase orders, quotes & receipts — one place for all supplier paperwork'],
+  pipeline:['Pipeline','Potential future orders to keep an eye on — not part of MRP planning'],
   settings:['Settings','Data management & configurable lists']
 };
 /* Sub-tab labels for the merged Purchase Orders / Quotes / Receipts page. */
@@ -1722,8 +1744,10 @@ let itemsEditingRow=null; // transient UI state (not saved) — which Items-tab 
 let selectedPO=null, selectedQuote=null, selectedReceipt=null, selectedDelivery=null;
 let docSearch={po:'', quotes:'', receipts:'', deliveries:''}; // transient UI state (not saved) — search box on each Documents sub-tab
 let docStatusFilter={po:'', quotes:''}; // transient UI state (not saved) — status dropdown on each Documents sub-tab
-let collapsedBomProducts={}; // transient UI state (not saved) — which BOM/Products cards are collapsed
+let collapsedBomProducts={}; // transient UI state (not saved) — which BOM/Products cards are collapsed (legacy, unused by the split-view layout below, left in case older data references it)
 let collapsedBomNests={}; // transient UI state (not saved) — which nested sub-assembly sections are collapsed, keyed by "parentId::childId"
+let BOM_SELECTED=null; // transient UI state (not saved) — which product is shown in the BOM/Products detail pane
+let BOM_SEARCH=''; // transient UI state (not saved) — filter text for the BOM/Products picker list
 function filterBySupplier(list, supplierIds, getSupplierId){
   if(!supplierIds || supplierIds.length===0) return list.slice();
   return list.filter(x=>supplierIds.includes(getSupplierId(x)));
@@ -1821,6 +1845,7 @@ function renderCounts(){
   document.getElementById('cnt-links').textContent=DB.items.reduce((s,i)=>s+(i.links?i.links.length:0),0);
   document.getElementById('cnt-suppliers').textContent=DB.suppliers.length;
   document.getElementById('cnt-demand').textContent=DB.demandPlan.length;
+  document.getElementById('cnt-pipeline').textContent=DB.pipeline.length;
   document.getElementById('cnt-plan').textContent=liveResults.filter(r=>r.plannedOrders.length).length;
   const closed=closedStatusName();
   const openPoCount=DB.purchaseOrders.filter(po=>po.status!==closed).length;
@@ -1846,6 +1871,7 @@ function renderTab(which){
   else if(which==='quotes') renderQuotes();
   else if(which==='receipts') renderReceipts();
   else if(which==='deliveries') renderDeliveries();
+  else if(which==='pipeline') renderPipeline();
   else if(which==='settings') renderSettings();
 }
 
@@ -1979,12 +2005,6 @@ function renderDash(){
           '<tbody>'+activity.map(a=>'<tr><td class="mono">'+fmtDate(a.date)+'</td><td><span class="activity-type-tag">'+a.type+'</span></td><td>'+a.text+'</td></tr>').join('')+
           '</tbody></table>'
         : '<div class="empty-state"><div class="empty-title">No activity yet</div><div class="empty-sub">Purchase orders and inventory receipts will show up here as they happen.</div></div>')+
-    '</div></div>'+
-    '<div class="dash-section-title">Top priority — order these first</div>'+
-    '<div class="card"><div class="card-body">'+
-      '<table><colgroup><col style="width:22%"><col style="width:12%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:28%"></colgroup>'+
-      '<thead><tr><th>Part</th><th class="num">Order Qty</th><th>Order By</th><th>Needed By</th><th>Status</th><th>Driven By</th></tr></thead>'+
-      '<tbody>'+(res.filter(r=>r.plannedOrders.length).slice(0,8).map(r=>rowPlan(r)).join('') || '<tr><td colspan="6" class="note">Nothing urgent — run MRP after editing your demand plan.</td></tr>')+'</tbody></table>'+
     '</div></div>'+
     '<div class="dash-section-title">Upcoming builds</div>'+
     '<div class="card"><div class="card-body">'+
@@ -2275,33 +2295,63 @@ function linkChipsFor(item){
 function renderBOM(){
   const el=document.getElementById('panel-bom-recipes');
   const roots=DB.items.filter(i=>i.isProduct);
+  if(!BOM_SELECTED || !roots.some(r=>r.id===BOM_SELECTED)){
+    BOM_SELECTED = (roots[0]||{}).id || null;
+  }
+  const product = BOM_SELECTED ? itemById(BOM_SELECTED) : null;
   document.getElementById('page-actions').innerHTML=
     '<button class="btn accent" id="add-bom-product">+ New product</button>';
+  const q=BOM_SEARCH.trim().toLowerCase();
+  const matches = q ? roots.filter(r=>r.name.toLowerCase().includes(q)) : roots;
+  const pickerHtml = matches.length
+    ? matches.map(r=>renderBomPickerItem(r)).join('')
+    : '<p class="bom-picker-empty">No products match "'+escAttr(BOM_SEARCH)+'".</p>';
   el.innerHTML=
-    '<div class="toolbar no-print"><button class="btn" id="toggle-all-bom"></button><div class="toolbar-spacer"></div><span class="toolbar-count">'+roots.length+' product'+(roots.length===1?'':'s')+'</span></div>'+
-    '<p class="note">Products are built from components below. If a component has its own recipe (like Wheel Set), its required parts nest underneath — the planner cascades demand all the way down through every level.</p>'+
-    '<div id="bom-list">'+(roots.map(r=>renderBomProduct(r)).join('') || '<p class="note">No products yet — add one.</p>')+'</div>';
+    '<p class="note" style="margin:0 0 12px">Products are built from components below. If a component has its own recipe (like Wheel Set), its required parts nest underneath — the planner cascades demand all the way down through every level.</p>'+
+    '<div class="bom-layout">'+
+      '<div class="bom-picker no-print">'+
+        '<div class="bom-picker-search"><input type="text" id="bom-search" placeholder="Search products…" value="'+escAttr(BOM_SEARCH)+'"></div>'+
+        '<div class="bom-picker-list" id="bom-picker-list">'+pickerHtml+'</div>'+
+      '</div>'+
+      '<div class="bom-detail-wrap" id="bom-detail">'+(product ? renderBomProduct(product) : '<p class="note">No products yet — add one above.</p>')+'</div>'+
+    '</div>';
   document.getElementById('add-bom-product').addEventListener('click',()=>{
-    DB.items.push(mkItem(uid(),'New Product','ea',{isProduct:true}));
+    const p=mkItem(uid(),'New Product','ea',{isProduct:true});
+    DB.items.push(p);
+    BOM_SELECTED=p.id;
     save(); renderBOM(); renderCounts();
   });
-  const toggleAllBtn=document.getElementById('toggle-all-bom');
-  const allCollapsed = roots.length>0 && roots.every(r=>collapsedBomProducts[r.id]);
-  toggleAllBtn.textContent = allCollapsed ? 'Expand all' : 'Collapse all';
-  toggleAllBtn.addEventListener('click',()=>{
-    roots.forEach(r=>{ collapsedBomProducts[r.id]=!allCollapsed; });
+  const searchInput=document.getElementById('bom-search');
+  searchInput.addEventListener('input',e=>{
+    BOM_SEARCH=e.target.value;
     renderBOM();
+    const reFocus=document.getElementById('bom-search');
+    reFocus.focus(); reFocus.setSelectionRange(reFocus.value.length, reFocus.value.length);
+  });
+  document.querySelectorAll('#bom-picker-list .bom-picker-item').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      BOM_SELECTED=btn.dataset.id;
+      renderBOM();
+    });
   });
   wireBOM();
 }
+function renderBomPickerItem(product){
+  const compCount=(product.lines||[]).length;
+  const hasNested=(product.lines||[]).some(l=>{ const c=itemById(l.childId); return c && c.lines && c.lines.length>0; });
+  return '<button type="button" class="bom-picker-item'+(product.id===BOM_SELECTED?' active':'')+'" data-id="'+product.id+'">'+
+    '<div class="bom-picker-name">'+escAttr(product.name)+'</div>'+
+    '<div class="bom-picker-meta">'+compCount+' component'+(compCount===1?'':'s')+'</div>'+
+    (hasNested?'<div class="bom-picker-badge">has sub-recipe</div>':'')+
+  '</button>';
+}
 function renderBomProduct(product){
-  const collapsed=!!collapsedBomProducts[product.id];
-  return '<div class="card bom-product" data-id="'+product.id+'">'+
-    '<div class="card-head"><h3><button type="button" class="cost-collapse-toggle bom-product-toggle'+(collapsed?' is-collapsed':'')+'" title="'+(collapsed?'Expand':'Collapse')+'" aria-expanded="'+(!collapsed)+'">▾</button> <input class="f-pname" value="'+escAttr(product.name)+'" style="font:inherit;font-weight:600;border:none;background:transparent"></h3>'+
+  return '<div class="card bom-detail-card" data-id="'+product.id+'">'+
+    '<div class="card-head"><h3><input class="f-pname" value="'+escAttr(product.name)+'" style="font:inherit;font-weight:600;border:none;background:transparent"></h3>'+
     '<div class="row-actions no-print"><button class="btn sm danger del-product">Delete product</button></div></div>'+
-    (collapsed ? '' : '<div class="card-body">'+
+    '<div class="card-body">'+
       '<div class="bom-col-head"><span>Component</span><span>Qty / unit</span><span>Supplier link</span><span></span></div>'+
-      renderBomLines(product, [product.id])+'</div>')+'</div>';
+      renderBomLines(product, [product.id])+'</div></div>';
 }
 function renderBomLines(parent, ancestry){
   const rows=(parent.lines||[]).map((line,i)=>{
@@ -2326,30 +2376,28 @@ function renderBomLines(parent, ancestry){
   return '<div class="bom-lines">'+rows+'</div><button class="btn sm bom-add no-print" data-owner="'+parent.id+'">+ add component to '+escAttr(parent.name)+'</button>';
 }
 function wireBOM(){
-  const list=document.getElementById('bom-list');
-  list.querySelectorAll('.bom-product').forEach(card=>{
-    const id=card.dataset.id; const pr=itemById(id);
-    card.querySelector('.f-pname').addEventListener('change',e=>{pr.name=e.target.value; save(); renderCounts();});
-    card.querySelector('.del-product').addEventListener('click',()=>{
-      confirmModal('Delete '+pr.name+'?', ()=>{
-        DB.items=DB.items.filter(x=>x.id!==id);
-        DB.demandPlan=DB.demandPlan.filter(d=>d.productId!==id);
-        save(); renderBOM(); renderCounts();
-      });
-    });
-    card.querySelector('.bom-product-toggle').addEventListener('click',()=>{
-      collapsedBomProducts[id]=!collapsedBomProducts[id];
-      renderBOM();
+  const detail=document.getElementById('bom-detail');
+  const card=detail.querySelector('.bom-detail-card');
+  if(!card) return;
+  const id=card.dataset.id; const pr=itemById(id);
+  if(!pr) return;
+  card.querySelector('.f-pname').addEventListener('change',e=>{pr.name=e.target.value; save(); renderBOM(); renderCounts();});
+  card.querySelector('.del-product').addEventListener('click',()=>{
+    confirmModal('Delete '+pr.name+'?', ()=>{
+      DB.items=DB.items.filter(x=>x.id!==id);
+      DB.demandPlan=DB.demandPlan.filter(d=>d.productId!==id);
+      if(BOM_SELECTED===id) BOM_SELECTED=null;
+      save(); renderBOM(); renderCounts();
     });
   });
-  list.querySelectorAll('.bom-nest-toggle').forEach(btn=>{
+  detail.querySelectorAll('.bom-nest-toggle').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const key=btn.dataset.key;
       collapsedBomNests[key]=!collapsedBomNests[key];
       renderBOM();
     });
   });
-  list.querySelectorAll('.bom-row').forEach(row=>{
+  detail.querySelectorAll('.bom-row').forEach(row=>{
     const ownerId=row.dataset.owner; const i=Number(row.dataset.i); const owner=itemById(ownerId);
     if(!owner) return;
     const sel=row.querySelector('select');
@@ -2357,7 +2405,7 @@ function wireBOM(){
     row.querySelector('.bom-qtyper').addEventListener('change',e=>{ owner.lines[i].qtyPer=Number(e.target.value)||0; save(); });
     row.querySelector('.bom-del').addEventListener('click',()=>{ owner.lines.splice(i,1); save(); renderBOM(); });
   });
-  list.querySelectorAll('.bom-add').forEach(btn=>{
+  detail.querySelectorAll('.bom-add').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const owner=itemById(btn.dataset.owner);
       const fallback=DB.items.find(x=>x.id!==owner.id) || owner;
@@ -3067,6 +3115,50 @@ function renderSuppliers(){
   document.getElementById('add-supplier').addEventListener('click',()=>{
     DB.suppliers.push({id:uid(),name:'New Supplier',contact:'',email:'',phone:'',specialty:'',notes:''});
     save(); renderSuppliers(); renderCounts();
+  });
+}
+
+/* ---------------- Pipeline (potential future orders) ----------------
+   Freeform holding area for orders that might happen but aren't confirmed yet.
+   Deliberately NOT read by runMRP() or anything in Demand Plan / Planned Orders —
+   jotting an idea down here can never trigger a purchase recommendation. Once an
+   idea becomes a real order, add it to Demand Plan yourself and delete it here. */
+function renderPipeline(){
+  const el=document.getElementById('panel-pipeline');
+  document.getElementById('page-actions').innerHTML=
+    '<button class="btn accent" id="add-pipeline">+ New idea</button>';
+  el.innerHTML=
+    '<div class="toolbar no-print">'+
+      '<div class="toolbar-spacer"></div><span class="toolbar-count">'+DB.pipeline.length+' idea'+(DB.pipeline.length===1?'':'s')+'</span>'+
+    '</div>'+
+    '<div class="card"><div class="card-body">'+
+    '<table><colgroup><col style="width:18%"><col style="width:22%"><col style="width:8%"><col style="width:11%"><col style="width:29%"><col style="width:9%"></colgroup>'+
+    '<thead><tr><th>Customer</th><th>Product</th><th>Qty</th><th>Added</th><th>Notes</th><th></th></tr></thead>'+
+    '<tbody id="pipeline-tbody"></tbody></table>'+
+    '</div></div>';
+  const tb=document.getElementById('pipeline-tbody');
+  const rows=DB.pipeline.slice().sort((a,b)=>(b.dateAdded||'').localeCompare(a.dateAdded||''));
+  tb.innerHTML=rows.map(p=>{
+    return '<tr class="pipeline-row" data-id="'+p.id+'">'+
+      '<td><input class="f-customer" value="'+escAttr(p.customer||'')+'" placeholder="Customer / prospect"></td>'+
+      '<td><input class="f-product" value="'+escAttr(p.product||'')+'" placeholder="Product"></td>'+
+      '<td><input class="f-qty" type="number" min="0" value="'+escAttr(p.qty||'')+'"></td>'+
+      '<td class="note">'+fmtShortDate(p.dateAdded||todayISO())+'</td>'+
+      '<td><input class="f-notes" value="'+escAttr(p.notes||'')+'" placeholder="Notes"></td>'+
+      '<td class="col-actions no-print"><button class="btn sm danger del-pipeline">Delete</button></td>'+
+    '</tr>';
+  }).join('') || '<tr><td colspan="6" class="note">No pipeline ideas yet — add one above to jot down a potential future order without touching MRP planning.</td></tr>';
+  tb.querySelectorAll('tr.pipeline-row').forEach(tr=>{
+    const id=tr.dataset.id; const p=DB.pipeline.find(x=>x.id===id);
+    tr.querySelector('.f-customer').addEventListener('change',e=>{p.customer=e.target.value; save();});
+    tr.querySelector('.f-product').addEventListener('change',e=>{p.product=e.target.value; save();});
+    tr.querySelector('.f-qty').addEventListener('change',e=>{p.qty=e.target.value; save();});
+    tr.querySelector('.f-notes').addEventListener('change',e=>{p.notes=e.target.value; save();});
+    tr.querySelector('.del-pipeline').addEventListener('click',()=>{ confirmModal('Delete this pipeline idea?', ()=>{ DB.pipeline=DB.pipeline.filter(x=>x.id!==id); save(); renderPipeline(); renderCounts(); }); });
+  });
+  document.getElementById('add-pipeline').addEventListener('click',()=>{
+    DB.pipeline.push({id:uid(),customer:'',product:'',qty:'',notes:'',dateAdded:todayISO()});
+    save(); renderPipeline(); renderCounts();
   });
 }
 
