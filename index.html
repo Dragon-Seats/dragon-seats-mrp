@@ -33,6 +33,13 @@ h1,h2,h3,.brand,.tab,.dash-section-title{font-family:'Space Grotesk',system-ui,s
 .sb-brand b{font-size:14.5px;letter-spacing:.01em;color:#fff;font-weight:600}
 .sb-brand span{display:block;font-size:10px;color:#8a8d93;letter-spacing:.08em;text-transform:uppercase;margin-top:1px}
 .sb-group-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#6f7278;padding:16px 16px 6px;font-family:'Inter',system-ui,sans-serif}
+.sb-group-toggle{all:unset;box-sizing:border-box;cursor:pointer;width:100%;padding:16px 16px 6px;display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#6f7278;font-family:'Inter',system-ui,sans-serif}
+.sb-group-toggle:hover{color:#c9cacc}
+.sb-group-chevron{font-size:8px;line-height:1;color:#6f7278;transition:transform .15s ease}
+.sb-group-toggle:hover .sb-group-chevron{color:#c9cacc}
+.sb-group-toggle[aria-expanded="true"] .sb-group-chevron{transform:rotate(90deg)}
+.sb-subgroup{overflow:hidden;max-height:400px;transition:max-height .18s ease}
+.sb-subgroup.collapsed{max-height:0}
 .sb-nav{display:flex;flex-direction:column;padding:0 8px}
 .tab{all:unset;box-sizing:border-box;cursor:pointer;width:100%;padding:8px 10px;margin:1px 0;border-radius:var(--radius-sm);color:#c9cacc;font-size:13.5px;font-weight:500;display:flex;align-items:center;gap:9px;justify-content:flex-start;border-left:2.5px solid transparent}
 .tab .tab-ico{flex:0 0 auto;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;opacity:.85}
@@ -400,14 +407,18 @@ tr.row-editing{background:#fbf7f0}
       <button class="tab" data-tab="dash"><span class="tab-ico">&#9679;</span><span class="tab-label">Dashboard</span></button>
       <div class="sb-group-label">Pipeline</div>
       <button class="tab" data-tab="pipeline"><span class="tab-ico">&#9998;</span><span class="tab-label">Pipeline</span> <span class="count" id="cnt-pipeline">0</span></button>
-      <div class="sb-group-label">Catalog</div>
+      <button class="sb-group-toggle" type="button" data-group="catalog" aria-expanded="true"><span>Catalog</span><span class="sb-group-chevron">&#9656;</span></button>
+      <div class="sb-subgroup" data-group="catalog">
       <button class="tab" data-tab="items"><span class="tab-ico">&#9633;</span><span class="tab-label">Items</span> <span class="count" id="cnt-items">0</span></button>
       <button class="tab" data-tab="bom"><span class="tab-ico">&#8862;</span><span class="tab-label">BOM / Products</span> <span class="count" id="cnt-products">0</span></button>
       <button class="tab" data-tab="links"><span class="tab-ico">&#8734;</span><span class="tab-label">Links</span> <span class="count" id="cnt-links">0</span></button>
       <button class="tab" data-tab="suppliers"><span class="tab-ico">&#9737;</span><span class="tab-label">Suppliers</span> <span class="count" id="cnt-suppliers">0</span></button>
-      <div class="sb-group-label">Planning</div>
+      </div>
+      <button class="sb-group-toggle" type="button" data-group="planning" aria-expanded="true"><span>Planning</span><span class="sb-group-chevron">&#9656;</span></button>
+      <div class="sb-subgroup" data-group="planning">
       <button class="tab" data-tab="demand"><span class="tab-ico">&#9650;</span><span class="tab-label">Demand Plan</span> <span class="count" id="cnt-demand">0</span></button>
       <button class="tab" data-tab="plan"><span class="tab-ico">&#8623;</span><span class="tab-label">Planned Orders</span> <span class="count" id="cnt-plan">0</span></button>
+      </div>
       <div class="sb-group-label">Purchasing</div>
       <button class="tab" data-tab="docs"><span class="tab-ico">&#9776;</span><span class="tab-label">Documents</span> <span class="count" id="cnt-docs">0</span></button>
       <div class="sb-group-divider"></div>
@@ -1235,6 +1246,9 @@ function ensureShape(){
   if(!Array.isArray(DB.deliveries)) DB.deliveries=[];
   if(!Array.isArray(DB.bookings)) DB.bookings=[];
   if(!Array.isArray(DB.pipeline)) DB.pipeline=[];
+  DB.pipeline.forEach(function(p){
+    if(p.product && !p.itemId){ p.notes=(p.product+(p.notes?' — '+p.notes:'')); delete p.product; }
+  });
   purgeRetiredEquipment();
   if(!DB.lists || typeof DB.lists!=='object') DB.lists={};
   delete DB.lists.conferences; // retired with the Equipment/Availability Calendar feature
@@ -1803,6 +1817,9 @@ function setTab(which){
   });
   document.getElementById('pagetitle').textContent=TAB_LABELS[which][0];
   document.getElementById('pagesub').textContent=TAB_LABELS[which][1];
+  const activeGroup=TAB_GROUP[which];
+  if(activeGroup && navState[activeGroup]===false){ navState[activeGroup]=true; saveNavState(); }
+  applyNavState();
   const addDocBtn=document.getElementById('add-doc-btn');
   if(addDocBtn) addDocBtn.classList.toggle('hidden', which!=='docs');
   // Contextual header buttons (e.g. Items' "+ New item") are rebuilt by that page's own
@@ -2899,6 +2916,10 @@ function wireBomCosting(){
 /* ---------------- Links tab ---------------- */
 function itemSelectSimple(selId){ return '<select class="item-select">'+DB.items.map(i=>'<option value="'+i.id+'" '+(i.id===selId?'selected':'')+'>'+escAttr(i.name)+'</option>').join('')+'</select>'; }
 function supplierSelectSimple(selId){ return '<select class="supplier-select">'+DB.suppliers.map(s=>'<option value="'+s.id+'" '+(s.id===selId?'selected':'')+'>'+escAttr(s.name)+'</option>').join('')+'</select>'; }
+/* Same idea as the *Simple pickers above, but with a blank leading option — a Pipeline
+   idea is allowed to not have a specific item or supplier pinned down yet. */
+function itemSelectPipeline(selId){ return '<select class="item-select"><option value="">— pick an item —</option>'+DB.items.map(i=>'<option value="'+i.id+'" '+(i.id===selId?'selected':'')+'>'+escAttr(i.name)+'</option>').join('')+'</select>'; }
+function supplierSelectPipeline(selId){ return '<select class="supplier-select"><option value="">— pick a supplier —</option>'+DB.suppliers.map(s=>'<option value="'+s.id+'" '+(s.id===selId?'selected':'')+'>'+escAttr(s.name)+'</option>').join('')+'</select>'; }
 function supplierSelectOptional(selId){
   return '<select class="supplier-select" title="Supplier (optional)"><option value="">No supplier</option>'+
     DB.suppliers.map(s=>'<option value="'+s.id+'" '+(s.id===selId?'selected':'')+'>'+escAttr(s.name)+'</option>').join('')+
@@ -3132,8 +3153,8 @@ function renderPipeline(){
       '<div class="toolbar-spacer"></div><span class="toolbar-count">'+DB.pipeline.length+' idea'+(DB.pipeline.length===1?'':'s')+'</span>'+
     '</div>'+
     '<div class="card"><div class="card-body">'+
-    '<table><colgroup><col style="width:18%"><col style="width:22%"><col style="width:8%"><col style="width:11%"><col style="width:29%"><col style="width:9%"></colgroup>'+
-    '<thead><tr><th>Customer</th><th>Product</th><th>Qty</th><th>Added</th><th>Notes</th><th></th></tr></thead>'+
+    '<table><colgroup><col style="width:16%"><col style="width:20%"><col style="width:16%"><col style="width:7%"><col style="width:10%"><col style="width:22%"><col style="width:9%"></colgroup>'+
+    '<thead><tr><th>Customer</th><th>Item</th><th>Supplier</th><th>Qty</th><th>Added</th><th>Notes</th><th></th></tr></thead>'+
     '<tbody id="pipeline-tbody"></tbody></table>'+
     '</div></div>';
   const tb=document.getElementById('pipeline-tbody');
@@ -3141,23 +3162,35 @@ function renderPipeline(){
   tb.innerHTML=rows.map(p=>{
     return '<tr class="pipeline-row" data-id="'+p.id+'">'+
       '<td><input class="f-customer" value="'+escAttr(p.customer||'')+'" placeholder="Customer / prospect"></td>'+
-      '<td><input class="f-product" value="'+escAttr(p.product||'')+'" placeholder="Product"></td>'+
+      '<td>'+itemSelectPipeline(p.itemId)+'</td>'+
+      '<td>'+supplierSelectPipeline(p.supplierId)+'</td>'+
       '<td><input class="f-qty" type="number" min="0" value="'+escAttr(p.qty||'')+'"></td>'+
       '<td class="note">'+fmtShortDate(p.dateAdded||todayISO())+'</td>'+
       '<td><input class="f-notes" value="'+escAttr(p.notes||'')+'" placeholder="Notes"></td>'+
       '<td class="col-actions no-print"><button class="btn sm danger del-pipeline">Delete</button></td>'+
     '</tr>';
-  }).join('') || '<tr><td colspan="6" class="note">No pipeline ideas yet — add one above to jot down a potential future order without touching MRP planning.</td></tr>';
+  }).join('') || '<tr><td colspan="7" class="note">No pipeline ideas yet — add one above to jot down a potential future order without touching MRP planning.</td></tr>';
   tb.querySelectorAll('tr.pipeline-row').forEach(tr=>{
     const id=tr.dataset.id; const p=DB.pipeline.find(x=>x.id===id);
     tr.querySelector('.f-customer').addEventListener('change',e=>{p.customer=e.target.value; save();});
-    tr.querySelector('.f-product').addEventListener('change',e=>{p.product=e.target.value; save();});
+    tr.querySelector('.item-select').addEventListener('change',e=>{
+      p.itemId=e.target.value;
+      // Convenience: if this item has a known supplier link and no supplier is set yet,
+      // pull it in automatically rather than making you pick it twice.
+      if(!p.supplierId){
+        const it=itemById(p.itemId);
+        const link=(it&&it.links&&it.links[0])||null;
+        if(link&&link.supplierId){ p.supplierId=link.supplierId; save(); renderPipeline(); return; }
+      }
+      save();
+    });
+    tr.querySelector('.supplier-select').addEventListener('change',e=>{p.supplierId=e.target.value; save();});
     tr.querySelector('.f-qty').addEventListener('change',e=>{p.qty=e.target.value; save();});
     tr.querySelector('.f-notes').addEventListener('change',e=>{p.notes=e.target.value; save();});
     tr.querySelector('.del-pipeline').addEventListener('click',()=>{ confirmModal('Delete this pipeline idea?', ()=>{ DB.pipeline=DB.pipeline.filter(x=>x.id!==id); save(); renderPipeline(); renderCounts(); }); });
   });
   document.getElementById('add-pipeline').addEventListener('click',()=>{
-    DB.pipeline.push({id:uid(),customer:'',product:'',qty:'',notes:'',dateAdded:todayISO()});
+    DB.pipeline.push({id:uid(),customer:'',itemId:'',supplierId:'',qty:'',notes:'',dateAdded:todayISO()});
     save(); renderPipeline(); renderCounts();
   });
 }
@@ -3409,6 +3442,25 @@ function exportPlanCSV(res){
 }
 
 /* ---------------- Purchase Orders tab ---------------- */
+/* Compact "Item x Qty, Item x Qty" summary for document overview tables, so you can see
+   what's on a PO/Quote/Receipt/Load-out without opening it. Caps how many show inline;
+   the full list is always available via the cell's title tooltip. */
+function lineItemsSummary(lines, maxShow){
+  maxShow = maxShow || 2;
+  const arr = (lines||[]).filter(l=>l.itemId);
+  if(!arr.length) return '<span class="note">—</span>';
+  const parts = arr.map(l=>{
+    const it = itemById(l.itemId);
+    return escAttr(it?it.name:'(deleted item)')+' <span class="mono" style="color:var(--steel)">\u00d7'+(l.qty||0)+'</span>';
+  });
+  if(parts.length<=maxShow) return parts.join(', ');
+  return parts.slice(0,maxShow).join(', ')+' <span class="note">+'+(parts.length-maxShow)+' more</span>';
+}
+function lineItemsPlain(lines){
+  const arr = (lines||[]).filter(l=>l.itemId);
+  if(!arr.length) return '';
+  return arr.map(l=>{ const it=itemById(l.itemId); return (it?it.name:'(deleted item)')+' x'+(l.qty||0); }).join(', ');
+}
 function poLineTotal(po){ return (po.lines||[]).reduce((s,l)=>s+Number(l.qty||0)*Number(l.unitPrice||0),0); }
 function renderPO(){
   const el=document.getElementById('panel-po');
@@ -3419,6 +3471,7 @@ function renderPO(){
   const closed=closedStatusName();
   if(selectedPO && !poById(selectedPO)) selectedPO=null;
   el.innerHTML=
+    (selectedPO ? '<div class="toolbar no-print"><button class="btn sm subtle" id="po-back-to-list">← Back to Purchase Orders</button><div class="toolbar-spacer"></div><span class="toolbar-count">'+filteredPOs.length+' PO'+(filteredPOs.length===1?'':'s')+'</span></div>' : (
     '<div class="toolbar no-print">'+
       '<button class="btn accent" id="add-po">+ New PO</button>'+
       '<button class="btn" id="export-pdf-po">Export</button>'+
@@ -3430,8 +3483,8 @@ function renderPO(){
     '<p class="note">New requests start as <b>Requested</b>. Move to <b>Sent to Finance</b> once you\'ve drafted it and sent it their way; once Finance sends back the actual PO, attach it under Files below and move to <b>PO Issued</b>; once you\'ve sent that PO to the vendor, move to <b>Ordered</b>. Logging a receipt against this PO on the Receipts tab (or using Receive below) moves it to <b>Received</b> automatically. Click a row to open it.</p>'+
     '<div class="card"><div class="card-body">'+
     (filteredPOs.length ?
-      '<table class="list-table"><colgroup><col style="width:11%"><col style="width:16%"><col style="width:13%"><col style="width:12%"><col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:10%"><col style="width:12%"></colgroup>'+
-      '<thead><tr><th>PO #</th><th>Supplier</th><th>Status</th><th>Requested By</th><th>Order Date</th><th>Expected</th><th class="num">Items</th><th class="num">Total</th><th></th></tr></thead>'+
+      '<table class="list-table"><colgroup><col style="width:10%"><col style="width:13%"><col style="width:10%"><col style="width:9%"><col style="width:8%"><col style="width:8%"><col style="width:22%"><col style="width:8%"><col style="width:12%"></colgroup>'+
+      '<thead><tr><th>PO #</th><th>Supplier</th><th>Status</th><th>Requested By</th><th>Order Date</th><th>Expected</th><th>Item(s)</th><th class="num">Total</th><th></th></tr></thead>'+
       '<tbody>'+filteredPOs.map(po=>{
         const total=poLineTotal(po);
         return '<tr class="list-row'+(selectedPO===po.id?' is-selected':'')+'" data-id="'+po.id+'">'+
@@ -3441,29 +3494,29 @@ function renderPO(){
           '<td>'+escAttr(po.requestedBy||'—')+'</td>'+
           '<td class="mono">'+fmtDate(po.orderDate)+'</td>'+
           '<td class="mono">'+fmtDate(po.expectedDate)+'</td>'+
-          '<td class="num mono">'+(po.lines||[]).length+'</td>'+
+          '<td title="'+escAttr(lineItemsPlain(po.lines))+'">'+lineItemsSummary(po.lines)+'</td>'+
           '<td class="num mono">'+(total?'$'+total.toFixed(2):'—')+'</td>'+
           '<td class="col-actions no-print"><button class="btn sm subtle po-row-open">Open →</button></td>'+
         '</tr>';
       }).join('')+'</tbody></table>'
       : '<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">'+(DB.purchaseOrders.length?'No purchase orders match this filter':'No purchase orders yet')+'</div><div class="empty-sub">'+(DB.purchaseOrders.length?'Try clearing the search or filters above.':'Click + New PO to create one.')+'</div></div>')+
-    '</div></div>'+
+    '</div></div>'))+
     '<div id="po-detail">'+(selectedPO ? renderPoCard(poById(selectedPO)) : '')+'</div>';
   wirePO();
   wireFilterDropdown('filter-po','po',renderPO);
-  document.getElementById('po-search').addEventListener('input',e=>{ docSearch.po=e.target.value; renderPO(); });
-  document.getElementById('po-status-filter').addEventListener('change',e=>{ docStatusFilter.po=e.target.value; renderPO(); });
+  const poSearchEl=document.getElementById('po-search'); if(poSearchEl) poSearchEl.addEventListener('input',e=>{ docSearch.po=e.target.value; renderPO(); });
+  const poStatusFilterEl=document.getElementById('po-status-filter'); if(poStatusFilterEl) poStatusFilterEl.addEventListener('change',e=>{ docStatusFilter.po=e.target.value; renderPO(); });
   el.querySelectorAll('tr.list-row').forEach(tr=>{
     const openIt=()=>{ selectedPO=tr.dataset.id; renderPO(); const d=document.getElementById('po-detail'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'}); };
     tr.addEventListener('click', openIt);
   });
-  document.getElementById('add-po').addEventListener('click',()=>{
+  const addPoBtn=document.getElementById('add-po'); if(addPoBtn) addPoBtn.addEventListener('click',()=>{
     const po={id:uid(), poNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', orderDate:todayISO(), expectedDate:addDays(todayISO(),14), status:DB.lists.poStatus[0], requestedBy:'', approvedBy:'', lines:[], docs:[], notes:''};
     DB.purchaseOrders.push(po);
     selectedPO=po.id;
     save(); renderPO(); renderCounts();
   });
-  document.getElementById('export-pdf-po').addEventListener('click',()=>{
+  const exportPoBtn=document.getElementById('export-pdf-po'); if(exportPoBtn) exportPoBtn.addEventListener('click',()=>{
     const head=['PO #','Supplier','Status','Order Date','Expected Date','Requested By','Approved By','Total $'];
     const body=filteredPOs.map(po=>{
       const total=poLineTotal(po);
@@ -3471,6 +3524,7 @@ function renderPO(){
     });
     exportTablePDF('Dragon Seats - Purchase Orders', head, body);
   });
+  const poBackBtn=document.getElementById('po-back-to-list'); if(poBackBtn) poBackBtn.addEventListener('click',()=>{ selectedPO=null; renderPO(); });
 }
 function renderPoCard(po){
   const closed=closedStatusName();
@@ -3565,6 +3619,7 @@ function renderQuotes(){
   if(qq) filteredQuotes=filteredQuotes.filter(q=>(q.quoteNumber||'').toLowerCase().includes(qq) || ((supplierById(q.supplierId)||{}).name||'').toLowerCase().includes(qq));
   if(selectedQuote && !quoteById(selectedQuote)) selectedQuote=null;
   el.innerHTML=
+    (selectedQuote ? '<div class="toolbar no-print"><button class="btn sm subtle" id="quotes-back-to-list">← Back to Quotes</button><div class="toolbar-spacer"></div><span class="toolbar-count">'+filteredQuotes.length+' quote'+(filteredQuotes.length===1?'':'s')+'</span></div>' : (
     '<div class="toolbar no-print">'+
       '<button class="btn accent" id="add-quote">+ New blank quote</button>'+
       '<button class="btn" id="export-pdf-quotes">Export</button>'+
@@ -3576,8 +3631,8 @@ function renderQuotes(){
     '<p class="note">Quotes capture what a supplier is willing to charge before you commit — useful pricing signal even for items never actually ordered yet. Click a row to open it.</p>'+
     '<div class="card"><div class="card-body">'+
     (filteredQuotes.length ?
-      '<table class="list-table"><colgroup><col style="width:14%"><col style="width:20%"><col style="width:16%"><col style="width:15%"><col style="width:15%"><col style="width:10%"><col style="width:10%"></colgroup>'+
-      '<thead><tr><th>Quote #</th><th>Supplier</th><th>Status</th><th>Quote Date</th><th>Valid Until</th><th class="num">Total</th><th></th></tr></thead>'+
+      '<table class="list-table"><colgroup><col style="width:12%"><col style="width:15%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:21%"><col style="width:10%"><col style="width:12%"></colgroup>'+
+      '<thead><tr><th>Quote #</th><th>Supplier</th><th>Status</th><th>Quote Date</th><th>Valid Until</th><th>Item(s)</th><th class="num">Total</th><th></th></tr></thead>'+
       '<tbody>'+filteredQuotes.map(q=>{
         const converted=q.status==='Converted to PO';
         return '<tr class="list-row'+(selectedQuote===q.id?' is-selected':'')+'" data-id="'+q.id+'">'+
@@ -3586,31 +3641,33 @@ function renderQuotes(){
           '<td><span class="status-badge '+(converted?'closed':(q.status===DB.lists.quoteStatus[0]?'open':''))+'">'+escAttr(q.status)+'</span></td>'+
           '<td class="mono">'+fmtDate(q.quoteDate)+'</td>'+
           '<td class="mono">'+fmtDate(q.validUntil)+'</td>'+
+          '<td title="'+escAttr(lineItemsPlain(q.lines))+'">'+lineItemsSummary(q.lines)+'</td>'+
           '<td class="num mono">$'+quoteLineTotal(q).toFixed(2)+'</td>'+
           '<td class="col-actions no-print"><button class="btn sm subtle">Open →</button></td>'+
         '</tr>';
       }).join('')+'</tbody></table>'
       : '<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">'+(DB.quotes.length?'No quotes match this filter':'No quotes yet')+'</div><div class="empty-sub">Click + New blank quote to create one.</div></div>')+
-    '</div></div>'+
+    '</div></div>'))+
     '<div id="quote-detail">'+(selectedQuote ? renderQuoteCard(quoteById(selectedQuote)) : '')+'</div>';
   wireQuotes();
   wireFilterDropdown('filter-quotes','quotes',renderQuotes);
-  document.getElementById('quotes-search').addEventListener('input',e=>{ docSearch.quotes=e.target.value; renderQuotes(); });
-  document.getElementById('quotes-status-filter').addEventListener('change',e=>{ docStatusFilter.quotes=e.target.value; renderQuotes(); });
+  const quotesSearchEl=document.getElementById('quotes-search'); if(quotesSearchEl) quotesSearchEl.addEventListener('input',e=>{ docSearch.quotes=e.target.value; renderQuotes(); });
+  const quotesStatusFilterEl=document.getElementById('quotes-status-filter'); if(quotesStatusFilterEl) quotesStatusFilterEl.addEventListener('change',e=>{ docStatusFilter.quotes=e.target.value; renderQuotes(); });
   el.querySelectorAll('tr.list-row').forEach(tr=>{
     tr.addEventListener('click',()=>{ selectedQuote=tr.dataset.id; renderQuotes(); const d=document.getElementById('quote-detail'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'}); });
   });
-  document.getElementById('add-quote').addEventListener('click',()=>{
+  const addQuoteBtn=document.getElementById('add-quote'); if(addQuoteBtn) addQuoteBtn.addEventListener('click',()=>{
     const q={id:uid(), quoteNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', quoteDate:todayISO(), validUntil:addDays(todayISO(),30), status:DB.lists.quoteStatus[0], lines:[], docs:[], notes:''};
     DB.quotes.push(q);
     selectedQuote=q.id;
     save(); renderQuotes(); renderCounts();
   });
-  document.getElementById('export-pdf-quotes').addEventListener('click',()=>{
+  const exportQuotesBtn=document.getElementById('export-pdf-quotes'); if(exportQuotesBtn) exportQuotesBtn.addEventListener('click',()=>{
     const head=['Quote #','Supplier','Status','Quote Date','Valid Until','Total $'];
     const body=filteredQuotes.map(q=>[q.quoteNumber||'', (supplierById(q.supplierId)||{}).name||'', q.status, fmtDate(q.quoteDate), fmtDate(q.validUntil), '$'+quoteLineTotal(q).toFixed(2)]);
     exportTablePDF('Dragon Seats - Quotes', head, body);
   });
+  const quotesBackBtn=document.getElementById('quotes-back-to-list'); if(quotesBackBtn) quotesBackBtn.addEventListener('click',()=>{ selectedQuote=null; renderQuotes(); });
 }
 function renderQuoteCard(q){
   const converted=q.status==='Converted to PO';
@@ -3710,6 +3767,7 @@ function renderReceipts(){
   const pendingCount=DB.receipts.filter(r=>!r.appliedToStock).length;
   if(selectedReceipt && !receiptById(selectedReceipt)) selectedReceipt=null;
   el.innerHTML=
+    (selectedReceipt ? '<div class="toolbar no-print"><button class="btn sm subtle" id="receipts-back-to-list">← Back to Receipts</button><div class="toolbar-spacer"></div><span class="toolbar-count">'+filteredReceipts.length+' receipt'+(filteredReceipts.length===1?'':'s')+'</span></div>' : (
     '<div class="toolbar no-print">'+
       '<button class="btn accent" id="add-receipt">+ New blank receipt</button>'+
       '<button class="btn" id="export-pdf-receipts">Export</button>'+
@@ -3721,8 +3779,8 @@ function renderReceipts(){
     (pendingCount? '<div class="callout">'+pendingCount+' receipt'+(pendingCount===1?'':'s')+' not yet added to inventory — items may already be on the shelf but not reflected in stock counts until you click <b>Add to inventory</b>.</div>' : '')+
     '<div class="card"><div class="card-body">'+
     (filteredReceipts.length ?
-      '<table class="list-table"><colgroup><col style="width:14%"><col style="width:18%"><col style="width:16%"><col style="width:13%"><col style="width:14%"><col style="width:10%"><col style="width:10%"></colgroup>'+
-      '<thead><tr><th>Receipt</th><th>Supplier</th><th>Requested By</th><th>Date</th><th>Status</th><th class="num">Total</th><th></th></tr></thead>'+
+      '<table class="list-table"><colgroup><col style="width:12%"><col style="width:14%"><col style="width:12%"><col style="width:10%"><col style="width:11%"><col style="width:21%"><col style="width:10%"><col style="width:10%"></colgroup>'+
+      '<thead><tr><th>Receipt</th><th>Supplier</th><th>Requested By</th><th>Date</th><th>Status</th><th>Item(s)</th><th class="num">Total</th><th></th></tr></thead>'+
       '<tbody>'+filteredReceipts.map(r=>{
         const applied=!!r.appliedToStock;
         return '<tr class="list-row'+(selectedReceipt===r.id?' is-selected':'')+'" data-id="'+r.id+'">'+
@@ -3731,30 +3789,32 @@ function renderReceipts(){
           '<td>'+escAttr(r.requestedBy||'—')+'</td>'+
           '<td class="mono">'+fmtDate(r.receiptDate)+'</td>'+
           '<td><span class="status-badge '+(applied?'closed':'open')+'">'+(applied?'In inventory':'Pending')+'</span></td>'+
+          '<td title="'+escAttr(lineItemsPlain(r.lines))+'">'+lineItemsSummary(r.lines)+'</td>'+
           '<td class="num mono">$'+receiptLineTotal(r).toFixed(2)+'</td>'+
           '<td class="col-actions no-print"><button class="btn sm subtle">Open →</button></td>'+
         '</tr>';
       }).join('')+'</tbody></table>'
       : '<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">'+(DB.receipts.length?'No receipts match this filter':'No receipts yet')+'</div><div class="empty-sub">Click + New blank receipt to log one.</div></div>')+
-    '</div></div>'+
+    '</div></div>'))+
     '<div id="receipt-detail">'+(selectedReceipt ? renderReceiptCard(receiptById(selectedReceipt)) : '')+'</div>';
   wireReceipts();
   wireFilterDropdown('filter-receipts','receipts',renderReceipts);
-  document.getElementById('receipts-search').addEventListener('input',e=>{ docSearch.receipts=e.target.value; renderReceipts(); });
+  const receiptsSearchEl=document.getElementById('receipts-search'); if(receiptsSearchEl) receiptsSearchEl.addEventListener('input',e=>{ docSearch.receipts=e.target.value; renderReceipts(); });
   el.querySelectorAll('tr.list-row').forEach(tr=>{
     tr.addEventListener('click',()=>{ selectedReceipt=tr.dataset.id; renderReceipts(); const d=document.getElementById('receipt-detail'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'}); });
   });
-  document.getElementById('add-receipt').addEventListener('click',()=>{
+  const addReceiptBtn=document.getElementById('add-receipt'); if(addReceiptBtn) addReceiptBtn.addEventListener('click',()=>{
     const r={id:uid(), receiptNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', receiptDate:todayISO(), poId:'', orderLink:'', requestedBy:'', lines:[], docs:[], notes:'', appliedToStock:false, appliedAt:null};
     DB.receipts.unshift(r);
     selectedReceipt=r.id;
     save(); renderReceipts(); renderCounts();
   });
-  document.getElementById('export-pdf-receipts').addEventListener('click',()=>{
+  const exportReceiptsBtn=document.getElementById('export-pdf-receipts'); if(exportReceiptsBtn) exportReceiptsBtn.addEventListener('click',()=>{
     const head=['Receipt #','Supplier','Requested By','Receipt Date','Linked PO','In Stock?','Total $'];
     const body=filteredReceipts.map(r=>[r.receiptNumber||'', (supplierById(r.supplierId)||{}).name||'', r.requestedBy||'', fmtDate(r.receiptDate), (poById(r.poId)||{}).poNumber||'', r.appliedToStock?'Yes':'Pending', '$'+receiptLineTotal(r).toFixed(2)]);
     exportTablePDF('Dragon Seats - Receipts', head, body);
   });
+  const receiptsBackBtn=document.getElementById('receipts-back-to-list'); if(receiptsBackBtn) receiptsBackBtn.addEventListener('click',()=>{ selectedReceipt=null; renderReceipts(); });
 }
 function renderReceiptCard(r){
   const applied=!!r.appliedToStock;
@@ -3878,6 +3938,7 @@ function renderDeliveries(){
   const pendingCount=DB.deliveries.filter(d=>!d.appliedToStock).length;
   if(selectedDelivery && !deliveryById(selectedDelivery)) selectedDelivery=null;
   el.innerHTML=
+    (selectedDelivery ? '<div class="toolbar no-print"><button class="btn sm subtle" id="deliveries-back-to-list">← Back to Load-outs</button><div class="toolbar-spacer"></div><span class="toolbar-count">'+sorted.length+' load-out'+(sorted.length===1?'':'s')+'</span></div>' : (
     '<div class="toolbar no-print">'+
       '<button class="btn accent" id="add-delivery">+ New load-out</button>'+
       '<button class="btn" id="export-pdf-deliveries">Export</button>'+
@@ -3888,37 +3949,38 @@ function renderDeliveries(){
     (pendingCount? '<div class="callout">'+pendingCount+' load-out'+(pendingCount===1?'':'s')+' not yet marked as used — stock still shows these items as on-hand even though they may already be loaded or gone.</div>' : '')+
     '<div class="card"><div class="card-body">'+
     (sorted.length ?
-      '<table class="list-table"><colgroup><col style="width:35%"><col style="width:18%"><col style="width:17%"><col style="width:15%"><col style="width:15%"></colgroup>'+
-      '<thead><tr><th>Load-out</th><th>Date</th><th class="num">Items</th><th>Status</th><th></th></tr></thead>'+
+      '<table class="list-table"><colgroup><col style="width:20%"><col style="width:11%"><col style="width:36%"><col style="width:14%"><col style="width:19%"></colgroup>'+
+      '<thead><tr><th>Load-out</th><th>Date</th><th>Item(s)</th><th>Status</th><th></th></tr></thead>'+
       '<tbody>'+sorted.map(d=>{
         const applied=!!d.appliedToStock;
         return '<tr class="list-row'+(selectedDelivery===d.id?' is-selected':'')+'" data-id="'+d.id+'">'+
           '<td>'+escAttr(d.label||'Load-out — '+fmtDate(d.deliveryDate))+'</td>'+
           '<td class="mono">'+fmtDate(d.deliveryDate)+'</td>'+
-          '<td class="num mono">'+(d.lines||[]).length+'</td>'+
+          '<td title="'+escAttr(lineItemsPlain(d.lines))+'">'+lineItemsSummary(d.lines)+'</td>'+
           '<td><span class="status-badge '+(applied?'closed':'open')+'">'+(applied?'Used':'Pending')+'</span></td>'+
           '<td class="col-actions no-print"><button class="btn sm subtle">Open →</button></td>'+
         '</tr>';
       }).join('')+'</tbody></table>'
       : '<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">No load-outs logged yet</div><div class="empty-sub">Click + New load-out to log one.</div></div>')+
-    '</div></div>'+
+    '</div></div>'))+
     '<div id="delivery-detail">'+(selectedDelivery ? renderDeliveryCard(deliveryById(selectedDelivery)) : '')+'</div>';
   wireDeliveries();
-  document.getElementById('deliveries-search').addEventListener('input',e=>{ docSearch.deliveries=e.target.value; renderDeliveries(); });
+  const deliveriesSearchEl=document.getElementById('deliveries-search'); if(deliveriesSearchEl) deliveriesSearchEl.addEventListener('input',e=>{ docSearch.deliveries=e.target.value; renderDeliveries(); });
   el.querySelectorAll('tr.list-row').forEach(tr=>{
     tr.addEventListener('click',()=>{ selectedDelivery=tr.dataset.id; renderDeliveries(); const d=document.getElementById('delivery-detail'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'}); });
   });
-  document.getElementById('add-delivery').addEventListener('click',()=>{
+  const addDeliveryBtn=document.getElementById('add-delivery'); if(addDeliveryBtn) addDeliveryBtn.addEventListener('click',()=>{
     const d={id:uid(), label:'', deliveryDate:todayISO(), lines:[], docs:[], notes:'', appliedToStock:false, appliedAt:null};
     DB.deliveries.unshift(d);
     selectedDelivery=d.id;
     save(); renderDeliveries(); renderCounts();
   });
-  document.getElementById('export-pdf-deliveries').addEventListener('click',()=>{
+  const exportDeliveriesBtn=document.getElementById('export-pdf-deliveries'); if(exportDeliveriesBtn) exportDeliveriesBtn.addEventListener('click',()=>{
     const head=['Load-out','Date','Lines','Used?'];
     const body=sorted.map(d=>[d.label||'(no label)', fmtDate(d.deliveryDate), String((d.lines||[]).length), d.appliedToStock?'Yes':'Pending']);
     exportTablePDF('Dragon Seats - Deliveries', head, body);
   });
+  const deliveriesBackBtn=document.getElementById('deliveries-back-to-list'); if(deliveriesBackBtn) deliveriesBackBtn.addEventListener('click',()=>{ selectedDelivery=null; renderDeliveries(); });
 }
 function renderDeliveryCard(d){
   const applied=!!d.appliedToStock;
@@ -4148,6 +4210,29 @@ function renderSettings(){
   });
 }
 
+/* ---------------- Collapsible sidebar groups ----------------
+   Pure UI preference, not app data — kept in localStorage rather than DB so it's not part
+   of export/import backups. Undefined/missing = expanded (matches the old always-open look). */
+const NAV_STATE_KEY='dragon-seats-mrp-navstate-v1';
+function loadNavState(){ try{ return JSON.parse(localStorage.getItem(NAV_STATE_KEY))||{}; }catch(e){ return {}; } }
+function saveNavState(){ try{ localStorage.setItem(NAV_STATE_KEY, JSON.stringify(navState)); }catch(e){} }
+let navState=loadNavState();
+const TAB_GROUP={items:'catalog',bom:'catalog',links:'catalog',suppliers:'catalog',demand:'planning',plan:'planning'};
+function applyNavState(){
+  ['catalog','planning'].forEach(g=>{
+    const expanded=navState[g]!==false;
+    const sub=document.querySelector('.sb-subgroup[data-group="'+g+'"]');
+    const toggle=document.querySelector('.sb-group-toggle[data-group="'+g+'"]');
+    if(sub) sub.classList.toggle('collapsed', !expanded);
+    if(toggle) toggle.setAttribute('aria-expanded', expanded?'true':'false');
+  });
+}
+function toggleNavGroup(g){
+  navState[g]=!(navState[g]!==false);
+  saveNavState();
+  applyNavState();
+}
+
 /* ---------------- init ---------------- */
 let currentTab='dash';
 async function init(){
@@ -4155,6 +4240,9 @@ async function init(){
   runMRP();
   document.querySelectorAll('.tab[data-tab]').forEach(btn=>{
     btn.addEventListener('click',()=>{ currentTab=btn.dataset.tab; setTab(currentTab); renderCounts(); });
+  });
+  document.querySelectorAll('.sb-group-toggle[data-group]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ toggleNavGroup(btn.dataset.group); });
   });
   document.querySelectorAll('.subtab[data-subtab]').forEach(btn=>{
     btn.addEventListener('click',()=>{
