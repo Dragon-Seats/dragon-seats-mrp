@@ -405,13 +405,10 @@ tr.row-editing{background:#fbf7f0}
     <div class="sb-nav">
       <div class="sb-group-label" style="padding-top:2px">Overview</div>
       <button class="tab" data-tab="dash"><span class="tab-ico">&#9679;</span><span class="tab-label">Dashboard</span></button>
-      <div class="sb-group-label">Pipeline</div>
-      <button class="tab" data-tab="pipeline"><span class="tab-ico">&#9998;</span><span class="tab-label">Pipeline</span> <span class="count" id="cnt-pipeline">0</span></button>
       <button class="sb-group-toggle" type="button" data-group="catalog" aria-expanded="true"><span>Catalog</span><span class="sb-group-chevron">&#9656;</span></button>
       <div class="sb-subgroup" data-group="catalog">
       <button class="tab" data-tab="items"><span class="tab-ico">&#9633;</span><span class="tab-label">Items</span> <span class="count" id="cnt-items">0</span></button>
       <button class="tab" data-tab="bom"><span class="tab-ico">&#8862;</span><span class="tab-label">BOM / Products</span> <span class="count" id="cnt-products">0</span></button>
-      <button class="tab" data-tab="links"><span class="tab-ico">&#8734;</span><span class="tab-label">Links</span> <span class="count" id="cnt-links">0</span></button>
       <button class="tab" data-tab="suppliers"><span class="tab-ico">&#9737;</span><span class="tab-label">Suppliers</span> <span class="count" id="cnt-suppliers">0</span></button>
       </div>
       <button class="sb-group-toggle" type="button" data-group="planning" aria-expanded="true"><span>Planning</span><span class="sb-group-chevron">&#9656;</span></button>
@@ -443,7 +440,6 @@ tr.row-editing{background:#fbf7f0}
         <div class="doc-subpanel hidden" id="panel-bom-recipes"></div>
         <div class="doc-subpanel hidden" id="panel-bom-costing"></div>
       </div>
-      <div class="panel hidden" id="panel-links"></div>
       <div class="panel hidden" id="panel-suppliers"></div>
       <div class="panel hidden" id="panel-demand"></div>
       <div class="panel hidden" id="panel-plan"></div>
@@ -459,7 +455,6 @@ tr.row-editing{background:#fbf7f0}
         <div class="doc-subpanel hidden" id="panel-receipts"></div>
         <div class="doc-subpanel hidden" id="panel-deliveries"></div>
       </div>
-      <div class="panel hidden" id="panel-pipeline"></div>
       <div class="panel hidden" id="panel-settings"></div>
     </div>
   </div>
@@ -1245,10 +1240,6 @@ function ensureShape(){
   if(!Array.isArray(DB.receipts)) DB.receipts=[];
   if(!Array.isArray(DB.deliveries)) DB.deliveries=[];
   if(!Array.isArray(DB.bookings)) DB.bookings=[];
-  if(!Array.isArray(DB.pipeline)) DB.pipeline=[];
-  DB.pipeline.forEach(function(p){
-    if(p.product && !p.itemId){ p.notes=(p.product+(p.notes?' — '+p.notes:'')); delete p.product; }
-  });
   purgeRetiredEquipment();
   if(!DB.lists || typeof DB.lists!=='object') DB.lists={};
   delete DB.lists.conferences; // retired with the Equipment/Availability Calendar feature
@@ -1727,12 +1718,10 @@ const TAB_LABELS={
   dash:['Dashboard','MRP overview'],
   items:['Items','Inventory, lead time, safety stock & files'],
   bom:['BOM / Products','Products broken down by section'],
-  links:['Links','Supplier links per item — multiple allowed'],
   suppliers:['Suppliers','Vendor reference'],
   demand:['Demand Plan','Planned builds driving requirements'],
   plan:['Planned Orders','What to order, and when'],
   docs:['Documents','Purchase orders, quotes & receipts — one place for all supplier paperwork'],
-  pipeline:['Pipeline','Potential future orders to keep an eye on — not part of MRP planning'],
   settings:['Settings','Data management & configurable lists']
 };
 /* Sub-tab labels for the merged Purchase Orders / Quotes / Receipts page. */
@@ -1859,10 +1848,8 @@ function renderCounts(){
   const liveResults=runMRP();
   document.getElementById('cnt-items').textContent=DB.items.length;
   document.getElementById('cnt-products').textContent=DB.items.filter(i=>i.isProduct).length;
-  document.getElementById('cnt-links').textContent=DB.items.reduce((s,i)=>s+(i.links?i.links.length:0),0);
   document.getElementById('cnt-suppliers').textContent=DB.suppliers.length;
   document.getElementById('cnt-demand').textContent=DB.demandPlan.length;
-  document.getElementById('cnt-pipeline').textContent=DB.pipeline.length;
   document.getElementById('cnt-plan').textContent=liveResults.filter(r=>r.plannedOrders.length).length;
   const closed=closedStatusName();
   const openPoCount=DB.purchaseOrders.filter(po=>po.status!==closed).length;
@@ -1880,7 +1867,6 @@ function renderTab(which){
   if(which==='dash') renderDash();
   else if(which==='items') renderItems();
   else if(which==='bom') setBomSubTab(bomSubTab);
-  else if(which==='links') renderLinks();
   else if(which==='suppliers') renderSuppliers();
   else if(which==='demand') renderDemand();
   else if(which==='plan') renderPlan();
@@ -1888,7 +1874,6 @@ function renderTab(which){
   else if(which==='quotes') renderQuotes();
   else if(which==='receipts') renderReceipts();
   else if(which==='deliveries') renderDeliveries();
-  else if(which==='pipeline') renderPipeline();
   else if(which==='settings') renderSettings();
 }
 
@@ -1990,7 +1975,7 @@ function renderDash(){
     .concat(pendingReceipts.slice(0,4).map(r=>actionRow('amber','<b>'+escAttr(r.receiptNumber||'Receipt')+'</b> waiting to be added to inventory'+((supplierById(r.supplierId)||{}).name?' — '+escAttr(supplierById(r.supplierId).name):''),'Review','receipt-jump')))
     .concat(lateRows.slice(0,4).map(r=>actionRow('red','<b>'+escAttr(r.item.name)+'</b> is past due to order'+(r.suggestedQty?' — need '+r.suggestedQty+' '+r.item.uom:''),'View plan','plan-jump')))
     .concat(awaitingApprovalPOs.slice(0,3).map(po=>actionRow('amber','PO <b>'+escAttr(po.poNumber||'(no number)')+'</b> not yet sent — status '+escAttr(po.status),'Open','po-jump-'+po.id)))
-    .concat(missingLinkItems.slice(0,3).map(it=>actionRow('','<b>'+escAttr(it.name)+'</b> has no supplier link on file','Add link','items-jump')));
+    .concat(missingLinkItems.slice(0,3).map(it=>actionRow('','<b>'+escAttr(it.name)+'</b> has no supplier link on file','Add link','items-jump-'+it.id)));
   const actionHtml = actionRows.length
     ? actionRows.join('')
     : '<div class="empty-state"><div class="empty-icon">&#10003;</div><div class="empty-title">Nothing needs attention</div><div class="empty-sub">Receipts, past-due parts, unsent requests and missing supplier links will show up here.</div></div>';
@@ -2001,8 +1986,6 @@ function renderDash(){
     '<div class="dash-hero"><div class="dash-greeting">'+greeting+', John</div><div class="dash-date">'+dateStr+'</div></div>'+
     '<div class="stat-grid">'+
       statCard(pendingReceipts.length,'Pending receipts', pendingReceipts.length?'warn':'good')+
-      statCard(late,'Past due orders', late?'warn':'good')+
-      statCard(soon,'Order next 14 days', soon?'amber':'good')+
       statCard(openPOs,'Open POs','')+
       statCard(awaitingApproval,'Pending requests', awaitingApproval?'amber':'good')+
       statCard(missingLinks,'Missing supplier', missingLinks?'amber':'good')+
@@ -2037,8 +2020,11 @@ function renderDash(){
   el.querySelectorAll('.plan-jump').forEach(btn=>{
     btn.addEventListener('click',()=>{ setTab('plan'); renderCounts(); });
   });
-  el.querySelectorAll('.items-jump').forEach(btn=>{
-    btn.addEventListener('click',()=>{ setTab('items'); renderCounts(); });
+  el.querySelectorAll('[class*="items-jump-"]').forEach(btn=>{
+    const cls=Array.from(btn.classList).find(c=>c.indexOf('items-jump-')===0);
+    if(!cls) return;
+    const id=cls.slice('items-jump-'.length);
+    btn.addEventListener('click',()=>{ selectedItem=id; setTab('items'); renderCounts(); });
   });
   el.querySelectorAll('[class*="po-jump-"]').forEach(btn=>{
     const cls=Array.from(btn.classList).find(c=>c.indexOf('po-jump-')===0);
@@ -2308,6 +2294,10 @@ function renderItems(){
 function renderItemCard(it){
   const s=cadenceStatus(it);
   const statusHtml = s.cls==='none' ? '<span class="note" title="'+escAttr(s.title||'')+'">'+s.text+'</span>' : '<span class="badge '+s.cls+'" style="margin-left:0" title="'+escAttr(s.title||'')+'">'+s.text+'</span>';
+  const links=it.links||[];
+  const linksRows = links.length
+    ? links.map(l=>renderLinkRow(it,l)).join('')
+    : '<p class="note links-empty">No links or phone numbers yet for '+escAttr(it.name)+'.</p>';
   return '<div class="detail-drawer item-card" data-id="'+it.id+'">'+
     '<div class="detail-drawer-head"><div><h2>'+escAttr(it.name)+'</h2><div class="sub">'+escAttr(it.itemGroup||'Uncategorized')+'</div></div>'+
     '<div class="row-actions no-print"><button class="btn sm item-history-btn">Price history</button><button class="btn sm danger del-item">Delete item</button><button type="button" class="detail-drawer-close item-detail-close" title="Close">✕</button></div></div>'+
@@ -2321,6 +2311,11 @@ function renderItemCard(it){
       '</div>'+
     '</div>'+
     '<div class="detail-section">'+
+      '<div class="detail-section-title">Suppliers &amp; Links</div>'+
+      '<div id="item-links-rows">'+linksRows+'</div>'+
+      '<button class="btn sm accent add-link-here no-print" style="margin-top:10px">+ Add link or phone</button>'+
+    '</div>'+
+    '<div class="detail-section">'+
       '<div class="detail-section-title">Ordering &amp; reorder</div>'+
       '<div class="po-meta detail-grid">'+
         '<div><label>Last ordered</label><input class="f-lastdate" type="date" value="'+(it.lastPurchaseDate||'')+'"></div>'+
@@ -2331,7 +2326,7 @@ function renderItemCard(it){
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Notes</div>'+
-      '<input class="f-notes" style="width:100%" value="'+escAttr(it.notes||'')+'" placeholder="—">'+
+      '<input class="f-itemnotes" style="width:100%" value="'+escAttr(it.notes||'')+'" placeholder="—">'+
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Attachments</div>'+
@@ -2355,7 +2350,7 @@ function wireItemCard(){
     card.querySelector('.f-lastdate').addEventListener('change',e=>{ it.lastPurchaseDate=e.target.value||null; save(); renderItems(); });
     card.querySelector('.f-lastqty').addEventListener('change',e=>{ it.lastPurchaseQty=e.target.value===''?null:(Number(e.target.value)||0); save(); });
     card.querySelector('.f-cadence').addEventListener('change',e=>{ it.reorderCadenceDays=e.target.value===''?null:(Number(e.target.value)||0); save(); renderItems(); });
-    card.querySelector('.f-notes').addEventListener('change',e=>{ it.notes=e.target.value; save(); });
+    card.querySelector('.f-itemnotes').addEventListener('change',e=>{ it.notes=e.target.value; save(); });
     const histBtn=card.querySelector('.item-history-btn');
     if(histBtn) histBtn.addEventListener('click',()=>{
       const rows=priceHistoryFor(it.id);
@@ -2378,10 +2373,49 @@ function wireItemCard(){
       it.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
       save(); renderItems();
     });
+    const addLinkBtn=card.querySelector('.add-link-here');
+    if(addLinkBtn) addLinkBtn.addEventListener('click',()=>{
+      it.links=it.links||[];
+      it.links.push({id:uid(), supplierId:'', cost:0, url:'', phone:'', contactType:'link', notes:''});
+      save(); renderItems(); renderCounts();
+      setTimeout(()=>{
+        const freshCard=document.querySelector('.item-card[data-id="'+id+'"]');
+        const rows=freshCard? freshCard.querySelectorAll('.link-row .f-value') : [];
+        const last=rows[rows.length-1];
+        if(last) last.focus();
+      },30);
+    });
+    card.querySelectorAll('.link-row').forEach(row=>{
+      const linkId=row.dataset.link;
+      const link=(it.links||[]).find(l=>l.id===linkId);
+      if(!link) return;
+      row.querySelectorAll('.seg-btn').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          if(link.contactType===btn.dataset.type) return;
+          link.contactType=btn.dataset.type;
+          save(); renderItems();
+        });
+      });
+      const valueInput=row.querySelector('.f-value');
+      const goLink=row.querySelector('.link-go');
+      const syncGoLink=v=>{
+        if(!goLink) return;
+        const href = link.contactType==='phone' ? telHref(v) : orderLinkHref(v);
+        if(href){ goLink.href=href; goLink.classList.remove('is-disabled'); goLink.tabIndex=0; goLink.setAttribute('aria-disabled','false'); }
+        else{ goLink.href='#'; goLink.classList.add('is-disabled'); goLink.tabIndex=-1; goLink.setAttribute('aria-disabled','true'); }
+      };
+      valueInput.addEventListener('input',e=>syncGoLink(e.target.value));
+      valueInput.addEventListener('change',e=>{
+        if(link.contactType==='phone') link.phone=e.target.value; else link.url=e.target.value;
+        save();
+      });
+      row.querySelector('.supplier-select').addEventListener('change',e=>{ link.supplierId=e.target.value; save(); renderItems(); });
+      row.querySelector('.f-notes').addEventListener('change',e=>{ link.notes=e.target.value; save(); });
+      row.querySelector('.del-link').addEventListener('click',()=>{ it.links=it.links.filter(l=>l.id!==linkId); save(); renderItems(); renderCounts(); });
+    });
   });
 }
 
-/* ---------------- BOM tab ---------------- */
 function itemOptionsExcluding(ancestry){ return DB.items.filter(i=>!ancestry.includes(i.id)); }
 function itemSelectForBomLine(selId, ancestry){
   const opts=itemOptionsExcluding(ancestry);
@@ -2998,80 +3032,10 @@ function wireBomCosting(){
 /* ---------------- Links tab ---------------- */
 function itemSelectSimple(selId){ return '<select class="item-select">'+DB.items.map(i=>'<option value="'+i.id+'" '+(i.id===selId?'selected':'')+'>'+escAttr(i.name)+'</option>').join('')+'</select>'; }
 function supplierSelectSimple(selId){ return '<select class="supplier-select">'+DB.suppliers.map(s=>'<option value="'+s.id+'" '+(s.id===selId?'selected':'')+'>'+escAttr(s.name)+'</option>').join('')+'</select>'; }
-/* Same idea as the *Simple pickers above, but with a blank leading option — a Pipeline
-   idea is allowed to not have a specific item or supplier pinned down yet. */
-function itemSelectPipeline(selId){ return '<select class="item-select"><option value="">— pick an item —</option>'+DB.items.map(i=>'<option value="'+i.id+'" '+(i.id===selId?'selected':'')+'>'+escAttr(i.name)+'</option>').join('')+'</select>'; }
-function supplierSelectPipeline(selId){ return '<select class="supplier-select"><option value="">— pick a supplier —</option>'+DB.suppliers.map(s=>'<option value="'+s.id+'" '+(s.id===selId?'selected':'')+'>'+escAttr(s.name)+'</option>').join('')+'</select>'; }
 function supplierSelectOptional(selId){
   return '<select class="supplier-select" title="Supplier (optional)"><option value="">No supplier</option>'+
     DB.suppliers.map(s=>'<option value="'+s.id+'" '+(s.id===selId?'selected':'')+'>'+escAttr(s.name)+'</option>').join('')+
     '</select>';
-}
-
-let LINKS_SELECTED=null;
-let LINKS_SEARCH=''; // transient UI state (not saved) — filter text for the Links item picker
-
-function renderLinks(){
-  const el=document.getElementById('panel-links');
-  const selectable=DB.items.filter(i=>!i.isProduct && i.category!=='equipment');
-  if(!LINKS_SELECTED || !itemById(LINKS_SELECTED) || itemById(LINKS_SELECTED).isProduct || itemById(LINKS_SELECTED).category==='equipment'){
-    LINKS_SELECTED = (selectable[0]||{}).id || '';
-  }
-  const item = itemById(LINKS_SELECTED);
-  const knownGroups=DB.lists.itemGroups||[];
-  const groupOrder=knownGroups.concat(['']); // '' = Uncategorized / any stale value not in the list, rendered last
-  const q=LINKS_SEARCH.trim().toLowerCase();
-  const matches = q ? selectable.filter(i=>i.name.toLowerCase().includes(q)) : selectable;
-  const visibleGroups=groupOrder.filter(g=>matches.some(it=> g==='' ? (!it.itemGroup || !knownGroups.includes(it.itemGroup)) : it.itemGroup===g));
-  const pickerHtml = visibleGroups.length
-    ? visibleGroups.map(g=>{
-        const rows=matches.filter(it=> g==='' ? (!it.itemGroup || !knownGroups.includes(it.itemGroup)) : it.itemGroup===g);
-        return '<div class="links-picker-group">'+escAttr(g||'Uncategorized')+'</div>'+
-          rows.map(it=>'<button type="button" class="links-picker-item'+(it.id===LINKS_SELECTED?' active':'')+'" data-id="'+it.id+'">'+escAttr(it.name)+'</button>').join('');
-      }).join('')
-    : '<p class="links-picker-empty">No parts match "'+escAttr(LINKS_SEARCH)+'".</p>';
-  el.innerHTML=
-    '<p class="note" style="margin:0 0 12px">Pick a part, then add the links or phone numbers you use to order it.</p>'+
-    '<div class="links-layout">'+
-      '<div class="links-picker no-print">'+
-        '<div class="links-picker-search"><input type="text" id="links-search" placeholder="Search parts…" value="'+escAttr(LINKS_SEARCH)+'"></div>'+
-        '<div class="links-picker-list" id="links-picker-list">'+pickerHtml+'</div>'+
-      '</div>'+
-      '<div class="links-detail-wrap" id="links-detail">'+(item? renderLinksDetail(item) : '<p class="note">No items yet — add one on the Items tab first.</p>')+'</div>'+
-    '</div>';
-
-  const searchInput=document.getElementById('links-search');
-  searchInput.addEventListener('input',e=>{
-    LINKS_SEARCH=e.target.value;
-    renderLinks();
-    const reFocus=document.getElementById('links-search');
-    reFocus.focus(); reFocus.setSelectionRange(reFocus.value.length, reFocus.value.length);
-  });
-  document.querySelectorAll('#links-picker-list .links-picker-item').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      LINKS_SELECTED=btn.dataset.id;
-      renderLinks();
-    });
-  });
-  wireLinksDetail();
-}
-
-function renderLinksDetail(item){
-  const links=item.links||[];
-  const rows = links.length
-    ? links.map(l=>renderLinkRow(item,l)).join('')
-    : '<p class="note links-empty">No links or phone numbers yet for '+escAttr(item.name)+'.</p>';
-  return '<div class="card links-detail-card" data-id="'+item.id+'">'+
-    '<div class="card-head">'+
-      '<h3>'+escAttr(item.name)+'</h3>'+
-      '<div class="row-actions no-print"><button class="btn sm subtle danger del-item-here" data-id="'+item.id+'">Delete this item</button></div>'+
-    '</div>'+
-    '<div class="card-body">'+
-      '<div class="links-cost-row"><span class="note" style="margin-right:8px">Standard cost</span>'+costCellHtml(item)+'</div>'+
-      '<div id="links-rows">'+rows+'</div>'+
-      '<button class="btn sm accent add-link-here no-print" data-id="'+item.id+'" style="margin-top:10px">+ Add link or phone</button>'+
-    '</div>'+
-  '</div>';
 }
 
 function telHref(v){ const digits=(v||'').trim().replace(/[^\d+]/g,''); return digits?('tel:'+digits):''; }
@@ -3097,72 +3061,6 @@ function renderLinkRow(item, link){
     '<input class="f-notes" placeholder="Notes (optional)" value="'+escAttr(link.notes||'')+'">'+
     '<button class="btn sm subtle danger del-link" title="Remove">Remove</button>'+
   '</div>';
-}
-
-function wireLinksDetail(){
-  const root=document.getElementById('links-detail');
-  if(!root) return;
-
-  wireCostCell(root.querySelector('.cost-cell'), renderLinks);
-
-  const delItemBtn=root.querySelector('.del-item-here');
-  if(delItemBtn) delItemBtn.addEventListener('click',()=>{
-    const id=delItemBtn.dataset.id; const item=itemById(id);
-    if(!item) return;
-    const usedIn = DB.items.filter(x=>x.id!==id && (x.lines||[]).some(l=>l.childId===id)).map(x=>x.name);
-    let msg = 'Delete '+item.name+'? This removes its links and, if it\'s a component, its entry in any BOM recipe';
-    if(usedIn.length) msg += ' (currently used in: '+usedIn.join(', ')+')';
-    msg += '. This cannot be undone.';
-    confirmModal(msg, ()=>{
-      DB.items = DB.items.filter(x=>x.id!==id);
-      DB.items.forEach(x=>{ x.lines=(x.lines||[]).filter(l=>l.childId!==id); });
-      DB.demandPlan = DB.demandPlan.filter(d=>d.productId!==id);
-      DB.purchaseOrders.forEach(po=>{ po.lines=(po.lines||[]).filter(l=>l.itemId!==id); });
-      LINKS_SELECTED=null;
-      save(); renderLinks(); renderCounts();
-    });
-  });
-
-  const addLinkBtn=root.querySelector('.add-link-here');
-  if(addLinkBtn) addLinkBtn.addEventListener('click',()=>{
-    const item=itemById(addLinkBtn.dataset.id);
-    item.links=item.links||[];
-    item.links.push({id:uid(), supplierId:'', cost:0, url:'', phone:'', contactType:'link', notes:''});
-    save(); renderLinks(); renderCounts();
-    const valueInputs=root.querySelectorAll('.link-row .f-value');
-    const last=valueInputs[valueInputs.length-1];
-    if(last) last.focus();
-  });
-
-  root.querySelectorAll('.link-row').forEach(row=>{
-    const itemId=row.dataset.item; const linkId=row.dataset.link;
-    const item=itemById(itemId); const link=item?(item.links||[]).find(l=>l.id===linkId):null;
-    if(!item||!link) return;
-
-    row.querySelectorAll('.seg-btn').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        if(link.contactType===btn.dataset.type) return;
-        link.contactType=btn.dataset.type;
-        save(); renderLinks();
-      });
-    });
-    const valueInput=row.querySelector('.f-value');
-    const goLink=row.querySelector('.link-go');
-    const syncGoLink=v=>{
-      if(!goLink) return;
-      const href = link.contactType==='phone' ? telHref(v) : orderLinkHref(v);
-      if(href){ goLink.href=href; goLink.classList.remove('is-disabled'); goLink.tabIndex=0; goLink.setAttribute('aria-disabled','false'); }
-      else{ goLink.href='#'; goLink.classList.add('is-disabled'); goLink.tabIndex=-1; goLink.setAttribute('aria-disabled','true'); }
-    };
-    valueInput.addEventListener('input',e=>syncGoLink(e.target.value));
-    valueInput.addEventListener('change',e=>{
-      if(link.contactType==='phone') link.phone=e.target.value; else link.url=e.target.value;
-      save();
-    });
-    row.querySelector('.supplier-select').addEventListener('change',e=>{ link.supplierId=e.target.value; save(); });
-    row.querySelector('.f-notes').addEventListener('change',e=>{ link.notes=e.target.value; save(); });
-    row.querySelector('.del-link').addEventListener('click',()=>{ item.links=item.links.filter(l=>l.id!==linkId); save(); renderLinks(); renderCounts(); });
-  });
 }
 
 /* ---------------- Suppliers tab ---------------- */
@@ -3218,62 +3116,6 @@ function renderSuppliers(){
   document.getElementById('add-supplier').addEventListener('click',()=>{
     DB.suppliers.push({id:uid(),name:'New Supplier',contact:'',email:'',phone:'',specialty:'',notes:''});
     save(); renderSuppliers(); renderCounts();
-  });
-}
-
-/* ---------------- Pipeline (potential future orders) ----------------
-   Freeform holding area for orders that might happen but aren't confirmed yet.
-   Deliberately NOT read by runMRP() or anything in Demand Plan / Planned Orders —
-   jotting an idea down here can never trigger a purchase recommendation. Once an
-   idea becomes a real order, add it to Demand Plan yourself and delete it here. */
-function renderPipeline(){
-  const el=document.getElementById('panel-pipeline');
-  document.getElementById('page-actions').innerHTML=
-    '<button class="btn accent" id="add-pipeline">+ New idea</button>';
-  el.innerHTML=
-    '<div class="toolbar no-print">'+
-      '<div class="toolbar-spacer"></div><span class="toolbar-count">'+DB.pipeline.length+' idea'+(DB.pipeline.length===1?'':'s')+'</span>'+
-    '</div>'+
-    '<div class="card"><div class="card-body">'+
-    '<table><colgroup><col style="width:16%"><col style="width:20%"><col style="width:16%"><col style="width:7%"><col style="width:10%"><col style="width:22%"><col style="width:9%"></colgroup>'+
-    '<thead><tr><th>Customer</th><th>Item</th><th>Supplier</th><th>Qty</th><th>Added</th><th>Notes</th><th></th></tr></thead>'+
-    '<tbody id="pipeline-tbody"></tbody></table>'+
-    '</div></div>';
-  const tb=document.getElementById('pipeline-tbody');
-  const rows=DB.pipeline.slice().sort((a,b)=>(b.dateAdded||'').localeCompare(a.dateAdded||''));
-  tb.innerHTML=rows.map(p=>{
-    return '<tr class="pipeline-row" data-id="'+p.id+'">'+
-      '<td><input class="f-customer" value="'+escAttr(p.customer||'')+'" placeholder="Customer / prospect"></td>'+
-      '<td>'+itemSelectPipeline(p.itemId)+'</td>'+
-      '<td>'+supplierSelectPipeline(p.supplierId)+'</td>'+
-      '<td><input class="f-qty" type="number" min="0" value="'+escAttr(p.qty||'')+'"></td>'+
-      '<td class="note">'+fmtShortDate(p.dateAdded||todayISO())+'</td>'+
-      '<td><input class="f-notes" value="'+escAttr(p.notes||'')+'" placeholder="Notes"></td>'+
-      '<td class="col-actions no-print"><button class="btn sm danger del-pipeline">Delete</button></td>'+
-    '</tr>';
-  }).join('') || '<tr><td colspan="7" class="note">No pipeline ideas yet — add one above to jot down a potential future order without touching MRP planning.</td></tr>';
-  tb.querySelectorAll('tr.pipeline-row').forEach(tr=>{
-    const id=tr.dataset.id; const p=DB.pipeline.find(x=>x.id===id);
-    tr.querySelector('.f-customer').addEventListener('change',e=>{p.customer=e.target.value; save();});
-    tr.querySelector('.item-select').addEventListener('change',e=>{
-      p.itemId=e.target.value;
-      // Convenience: if this item has a known supplier link and no supplier is set yet,
-      // pull it in automatically rather than making you pick it twice.
-      if(!p.supplierId){
-        const it=itemById(p.itemId);
-        const link=(it&&it.links&&it.links[0])||null;
-        if(link&&link.supplierId){ p.supplierId=link.supplierId; save(); renderPipeline(); return; }
-      }
-      save();
-    });
-    tr.querySelector('.supplier-select').addEventListener('change',e=>{p.supplierId=e.target.value; save();});
-    tr.querySelector('.f-qty').addEventListener('change',e=>{p.qty=e.target.value; save();});
-    tr.querySelector('.f-notes').addEventListener('change',e=>{p.notes=e.target.value; save();});
-    tr.querySelector('.del-pipeline').addEventListener('click',()=>{ confirmModal('Delete this pipeline idea?', ()=>{ DB.pipeline=DB.pipeline.filter(x=>x.id!==id); save(); renderPipeline(); renderCounts(); }); });
-  });
-  document.getElementById('add-pipeline').addEventListener('click',()=>{
-    DB.pipeline.push({id:uid(),customer:'',itemId:'',supplierId:'',qty:'',notes:'',dateAdded:todayISO()});
-    save(); renderPipeline(); renderCounts();
   });
 }
 
@@ -4299,7 +4141,7 @@ const NAV_STATE_KEY='dragon-seats-mrp-navstate-v1';
 function loadNavState(){ try{ return JSON.parse(localStorage.getItem(NAV_STATE_KEY))||{}; }catch(e){ return {}; } }
 function saveNavState(){ try{ localStorage.setItem(NAV_STATE_KEY, JSON.stringify(navState)); }catch(e){} }
 let navState=loadNavState();
-const TAB_GROUP={items:'catalog',bom:'catalog',links:'catalog',suppliers:'catalog',demand:'planning',plan:'planning'};
+const TAB_GROUP={items:'catalog',bom:'catalog',suppliers:'catalog',demand:'planning',plan:'planning'};
 function applyNavState(){
   ['catalog','planning'].forEach(g=>{
     const expanded=navState[g]!==false;
