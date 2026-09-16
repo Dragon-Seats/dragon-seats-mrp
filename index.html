@@ -4053,7 +4053,7 @@ function findDuplicateItems(){
 function renderDataAudit(){
   const {nameDupes, mixedUsage, unpricedAssemblies}=findDuplicateItems();
   if(!nameDupes.length && !mixedUsage.length && !unpricedAssemblies.length){
-    return '<p class="note">No duplicate names, mixed bundle/direct usage, or un-grouped sub-assemblies found across your items and products right now.</p>';
+    return '';
   }
   let html='';
   if(unpricedAssemblies.length){
@@ -4081,27 +4081,28 @@ function renderDataAudit(){
 function renderSettings(){
   const el=document.getElementById('panel-settings');
   const bigSize = JSON.stringify(DB).length >= SIZE_WARN_THRESHOLD;
+  const auditHtml=renderDataAudit();
   el.innerHTML=
     '<div class="callout '+(bigSize?'':'hidden')+'" id="size-warn">This file has gotten large (attachments included). Saving may start to feel a little slower. Consider removing large attachments you no longer need if things feel sluggish.</div>'+
-    '<div class="card"><div class="card-head"><h3>Data audit</h3></div><div class="card-body">'+renderDataAudit()+'</div></div>'+
+    (auditHtml? '<div class="card"><div class="card-head"><h3>Data audit</h3></div><div class="card-body">'+auditHtml+'</div></div>' : '')+
     '<div class="card"><div class="card-head"><h3>Data management</h3></div><div class="card-body">'+
-      '<p class="note"><b>Export data</b> — download a JSON backup of everything (items, BOM, links, suppliers, demand plan, purchase orders, attached files).</p>'+
-      '<button class="btn" id="export-data">Export data (JSON)</button><br><br>'+
-      '<p class="note"><b>Import data</b> — restore from a JSON backup.</p>'+
-      '<button class="btn" id="import-data">Import data</button>'+
-      '<input type="file" id="import-file" accept="application/json" class="hidden"><br><br>'+
-      '<p class="note"><b>Reset to sample</b> — reloads the starter data. This does not touch the Materials Tracker app.</p>'+
-      '<button class="btn danger" id="reset-sample">Reset to sample</button>'+
+      '<div class="toolbar no-print" style="flex-wrap:wrap">'+
+        '<button class="btn" id="export-data">Export data (JSON)</button>'+
+        '<button class="btn" id="import-data">Import data</button>'+
+        '<input type="file" id="import-file" accept="application/json" class="hidden">'+
+        '<button class="btn danger" id="reset-sample">Reset to sample</button>'+
+      '</div>'+
+      helpNote('What do these do?', '<b>Export data</b> — download a JSON backup of everything (items, BOM, links, suppliers, demand plan, purchase orders, attached files).<br><b>Import data</b> — restore from a JSON backup.<br><b>Reset to sample</b> — reloads the starter data. This does not touch the Materials Tracker app.')+
     '</div></div>'+
     '<div class="card"><div class="card-head"><h3>Purchase order statuses</h3></div><div class="card-body">'+
-      '<p class="note">These are the status options available on each Purchase Order. The <b>last one in this list</b> is treated as "received / closed" — hitting "Receive" on a PO sets it to that status and adds its quantities to stock.</p>'+
       '<div id="po-status-list"></div>'+
       '<div class="toolbar no-print"><input id="new-status-input" placeholder="New status name" style="width:220px"><button class="btn sm" id="add-status-btn">+ Add</button></div>'+
+      helpNote('How does this work?', 'These are the status options available on each Purchase Order. The <b>last one in this list</b> is treated as "received / closed" — hitting "Receive" on a PO sets it to that status and adds its quantities to stock.')+
     '</div></div>'+
     '<div class="card"><div class="card-head"><h3>Item categories</h3></div><div class="card-body">'+
-      '<p class="note">These are the category options available on each component/part on the <b>Items</b> tab — pick one per item from the dropdown there to group the list. Anything left blank shows under "Uncategorized".</p>'+
       '<div id="item-group-list"></div>'+
       '<div class="toolbar no-print"><input id="new-item-group-input" placeholder="New category name" style="width:220px"><button class="btn sm" id="add-item-group-btn">+ Add</button></div>'+
+      helpNote('How does this work?', 'These are the category options available on each component/part on the <b>Items</b> tab — pick one per item from the dropdown there to group the list. Anything left blank shows under "Uncategorized".')+
     '</div></div>';
   document.getElementById('export-data').addEventListener('click',()=>{
     const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
