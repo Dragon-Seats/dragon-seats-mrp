@@ -2139,6 +2139,47 @@ function openAddItemGroupModal(){
   document.getElementById('new-cat-cancel').addEventListener('click', closeModal);
   inp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
 }
+
+function openAddItemModal(){
+  const known=DB.lists.itemGroups||[];
+  const bodyHtml=
+    '<div class="po-meta">'+
+      '<div><label>Name</label><br><input type="text" id="new-item-name" style="width:100%;font:inherit;box-sizing:border-box" placeholder="e.g. M6 Hex Bolt"></div>'+
+      '<div><label>Category</label><br><select id="new-item-cat" style="width:100%">'+
+        '<option value="">Uncategorized</option>'+
+        known.map(g=>'<option value="'+escAttr(g)+'">'+escAttr(g)+'</option>').join('')+
+      '</select></div>'+
+      '<div><label>Unit of measure</label><br><input type="text" id="new-item-uom" style="width:100%;font:inherit;box-sizing:border-box" value="ea"></div>'+
+      '<div><label>On hand</label><br><input type="number" id="new-item-onhand" style="width:100%;font:inherit;box-sizing:border-box" value="0"></div>'+
+    '</div>'+
+    '<div style="margin-top:10px"><label>Notes</label><br><input type="text" id="new-item-notes" style="width:100%;font:inherit;box-sizing:border-box" placeholder="—"></div>'+
+    '<p class="note" style="margin-top:10px">Last-ordered date/qty and reorder cadence can be filled in on the row after it\'s created.</p>'+
+    '<div class="toolbar" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="new-item-cancel">Cancel</button><button class="btn accent" id="new-item-save">Save</button></div>';
+  openModal('New item', bodyHtml);
+  const nameInp=document.getElementById('new-item-name');
+  nameInp.focus();
+  const commit=()=>{
+    const name=nameInp.value.trim();
+    if(!name){ nameInp.focus(); return; }
+    const cat=document.getElementById('new-item-cat').value;
+    const uom=(document.getElementById('new-item-uom').value||'ea').trim()||'ea';
+    const onHand=Number(document.getElementById('new-item-onhand').value)||0;
+    const notes=document.getElementById('new-item-notes').value.trim();
+    const it=mkItem(uid(), name, uom, {itemGroup:cat, onHand, notes});
+    DB.items.unshift(it);
+    collapsedItemGroups[cat||'__uncategorized__']=false;
+    save(); closeModal(); renderItems(); renderCounts();
+    setTimeout(()=>{
+      const row=document.querySelector('tr[data-id="'+it.id+'"]');
+      if(row) row.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 30);
+  };
+  document.getElementById('new-item-save').addEventListener('click', commit);
+  document.getElementById('new-item-cancel').addEventListener('click', closeModal);
+  ['new-item-name','new-item-uom','new-item-onhand','new-item-notes'].forEach(id=>{
+    document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
+  });
+}
 function itemGroupSelect(selId){
   const known=DB.lists.itemGroups||[];
   const opts=known.slice();
@@ -2268,10 +2309,7 @@ function renderItems(){
       }
     });
   });
-  document.getElementById('add-item').addEventListener('click',()=>{
-    DB.items.push(mkItem(uid(),'New Item','ea',{}));
-    save(); renderItems(); renderCounts();
-  });
+  document.getElementById('add-item').addEventListener('click', openAddItemModal);
   document.getElementById('add-item-group').addEventListener('click', openAddItemGroupModal);
   document.getElementById('export-pdf-items').addEventListener('click',()=>{
     const head=['Name','Category','UoM','On Hand','Last Ordered','Qty','Reorder Every','Status','Notes'];
