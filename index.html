@@ -4057,25 +4057,28 @@ function renderDataAudit(){
   }
   let html='';
   if(unpricedAssemblies.length){
-    html+='<p class="note" style="margin-bottom:6px"><b>Sub-assembly not grouped as a bundle</b> — these items have their own recipe (so they\'re a sub-assembly, not a raw part) but no price of their own set on <i>this exact item</i> (no Standard Cost, pack price, price breaks, PO/receipt history, or link cost). So instead of showing as one bundle-priced line, every component underneath needs its own price. If this should be one bundle price (like a vendor that quotes one price for the whole kit), open it on the Items tab and set a Standard Cost, pack price, or price breaks directly on it — click the 🏷️ next to its Standard Cost. If two entries with a similar name showed up above under "Same name, multiple entries," that\'s the most likely cause: the priced one and the one your bench actually uses are two different items.</p>';
-    html+='<ul style="margin:0 0 14px 18px;padding:0">'+unpricedAssemblies.map(x=>
-      '<li style="margin-bottom:4px">"'+escAttr(x.item.name)+'" ('+x.item.id+') — '+x.childCount+' component'+(x.childCount>1?'s':'')+' in its recipe, no price of its own</li>'
-    ).join('')+'</ul>';
+    html+='<div style="margin-bottom:12px"><b>Sub-assembly not grouped as a bundle</b> ('+unpricedAssemblies.length+')'+
+      '<ul style="margin:6px 0 0 18px;padding:0">'+unpricedAssemblies.map(x=>
+        '<li style="margin-bottom:2px">'+escAttr(x.item.name)+' — '+x.childCount+' component'+(x.childCount>1?'s':'')+', no price of its own</li>'
+      ).join('')+'</ul></div>';
   }
   if(nameDupes.length){
-    html+='<p class="note" style="margin-bottom:6px"><b>Same name, multiple entries</b> — these look like duplicates. Pick which one to keep, move any real data (on-hand, notes, links) onto it, then delete the rest from the Items tab.</p>';
-    html+='<ul style="margin:0 0 14px 18px;padding:0">'+nameDupes.map(g=>
-      '<li style="margin-bottom:4px">"'+escAttr(g[0].name)+'" — '+g.length+' entries ('+g.map(it=>it.id).join(', ')+')</li>'
-    ).join('')+'</ul>';
+    html+='<div style="margin-bottom:12px"><b>Same name, multiple entries</b> ('+nameDupes.length+')'+
+      '<ul style="margin:6px 0 0 18px;padding:0">'+nameDupes.map(g=>
+        '<li style="margin-bottom:2px">'+escAttr(g[0].name)+' — '+g.length+' entries</li>'
+      ).join('')+'</ul></div>';
   }
   if(mixedUsage.length){
-    html+='<p class="note" style="margin-bottom:6px"><b>Bundled in one place, listed separately in another</b> — these parts are already covered by a bundle price under one product, but also show up needing their own price under another. If that\'s really the same physical part, remove the separate line (or fold it into the bundle); if it\'s legitimately priced separately for that other product, no action needed.</p>';
-    html+='<ul style="margin:0;padding:0 0 0 18px">'+mixedUsage.map(x=>
-      '<li style="margin-bottom:6px">"'+escAttr(x.item.name)+'" — '+x.uses.map(u=>
-        (u.type==='included' ? 'included in a bundle via '+escAttr(u.vias.join(', ')) : 'needs its own price via '+escAttr(u.vias.join(', ')))+' ('+escAttr(u.product)+')'
-      ).join('; ')+'</li>'
-    ).join('')+'</ul>';
+    html+='<div><b>Bundled in one place, listed separately in another</b> ('+mixedUsage.length+')'+
+      '<ul style="margin:6px 0 0 18px;padding:0">'+mixedUsage.map(x=>
+        '<li style="margin-bottom:2px">'+escAttr(x.item.name)+'</li>'
+      ).join('')+'</ul></div>';
   }
+  html+=helpNote('What do these mean?',
+    '<b>Sub-assembly not grouped as a bundle</b> — this item has its own recipe (so it\'s a sub-assembly, not a raw part) but no price of its own (no Standard Cost, pack price, price breaks, PO/receipt history, or link cost). So instead of showing as one bundle-priced line, every component underneath needs its own price. If this should be one bundle price, open it on the Items tab and set a Standard Cost, pack price, or price breaks directly on it.<br><br>'+
+    '<b>Same name, multiple entries</b> — these look like duplicates. Pick which one to keep, move any real data (on-hand, notes, links) onto it, then delete the rest from the Items tab.<br><br>'+
+    '<b>Bundled in one place, listed separately in another</b> — this part is already covered by a bundle price under one product, but also shows up needing its own price under another. If it\'s really the same physical part, remove the separate line or fold it into the bundle; if it\'s legitimately priced separately for that other product, no action needed.'
+  );
   return html;
 }
 function renderSettings(){
