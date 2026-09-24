@@ -1564,9 +1564,34 @@ function priceHistoryFor(itemId){
   rows.sort((a,b)=> (b.reliability-a.reliability) || (b.date||'').localeCompare(a.date||''));
   return rows;
 }
+/* Broader than priceHistoryFor(): every PO and Receipt line for this item, regardless of
+   whether a price was ever logged on it -- this answers "did we order it and when", not
+   "what did it cost", so it deliberately does NOT feed resolvePartCost()/BOM costing (that
+   still calls priceHistoryFor(), which stays priced-only on purpose -- a priceless line
+   becoming the "most recent price" would silently zero out a cost rollup). Quotes are left
+   out too -- a quote isn't an order that happened, just an estimate. */
+function orderHistoryFor(itemId){
+  const rows=[];
+  DB.purchaseOrders.forEach(po=>{
+    (po.lines||[]).forEach(l=>{
+      if(l.itemId===itemId){
+        rows.push({date:po.orderDate, supplier:(supplierById(po.supplierId)||{}).name||'—', qty:l.qty, unitPrice:l.unitPrice, poNumber:po.poNumber, source:'PO', reliability:2});
+      }
+    });
+  });
+  DB.receipts.forEach(r=>{
+    (r.lines||[]).forEach(l=>{
+      if(l.itemId===itemId){
+        rows.push({date:r.receiptDate, supplier:(supplierById(r.supplierId)||{}).name||'—', qty:l.qty, unitPrice:l.unitPrice, poNumber:r.receiptNumber, source:'Receipt', reliability:3});
+      }
+    });
+  });
+  rows.sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.reliability-a.reliability));
+  return rows;
+}
 function renderHistoryTable(rows){
   return '<table><thead><tr><th>Date</th><th>Supplier</th><th class="num">Qty</th><th class="num">Unit Price</th><th>Source</th><th>PO #</th></tr></thead><tbody>'+
-    rows.map(r=>'<tr><td class="mono">'+fmtDate(r.date)+'</td><td>'+r.supplier+'</td><td class="num mono">'+r.qty+'</td><td class="num mono">$'+Number(r.unitPrice).toFixed(2)+'</td><td class="mono">'+(r.source||'PO')+'</td><td class="mono">'+(r.poNumber||'')+'</td></tr>').join('')
+    rows.map(r=>'<tr><td class="mono">'+fmtDate(r.date)+'</td><td>'+r.supplier+'</td><td class="num mono">'+r.qty+'</td><td class="num mono">'+(Number(r.unitPrice)>0?'$'+Number(r.unitPrice).toFixed(2):'—')+'</td><td class="mono">'+(r.source||'PO')+'</td><td class="mono">'+(r.poNumber||'')+'</td></tr>').join('')
     +'</tbody></table>';
 }
 
@@ -1716,26 +1741,26 @@ function runMRP(){
 /* ---------------- tabs / rendering shell ---------------- */
 const TAB_LABELS={
   dash:['Dashboard','MRP overview'],
-  items:['Items','Inventory, lead time, safety stock & files'],
-  bom:['BOM / Products','Products broken down by section'],
+  items:['Items','Inventory, lead time & safety stock'],
+  bom:['BOM / Products','Product structure and components'],
   suppliers:['Suppliers','Vendor reference'],
-  demand:['Demand Plan','Planned builds driving requirements'],
-  plan:['Planned Orders','What to order, and when'],
-  docs:['Documents','Purchase orders, quotes & receipts — one place for all supplier paperwork'],
-  settings:['Settings','Data management & configurable lists']
+  demand:['Demand Plan','Planned builds and requirements'],
+  plan:['Planned Orders','Recommended order quantities and timing'],
+  docs:['Documents','Purchase orders, quotes and receipts'],
+  settings:['Settings','Data management and configuration']
 };
 /* Sub-tab labels for the merged Purchase Orders / Quotes / Receipts page. */
 const DOC_SUBTAB_LABELS={
-  po:'Purchase Orders — request → finance approval → open/close, price history, file import',
-  quotes:'Quotes — supplier quotes & estimates, pricing signal before you commit',
-  receipts:'Receipts — what was actually paid, who bought it, most trustworthy price history',
-  deliveries:'Deliveries / Load-Outs — what left the shop on a truck or trailer, so usage comes out of stock'
+  po:'Purchase Orders — requests, approvals & status',
+  quotes:'Quotes — supplier pricing and estimates',
+  receipts:'Receipts — confirmed purchases and pricing',
+  deliveries:'Deliveries — outbound shipments and load-outs'
 };
 let docSubTab='po';
 /* Sub-tab labels for the BOM / Products page (recipes vs. rolled-up cost). */
 const BOM_SUBTAB_LABELS={
-  recipes:'Products broken down by section — components nest to any depth',
-  costing:'Cost to build one unit, rolled up all the way down through every nested component'
+  recipes:'Product structure and components',
+  costing:'Rolled-up cost per unit'
 };
 let bomSubTab='recipes';
 /* Each value is an array of supplier IDs to include; an empty array means "all suppliers". */
@@ -2300,7 +2325,7 @@ function renderItemCard(it){
     : '<p class="note links-empty">No links or phone numbers yet for '+escAttr(it.name)+'.</p>';
   return '<div class="detail-drawer item-card" data-id="'+it.id+'">'+
     '<div class="detail-drawer-head"><div><h2>'+escAttr(it.name)+'</h2><div class="sub">'+escAttr(it.itemGroup||'Uncategorized')+'</div></div>'+
-    '<div class="row-actions no-print"><button class="btn sm item-history-btn">Price history</button><button class="btn sm danger del-item">Delete item</button><button type="button" class="detail-drawer-close item-detail-close" title="Close">✕</button></div></div>'+
+    '<div class="row-actions no-print"><button class="btn sm item-history-btn">Order history</button><button class="btn sm danger del-item">Delete item</button><button type="button" class="detail-drawer-close item-detail-close" title="Close">✕</button></div></div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Item information</div>'+
       '<div class="po-meta detail-grid">'+
@@ -2353,9 +2378,9 @@ function wireItemCard(){
     card.querySelector('.f-itemnotes').addEventListener('change',e=>{ it.notes=e.target.value; save(); });
     const histBtn=card.querySelector('.item-history-btn');
     if(histBtn) histBtn.addEventListener('click',()=>{
-      const rows=priceHistoryFor(it.id);
-      const body=rows.length? renderHistoryTable(rows) : '<p class="note">No purchase order history for this item yet.</p>';
-      openModal('Price history — '+it.name, body);
+      const rows=orderHistoryFor(it.id);
+      const body=rows.length? renderHistoryTable(rows) : '<p class="note">No orders on file for this item yet.</p>';
+      openModal('Order history — '+it.name, body);
     });
     const delBtn=card.querySelector('.del-item');
     if(delBtn) delBtn.addEventListener('click',()=>{
@@ -3065,6 +3090,42 @@ function renderLinkRow(item, link){
 
 /* ---------------- Suppliers tab ---------------- */
 let supplierSearch=''; // transient UI state (not saved) — Suppliers-tab search box
+function openAddSupplierModal(){
+  const bodyHtml=
+    '<div class="po-meta">'+
+      '<div><label>Name</label><br><input type="text" id="new-supplier-name" style="width:100%;font:inherit;box-sizing:border-box" placeholder="e.g. Acme Fasteners"></div>'+
+      '<div><label>Contact</label><br><input type="text" id="new-supplier-contact" style="width:100%;font:inherit;box-sizing:border-box" placeholder="e.g. Jane Smith"></div>'+
+      '<div><label>Email</label><br><input type="text" id="new-supplier-email" style="width:100%;font:inherit;box-sizing:border-box" placeholder="—"></div>'+
+      '<div><label>Phone</label><br><input type="text" id="new-supplier-phone" style="width:100%;font:inherit;box-sizing:border-box" placeholder="—"></div>'+
+    '</div>'+
+    '<div style="margin-top:10px"><label>Specialty</label><br><input type="text" id="new-supplier-spec" style="width:100%;font:inherit;box-sizing:border-box" placeholder="e.g. Hardware, Wheels"></div>'+
+    '<div style="margin-top:10px"><label>Notes</label><br><input type="text" id="new-supplier-notes" style="width:100%;font:inherit;box-sizing:border-box" placeholder="—"></div>'+
+    '<div class="toolbar" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="new-supplier-cancel">Cancel</button><button class="btn accent" id="new-supplier-save">Save</button></div>';
+  openModal('New supplier', bodyHtml);
+  const nameInp=document.getElementById('new-supplier-name');
+  nameInp.focus();
+  const commit=()=>{
+    const name=nameInp.value.trim();
+    if(!name){ nameInp.focus(); return; }
+    const contact=document.getElementById('new-supplier-contact').value.trim();
+    const email=document.getElementById('new-supplier-email').value.trim();
+    const phone=document.getElementById('new-supplier-phone').value.trim();
+    const spec=document.getElementById('new-supplier-spec').value.trim();
+    const notes=document.getElementById('new-supplier-notes').value.trim();
+    const s={id:uid(), name, contact, email, phone, specialty:spec, notes};
+    DB.suppliers.unshift(s);
+    save(); closeModal(); renderSuppliers(); renderCounts();
+    setTimeout(()=>{
+      const row=document.querySelector('tr.sup-row[data-id="'+s.id+'"]');
+      if(row) row.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 30);
+  };
+  document.getElementById('new-supplier-save').addEventListener('click', commit);
+  document.getElementById('new-supplier-cancel').addEventListener('click', closeModal);
+  ['new-supplier-name','new-supplier-contact','new-supplier-email','new-supplier-phone','new-supplier-spec','new-supplier-notes'].forEach(id=>{
+    document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
+  });
+}
 function renderSuppliers(){
   const el=document.getElementById('panel-suppliers');
   const sq=(supplierSearch||'').trim().toLowerCase();
@@ -3113,10 +3174,7 @@ function renderSuppliers(){
   tb.querySelectorAll('.view-sup-doc').forEach(btn=>{
     btn.addEventListener('click',()=>{ jumpToSupplierDoc(btn.dataset.type, btn.dataset.id); });
   });
-  document.getElementById('add-supplier').addEventListener('click',()=>{
-    DB.suppliers.push({id:uid(),name:'New Supplier',contact:'',email:'',phone:'',specialty:'',notes:''});
-    save(); renderSuppliers(); renderCounts();
-  });
+  document.getElementById('add-supplier').addEventListener('click', openAddSupplierModal);
 }
 
 /* Gathers every PO/Quote/Receipt on file for a supplier, most-recent-first within each group. */
