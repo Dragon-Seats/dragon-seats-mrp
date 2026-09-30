@@ -1310,6 +1310,7 @@ function ensureShape(){
     if(typeof r.appliedToStock!=='boolean') r.appliedToStock=false;
     if(r.appliedAt===undefined) r.appliedAt=null;
     if(typeof r.requestedBy!=='string') r.requestedBy='';
+    if(r.orderTotal===undefined) r.orderTotal=null;
     r.lines.forEach(l=>{
       if(typeof l.received!=='boolean') l.received=false;
       if(l.receivedAt===undefined) l.receivedAt=null;
@@ -3173,7 +3174,10 @@ function supplierDocGroups(s){
   const r=DB.receipts.filter(x=>x.supplierId===s.id).slice().sort((a,b)=>(b.receiptDate||'').localeCompare(a.receiptDate||''));
   return {po,q,r,total:po.length+q.length+r.length};
 }
-function supplierDocLineTotal(doc){ return (doc.lines||[]).reduce((sum,l)=>sum+Number(l.qty||0)*Number(l.unitPrice||0),0); }
+function supplierDocLineTotal(doc){
+  const lineSum=(doc.lines||[]).reduce((sum,l)=>sum+Number(l.qty||0)*Number(l.unitPrice||0),0);
+  return (doc.orderTotal!=null && Number(doc.orderTotal)>0) ? Number(doc.orderTotal) : lineSum;
+}
 /* Renders one PO/Quote/Receipt summary row within the supplier documents panel. */
 function supplierDocRowHTML(type, doc){
   let label, number, date, status;
@@ -3607,6 +3611,17 @@ function wirePO(){
 
 /* ---------------- Quotes tab ---------------- */
 function quoteLineTotal(q){ return (q.lines||[]).reduce((s,l)=>s+Number(l.qty||0)*Number(l.unitPrice||0),0); }
+/* Updates the Line Total cells, Items subtotal and the Quote total placeholder in place,
+   so editing qty/price doesn't need a full re-render (which would steal focus mid-typing). */
+function refreshQuoteTotals(card,q){
+  card.querySelectorAll('.po-lines-tbody tr[data-i]').forEach(tr=>{
+    const l=(q.lines||[])[Number(tr.dataset.i)]; const c=tr.querySelector('.q-line-total');
+    if(l && c) c.textContent='$'+(Number(l.qty||0)*Number(l.unitPrice||0)).toFixed(2);
+  });
+  const sub=quoteLineTotal(q);
+  const st=card.querySelector('.q-subtotal'); if(st) st.textContent='$'+sub.toFixed(2);
+  const tot=card.querySelector('.f-ordertotal'); if(tot) tot.placeholder=sub.toFixed(2);
+}
 function quoteDisplayTotal(q){ return (q.orderTotal!=null && Number(q.orderTotal)>0) ? Number(q.orderTotal) : quoteLineTotal(q); }
 function renderQuotes(){
   const el=document.getElementById('panel-quotes');
@@ -3679,21 +3694,27 @@ function renderQuoteCard(q){
         '<div><label>Quote date</label><input class="f-qdate" type="date" value="'+(q.quoteDate||'')+'"></div>'+
         '<div><label>Valid until</label><input class="f-vuntil" type="date" value="'+(q.validUntil||'')+'"></div>'+
         '<div><label>Status</label><select class="f-status">'+DB.lists.quoteStatus.map(s=>'<option value="'+escAttr(s)+'" '+(s===q.status?'selected':'')+'>'+escAttr(s)+'</option>').join('')+'</select></div>'+
-        '<div><label>Order total (optional)</label><input class="f-ordertotal num" type="number" step="0.01" placeholder="Only if quoted as one lump sum" value="'+(q.orderTotal!=null?q.orderTotal:'')+'"></div>'+
       '</div>'+
-      '<p class="note" style="margin-top:8px">If the supplier quoted one lump sum instead of pricing each item, enter it as the <b>Order total</b> above -- it\'s used as this quote\'s total on the list and in exports. Line item prices below (when filled in) still drive item cost history, so add those too when you have them.</p>'+
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Line items</div>'+
-      '<table><colgroup><col style="width:45%"><col style="width:18%"><col style="width:20%"><col style="width:17%"></colgroup>'+
-      '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th></th></tr></thead>'+
+      '<table><colgroup><col style="width:38%"><col style="width:13%"><col style="width:17%"><col style="width:17%"><col style="width:15%"></colgroup>'+
+      '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th class="num">Line Total</th><th></th></tr></thead>'+
       '<tbody class="po-lines-tbody">'+((q.lines||[]).map((l,i)=>
         '<tr data-i="'+i+'">'+
           '<td>'+itemSelectSimple(l.itemId)+'</td>'+
           '<td class="num"><input class="f-qty num" type="number" value="'+l.qty+'"></td>'+
           '<td class="num"><input class="f-price num" type="number" step="0.01" value="'+(l.unitPrice||0)+'"></td>'+
+          '<td class="num mono q-line-total">$'+(Number(l.qty||0)*Number(l.unitPrice||0)).toFixed(2)+'</td>'+
           '<td class="col-actions no-print"><button class="btn sm danger po-del-line">Remove</button></td>'+
-        '</tr>').join('') || '<tr><td colspan="4" class="note">No line items yet.</td></tr>')+'</tbody></table>'+
+        '</tr>').join('') || '<tr><td colspan="5" class="note">No line items yet.</td></tr>')+'</tbody>'+
+      '<tfoot class="q-totals">'+
+        '<tr><td colspan="3" class="num" style="color:var(--steel)">Items subtotal</td><td class="num mono q-subtotal">$'+quoteLineTotal(q).toFixed(2)+'</td><td></td></tr>'+
+        '<tr><td colspan="3" class="num" style="font-weight:600">Quote total</td>'+
+          '<td class="num"><input class="f-ordertotal num" type="number" step="0.01" min="0" style="font-weight:600" placeholder="'+quoteLineTotal(q).toFixed(2)+'" value="'+(q.orderTotal!=null?q.orderTotal:'')+'"></td>'+
+          '<td class="note q-total-hint">'+((q.orderTotal!=null && Number(q.orderTotal)>0)?'Entered':'= subtotal')+'</td></tr>'+
+      '</tfoot></table>'+
+      '<p class="note" style="margin-top:6px">Type the supplier\'s quoted total in <b>Quote total</b> (freight, tax, lump-sum pricing, etc.). Leave it blank to use the items subtotal. It\'s what shows on the quote list, the supplier\'s Documents panel, and exports.</p>'+
       '<button class="btn sm po-add-line no-print" style="margin-top:8px">+ Add line item</button>'+
     '</div>'+
     '<div class="detail-section">'+
@@ -3739,8 +3760,8 @@ function wireQuotes(){
       const i=Number(tr.dataset.i);
       const isel=tr.querySelector('.item-select');
       if(isel) isel.addEventListener('change',e=>{ q.lines[i].itemId=e.target.value; save(); });
-      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ q.lines[i].qty=Number(e.target.value)||0; save(); });
-      const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ q.lines[i].unitPrice=Number(e.target.value)||0; save(); });
+      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ q.lines[i].qty=Number(e.target.value)||0; save(); refreshQuoteTotals(card,q); });
+      const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ q.lines[i].unitPrice=Number(e.target.value)||0; save(); refreshQuoteTotals(card,q); });
       const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ q.lines.splice(i,1); save(); renderQuotes(); });
     });
     enableFileDrop(card.querySelector('.file-btn'), card.querySelector('.po-file'));
@@ -3755,6 +3776,18 @@ function wireQuotes(){
 
 /* ---------------- Receipts tab ---------------- */
 function receiptLineTotal(r){ return (r.lines||[]).reduce((s,l)=>s+Number(l.qty||0)*Number(l.unitPrice||0),0); }
+/* Same as quotes: a typed-in receipt total (freight, tax, lump sum) wins over the summed lines.
+   Display only -- line prices still feed price history / BOM costing untouched. */
+function receiptDisplayTotal(r){ return (r.orderTotal!=null && Number(r.orderTotal)>0) ? Number(r.orderTotal) : receiptLineTotal(r); }
+function refreshReceiptTotals(card,r){
+  card.querySelectorAll('.po-lines-tbody tr[data-i]').forEach(tr=>{
+    const l=(r.lines||[])[Number(tr.dataset.i)]; const c=tr.querySelector('.q-line-total');
+    if(l && c) c.textContent='$'+(Number(l.qty||0)*Number(l.unitPrice||0)).toFixed(2);
+  });
+  const sub=receiptLineTotal(r);
+  const st=card.querySelector('.q-subtotal'); if(st) st.textContent='$'+sub.toFixed(2);
+  const tot=card.querySelector('.f-ordertotal'); if(tot) tot.placeholder=sub.toFixed(2);
+}
 function renderReceipts(){
   const el=document.getElementById('panel-receipts');
   let filteredReceipts=filterBySupplier(DB.receipts, docSupplierFilter.receipts, r=>r.supplierId)
@@ -3790,7 +3823,7 @@ function renderReceipts(){
           '<td class="mono">'+fmtDate(r.receiptDate)+'</td>'+
           '<td><span class="status-badge '+(applied?'closed':'open')+'">'+(applied?'In inventory':'Pending')+'</span></td>'+
           '<td title="'+escAttr(lineItemsPlain(r.lines))+'">'+lineItemsSummary(r.lines)+'</td>'+
-          '<td class="num mono">$'+receiptLineTotal(r).toFixed(2)+'</td>'+
+          '<td class="num mono">$'+receiptDisplayTotal(r).toFixed(2)+'</td>'+
           '<td class="col-actions no-print"><button class="btn sm subtle">Open →</button></td>'+
         '</tr>';
       }).join('')+'</tbody></table>'
@@ -3811,7 +3844,7 @@ function renderReceipts(){
   });
   const exportReceiptsBtn=document.getElementById('export-pdf-receipts'); if(exportReceiptsBtn) exportReceiptsBtn.addEventListener('click',()=>{
     const head=['Receipt #','Supplier','Requested By','Receipt Date','Linked PO','In Stock?','Total $'];
-    const body=filteredReceipts.map(r=>[r.receiptNumber||'', (supplierById(r.supplierId)||{}).name||'', r.requestedBy||'', fmtDate(r.receiptDate), (poById(r.poId)||{}).poNumber||'', r.appliedToStock?'Yes':'Pending', '$'+receiptLineTotal(r).toFixed(2)]);
+    const body=filteredReceipts.map(r=>[r.receiptNumber||'', (supplierById(r.supplierId)||{}).name||'', r.requestedBy||'', fmtDate(r.receiptDate), (poById(r.poId)||{}).poNumber||'', r.appliedToStock?'Yes':'Pending', '$'+receiptDisplayTotal(r).toFixed(2)]);
     exportTablePDF('Dragon Seats - Receipts', head, body);
   });
   const receiptsBackBtn=document.getElementById('receipts-back-to-list'); if(receiptsBackBtn) receiptsBackBtn.addEventListener('click',()=>{ selectedReceipt=null; renderReceipts(); });
@@ -3841,16 +3874,24 @@ function renderReceiptCard(r){
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Line items</div>'+
-      '<table><colgroup><col style="width:36%"><col style="width:13%"><col style="width:15%"><col style="width:21%"><col style="width:15%"></colgroup>'+
-      '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th>In Stock</th><th></th></tr></thead>'+
+      '<table><colgroup><col style="width:30%"><col style="width:11%"><col style="width:14%"><col style="width:14%"><col style="width:19%"><col style="width:12%"></colgroup>'+
+      '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th class="num">Line Total</th><th>In Stock</th><th></th></tr></thead>'+
       '<tbody class="po-lines-tbody">'+((r.lines||[]).map((l,i)=>
         '<tr data-i="'+i+'">'+
           '<td>'+itemSelectSimple(l.itemId)+'</td>'+
           '<td class="num"><input class="f-qty num" type="number" value="'+l.qty+'"></td>'+
           '<td class="num"><input class="f-price num" type="number" step="0.01" value="'+(l.unitPrice||0)+'"></td>'+
+          '<td class="num mono q-line-total">$'+(Number(l.qty||0)*Number(l.unitPrice||0)).toFixed(2)+'</td>'+
           '<td class="col-actions no-print">'+(l.received?('<span class="status-badge closed" title="'+(l.receivedAt?('Added '+fmtDate(l.receivedAt)):'')+'">✓ In stock</span> <button class="btn sm subtle line-undo-receive">Undo</button>'):'<button class="btn sm accent line-add-inventory">Add to inventory</button>')+'</td>'+
           '<td class="col-actions no-print"><button class="btn sm danger po-del-line">Remove</button></td>'+
-        '</tr>').join('') || '<tr><td colspan="5" class="note">No line items yet.</td></tr>')+'</tbody></table>'+
+        '</tr>').join('') || '<tr><td colspan="6" class="note">No line items yet.</td></tr>')+'</tbody>'+
+      '<tfoot class="q-totals">'+
+        '<tr><td colspan="3" class="num" style="color:var(--steel)">Items subtotal</td><td class="num mono q-subtotal">$'+receiptLineTotal(r).toFixed(2)+'</td><td colspan="2"></td></tr>'+
+        '<tr><td colspan="3" class="num" style="font-weight:600">Receipt total</td>'+
+          '<td class="num"><input class="f-ordertotal num" type="number" step="0.01" min="0" style="font-weight:600" placeholder="'+receiptLineTotal(r).toFixed(2)+'" value="'+(r.orderTotal!=null?r.orderTotal:'')+'"></td>'+
+          '<td colspan="2" class="note q-total-hint">'+((r.orderTotal!=null && Number(r.orderTotal)>0)?'Entered':'= subtotal')+'</td></tr>'+
+      '</tfoot></table>'+
+      '<p class="note" style="margin-top:6px">Type what was actually paid in <b>Receipt total</b> (freight, tax, lump-sum pricing, etc.). Leave it blank to use the items subtotal. It\'s what shows on the receipts list, the supplier\'s Documents panel, and exports.</p>'+
       '<button class="btn sm po-add-line no-print" style="margin-top:8px">+ Add line item</button>'+
     '</div>'+
     '<div class="detail-section">'+
@@ -3877,6 +3918,7 @@ function wireReceipts(){
     card.querySelector('.f-reqby').addEventListener('change',e=>{r.requestedBy=e.target.value; save(); renderReceipts();});
     card.querySelector('.f-rlink').addEventListener('change',e=>{r.orderLink=e.target.value.trim(); save(); renderReceipts();});
     card.querySelector('.f-ponotes').addEventListener('change',e=>{r.notes=e.target.value; save();});
+    card.querySelector('.f-ordertotal').addEventListener('change',e=>{ const v=e.target.value; r.orderTotal=(v===''?null:Number(v)); save(); renderReceipts(); });
     card.querySelector('.del-receipt').addEventListener('click',()=>{ confirmModal('Delete this receipt?', ()=>{ DB.receipts=DB.receipts.filter(x=>x.id!==id); save(); renderReceipts(); renderCounts(); }); });
     const applyBtn=card.querySelector('.apply-receipt');
     if(applyBtn) applyBtn.addEventListener('click',()=>{
@@ -3912,8 +3954,8 @@ function wireReceipts(){
       const i=Number(tr.dataset.i);
       const isel=tr.querySelector('.item-select');
       if(isel) isel.addEventListener('change',e=>{ r.lines[i].itemId=e.target.value; save(); });
-      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ r.lines[i].qty=Number(e.target.value)||0; save(); });
-      const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ r.lines[i].unitPrice=Number(e.target.value)||0; save(); });
+      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ r.lines[i].qty=Number(e.target.value)||0; save(); refreshReceiptTotals(card,r); });
+      const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ r.lines[i].unitPrice=Number(e.target.value)||0; save(); refreshReceiptTotals(card,r); });
       const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ r.lines.splice(i,1); save(); renderReceipts(); });
       const addInv=tr.querySelector('.line-add-inventory');
       if(addInv) addInv.addEventListener('click',()=>{
