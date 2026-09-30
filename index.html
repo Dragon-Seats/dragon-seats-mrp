@@ -448,12 +448,10 @@ tr.row-editing{background:#fbf7f0}
           <button class="subtab" data-subtab="po">Purchase Orders <span class="count" id="cnt-po">0</span></button>
           <button class="subtab" data-subtab="quotes">Quotes <span class="count" id="cnt-quotes">0</span></button>
           <button class="subtab" data-subtab="receipts">Receipts <span class="count" id="cnt-receipts">0</span></button>
-          <button class="subtab" data-subtab="deliveries">Deliveries / Load-Outs <span class="count" id="cnt-deliveries">0</span></button>
         </div>
         <div class="doc-subpanel hidden" id="panel-po"></div>
         <div class="doc-subpanel hidden" id="panel-quotes"></div>
         <div class="doc-subpanel hidden" id="panel-receipts"></div>
-        <div class="doc-subpanel hidden" id="panel-deliveries"></div>
       </div>
       <div class="panel hidden" id="panel-settings"></div>
     </div>
@@ -1289,6 +1287,10 @@ function ensureShape(){
     if(typeof po.requestedBy!=='string') po.requestedBy='';
     if(typeof po.approvedBy!=='string') po.approvedBy='';
     if(po.orderTotal===undefined) po.orderTotal=null;
+    po.lines.forEach(l=>{
+      if(typeof l.received!=='boolean') l.received=false;
+      if(l.receivedAt===undefined) l.receivedAt=null;
+    });
   });
   DB.quotes.forEach(q=>{
     if(!Array.isArray(q.lines)) q.lines=[];
@@ -1308,6 +1310,10 @@ function ensureShape(){
     if(typeof r.appliedToStock!=='boolean') r.appliedToStock=false;
     if(r.appliedAt===undefined) r.appliedAt=null;
     if(typeof r.requestedBy!=='string') r.requestedBy='';
+    r.lines.forEach(l=>{
+      if(typeof l.received!=='boolean') l.received=false;
+      if(l.receivedAt===undefined) l.receivedAt=null;
+    });
   });
   DB.deliveries.forEach(d=>{
     if(!Array.isArray(d.lines)) d.lines=[];
@@ -1566,9 +1572,34 @@ function priceHistoryFor(itemId){
   rows.sort((a,b)=> (b.reliability-a.reliability) || (b.date||'').localeCompare(a.date||''));
   return rows;
 }
+/* Broader than priceHistoryFor(): every PO and Receipt line for this item, regardless of
+   whether a price was ever logged on it -- this answers "did we order it and when", not
+   "what did it cost", so it deliberately does NOT feed resolvePartCost()/BOM costing (that
+   still calls priceHistoryFor(), which stays priced-only on purpose -- a priceless line
+   becoming the "most recent price" would silently zero out a cost rollup). Quotes are left
+   out too -- a quote isn't an order that happened, just an estimate. */
+function orderHistoryFor(itemId){
+  const rows=[];
+  DB.purchaseOrders.forEach(po=>{
+    (po.lines||[]).forEach(l=>{
+      if(l.itemId===itemId){
+        rows.push({date:po.orderDate, supplier:(supplierById(po.supplierId)||{}).name||'—', qty:l.qty, unitPrice:l.unitPrice, poNumber:po.poNumber, source:'PO', reliability:2});
+      }
+    });
+  });
+  DB.receipts.forEach(r=>{
+    (r.lines||[]).forEach(l=>{
+      if(l.itemId===itemId){
+        rows.push({date:r.receiptDate, supplier:(supplierById(r.supplierId)||{}).name||'—', qty:l.qty, unitPrice:l.unitPrice, poNumber:r.receiptNumber, source:'Receipt', reliability:3});
+      }
+    });
+  });
+  rows.sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.reliability-a.reliability));
+  return rows;
+}
 function renderHistoryTable(rows){
   return '<table><thead><tr><th>Date</th><th>Supplier</th><th class="num">Qty</th><th class="num">Unit Price</th><th>Source</th><th>PO #</th></tr></thead><tbody>'+
-    rows.map(r=>'<tr><td class="mono">'+fmtDate(r.date)+'</td><td>'+r.supplier+'</td><td class="num mono">'+r.qty+'</td><td class="num mono">$'+Number(r.unitPrice).toFixed(2)+'</td><td class="mono">'+(r.source||'PO')+'</td><td class="mono">'+(r.poNumber||'')+'</td></tr>').join('')
+    rows.map(r=>'<tr><td class="mono">'+fmtDate(r.date)+'</td><td>'+r.supplier+'</td><td class="num mono">'+r.qty+'</td><td class="num mono">'+(Number(r.unitPrice)>0?'$'+Number(r.unitPrice).toFixed(2):'—')+'</td><td class="mono">'+(r.source||'PO')+'</td><td class="mono">'+(r.poNumber||'')+'</td></tr>').join('')
     +'</tbody></table>';
 }
 
@@ -1718,36 +1749,35 @@ function runMRP(){
 /* ---------------- tabs / rendering shell ---------------- */
 const TAB_LABELS={
   dash:['Dashboard','MRP overview'],
-  items:['Items','Inventory, lead time, safety stock & files'],
-  bom:['BOM / Products','Products broken down by section'],
+  items:['Items','Inventory, lead time & safety stock'],
+  bom:['BOM / Products','Product structure and components'],
   suppliers:['Suppliers','Vendor reference'],
-  demand:['Demand Plan','Planned builds driving requirements'],
-  plan:['Planned Orders','What to order, and when'],
-  docs:['Documents','Purchase orders, quotes & receipts — one place for all supplier paperwork'],
-  settings:['Settings','Data management & configurable lists']
+  demand:['Demand Plan','Planned builds and requirements'],
+  plan:['Planned Orders','Recommended order quantities and timing'],
+  docs:['Documents','Purchase orders, quotes and receipts'],
+  settings:['Settings','Data management and configuration']
 };
 /* Sub-tab labels for the merged Purchase Orders / Quotes / Receipts page. */
 const DOC_SUBTAB_LABELS={
-  po:'Purchase Orders — request → finance approval → open/close, price history, file import',
-  quotes:'Quotes — supplier quotes & estimates, pricing signal before you commit',
-  receipts:'Receipts — what was actually paid, who bought it, most trustworthy price history',
-  deliveries:'Deliveries / Load-Outs — what left the shop on a truck or trailer, so usage comes out of stock'
+  po:'Purchase Orders — requests, approvals & status',
+  quotes:'Quotes — supplier pricing and estimates',
+  receipts:'Receipts — confirmed purchases and pricing'
 };
 let docSubTab='po';
 /* Sub-tab labels for the BOM / Products page (recipes vs. rolled-up cost). */
 const BOM_SUBTAB_LABELS={
-  recipes:'Products broken down by section — components nest to any depth',
-  costing:'Cost to build one unit, rolled up all the way down through every nested component'
+  recipes:'Product structure and components',
+  costing:'Rolled-up cost per unit'
 };
 let bomSubTab='recipes';
 /* Each value is an array of supplier IDs to include; an empty array means "all suppliers". */
 let docSupplierFilter={po:[], quotes:[], receipts:[]};
 let collapsedItemGroups={}; // transient UI state (not saved) — which Items-tab category sections are collapsed
 let itemsToolbar={q:'', cat:'', status:''}; // transient UI state (not saved) — Items-tab search/filter toolbar
-let itemsEditingRow=null; // transient UI state (not saved) — which Items-tab row currently has its fields unlocked for edit
+let selectedItem=null; // transient UI state (not saved) — which Items-tab row is open in the detail panel
 /* transient UI state (not saved) — which record's detail drawer is open on the PO/Quotes/Receipts/Deliveries list views */
-let selectedPO=null, selectedQuote=null, selectedReceipt=null, selectedDelivery=null;
-let docSearch={po:'', quotes:'', receipts:'', deliveries:''}; // transient UI state (not saved) — search box on each Documents sub-tab
+let selectedPO=null, selectedQuote=null, selectedReceipt=null;
+let docSearch={po:'', quotes:'', receipts:''}; // transient UI state (not saved) — search box on each Documents sub-tab
 let docStatusFilter={po:'', quotes:''}; // transient UI state (not saved) — status dropdown on each Documents sub-tab
 let collapsedBomProducts={}; // transient UI state (not saved) — which BOM/Products cards are collapsed (legacy, unused by the split-view layout below, left in case older data references it)
 let collapsedBomNests={}; // transient UI state (not saved) — which nested sub-assembly sections are collapsed, keyed by "parentId::childId"
@@ -1800,7 +1830,7 @@ function setTab(which){
      to a specific record from Suppliers, or after saving via Add Document). Route those
      into the merged docs page and select the right sub-tab. */
   let sub=null;
-  if(which==='po'||which==='quotes'||which==='receipts'||which==='deliveries'){ sub=which; which='docs'; }
+  if(which==='po'||which==='quotes'||which==='receipts'){ sub=which; which='docs'; }
   Object.keys(TAB_LABELS).forEach(t=>{
     document.getElementById('panel-'+t).classList.toggle('hidden', t!==which);
     const btn=document.querySelector('.tab[data-tab="'+t+'"]');
@@ -1826,7 +1856,7 @@ function setTab(which){
 function setDocSubTab(sub){
   docSubTab=sub;
   document.getElementById('pagesub').textContent=DOC_SUBTAB_LABELS[sub];
-  ['po','quotes','receipts','deliveries'].forEach(t=>{
+  ['po','quotes','receipts'].forEach(t=>{
     document.getElementById('panel-'+t).classList.toggle('hidden', t!==sub);
     const btn=document.querySelector('.subtab[data-subtab="'+t+'"]');
     if(btn) btn.classList.toggle('active', t===sub);
@@ -1857,12 +1887,10 @@ function renderCounts(){
   const openPoCount=DB.purchaseOrders.filter(po=>po.status!==closed).length;
   const openQuoteCount=DB.quotes.filter(q=>q.status==='Open').length;
   const pendingReceiptCount=DB.receipts.filter(r=>!r.appliedToStock).length;
-  const pendingDeliveryCount=DB.deliveries.filter(d=>!d.appliedToStock).length;
   document.getElementById('cnt-po').textContent=openPoCount;
   document.getElementById('cnt-quotes').textContent=openQuoteCount;
   document.getElementById('cnt-receipts').textContent=pendingReceiptCount;
-  document.getElementById('cnt-deliveries').textContent=pendingDeliveryCount;
-  document.getElementById('cnt-docs').textContent=openPoCount+openQuoteCount+pendingReceiptCount+pendingDeliveryCount;
+  document.getElementById('cnt-docs').textContent=openPoCount+openQuoteCount+pendingReceiptCount;
 }
 
 function renderTab(which){
@@ -1875,7 +1903,6 @@ function renderTab(which){
   else if(which==='po') renderPO();
   else if(which==='quotes') renderQuotes();
   else if(which==='receipts') renderReceipts();
-  else if(which==='deliveries') renderDeliveries();
   else if(which==='settings') renderSettings();
 }
 
@@ -1883,22 +1910,6 @@ function renderTab(which){
 function fmtShortDate(iso){ const d=new Date(iso+'T00:00:00'); return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
 function statCard(value,label,cls){
   return '<div class="stat-card '+(cls||'')+'"><span class="stat-num">'+value+'</span><span class="stat-label">'+escAttr(label)+'</span></div>';
-}
-/* Horizontal segmented bar showing purchase orders grouped by status. No external charting
-   library — kept as plain HTML/CSS so the app stays fully self-contained and offline-safe. */
-function poStatusChart(){
-  const statusColor={'Requested':'var(--steel)','Sent to Finance':'var(--amber)','PO Issued':'var(--ink)','Ordered':'var(--graphite)','Received':'var(--green)'};
-  const statuses=(DB.lists.poStatus||[]).length?DB.lists.poStatus:['Requested','Sent to Finance','PO Issued','Ordered','Received'];
-  const counts=statuses.map(s=>({label:s, value:DB.purchaseOrders.filter(po=>po.status===s).length, color:statusColor[s]||'#8a8d93'}));
-  const total=counts.reduce((s,c)=>s+c.value,0);
-  const segs=total
-    ? counts.filter(c=>c.value).map(c=>'<div class="segbar-seg" style="width:'+(c.value/total*100)+'%;background:'+c.color+'"></div>').join('')
-    : '<div class="segbar-seg" style="width:100%;background:var(--steel-soft)"></div>';
-  const legend=counts.map(c=>'<span class="leg-item"><span class="leg-dot" style="background:'+c.color+'"></span>'+escAttr(c.label)+' <span class="leg-count">'+c.value+'</span></span>').join('');
-  return '<div class="chart-card"><h3>Purchase orders by status</h3>'+
-    '<div class="segbar">'+segs+'</div>'+
-    '<div class="chart-legend">'+(total?legend:'<span class="note">No purchase orders yet.</span>')+'</div>'+
-  '</div>';
 }
 /* Simple 8-week bar chart of planned orders by earliest release week, colored by urgency.
    Plain HTML/CSS bars — no external charting library. */
@@ -1968,17 +1979,16 @@ function renderDash(){
      on file, most-recent-first. */
   const activity=[]
     .concat(DB.purchaseOrders.map(po=>({date:po.orderDate, type:'PO', text:'PO '+(po.poNumber||'(no number)')+' — '+escAttr((supplierById(po.supplierId)||{}).name||'no supplier')+' · '+escAttr(po.status)})))
-    .concat(DB.quotes.map(q=>({date:q.quoteDate, type:'Quote', text:'Quote '+(q.quoteNumber||'(no number)')+' — '+escAttr((supplierById(q.supplierId)||{}).name||'no supplier')+' · '+escAttr(q.status)})))
     .concat(DB.receipts.filter(r=>r.appliedToStock).map(r=>({date:r.appliedAt||r.receiptDate, type:'Receipt', text:'Receipt '+escAttr(r.receiptNumber||'(no number)')+' added to inventory — '+escAttr((supplierById(r.supplierId)||{}).name||'no supplier')})))
     .filter(a=>a.date)
     .sort((a,b)=>(b.date||'')<(a.date||'')?-1:1)
-    .slice(0,10);
+    .slice(0,8);
 
   const actionRows=[]
     .concat(pendingReceipts.slice(0,4).map(r=>actionRow('amber','<b>'+escAttr(r.receiptNumber||'Receipt')+'</b> waiting to be added to inventory'+((supplierById(r.supplierId)||{}).name?' — '+escAttr(supplierById(r.supplierId).name):''),'Review','receipt-jump')))
     .concat(lateRows.slice(0,4).map(r=>actionRow('red','<b>'+escAttr(r.item.name)+'</b> is past due to order'+(r.suggestedQty?' — need '+r.suggestedQty+' '+r.item.uom:''),'View plan','plan-jump')))
     .concat(awaitingApprovalPOs.slice(0,3).map(po=>actionRow('amber','PO <b>'+escAttr(po.poNumber||'(no number)')+'</b> not yet sent — status '+escAttr(po.status),'Open','po-jump-'+po.id)))
-    .concat(missingLinkItems.slice(0,3).map(it=>actionRow('','<b>'+escAttr(it.name)+'</b> has no supplier link on file','Add link','items-jump')));
+    .concat(missingLinkItems.slice(0,3).map(it=>actionRow('','<b>'+escAttr(it.name)+'</b> has no supplier link on file','Add link','items-jump-'+it.id)));
   const actionHtml = actionRows.length
     ? actionRows.join('')
     : '<div class="empty-state"><div class="empty-icon">&#10003;</div><div class="empty-title">Nothing needs attention</div><div class="empty-sub">Receipts, past-due parts, unsent requests and missing supplier links will show up here.</div></div>';
@@ -1989,8 +1999,6 @@ function renderDash(){
     '<div class="dash-hero"><div class="dash-greeting">'+greeting+', John</div><div class="dash-date">'+dateStr+'</div></div>'+
     '<div class="stat-grid">'+
       statCard(pendingReceipts.length,'Pending receipts', pendingReceipts.length?'warn':'good')+
-      statCard(late,'Past due orders', late?'warn':'good')+
-      statCard(soon,'Order next 14 days', soon?'amber':'good')+
       statCard(openPOs,'Open POs','')+
       statCard(awaitingApproval,'Pending requests', awaitingApproval?'amber':'good')+
       statCard(missingLinks,'Missing supplier', missingLinks?'amber':'good')+
@@ -2001,7 +2009,7 @@ function renderDash(){
     '<div class="section-title-row"><div class="dash-section-title">Action required</div></div>'+
     '<div class="card"><div class="action-list">'+actionHtml+'</div></div>'+
     '<div class="section-title-row"><div class="dash-section-title">Purchasing overview &amp; planned orders</div></div>'+
-    '<div class="two-col">'+poStatusChart()+plannedOrdersWeekChart(res)+'</div>'+
+    plannedOrdersWeekChart(res)+
     '<div class="dash-section-title">Recent activity</div>'+
     '<div class="card"><div class="card-body">'+
       (activity.length
@@ -2025,8 +2033,11 @@ function renderDash(){
   el.querySelectorAll('.plan-jump').forEach(btn=>{
     btn.addEventListener('click',()=>{ setTab('plan'); renderCounts(); });
   });
-  el.querySelectorAll('.items-jump').forEach(btn=>{
-    btn.addEventListener('click',()=>{ setTab('items'); renderCounts(); });
+  el.querySelectorAll('[class*="items-jump-"]').forEach(btn=>{
+    const cls=Array.from(btn.classList).find(c=>c.indexOf('items-jump-')===0);
+    if(!cls) return;
+    const id=cls.slice('items-jump-'.length);
+    btn.addEventListener('click',()=>{ selectedItem=id; setTab('items'); renderCounts(); });
   });
   el.querySelectorAll('[class*="po-jump-"]').forEach(btn=>{
     const cls=Array.from(btn.classList).find(c=>c.indexOf('po-jump-')===0);
@@ -2197,7 +2208,9 @@ function renderItems(){
     '<button class="btn" id="add-item-group">+ New category</button>'+
     '<button class="btn" id="export-pdf-items">Export</button>'+
     '<button class="btn accent" id="add-item">+ New item</button>';
+  if(selectedItem && !itemById(selectedItem)) selectedItem=null;
   el.innerHTML=
+    (selectedItem ? '<div class="toolbar no-print"><button class="btn sm subtle" id="items-back-to-list">← Back to Items</button><div class="toolbar-spacer"></div><span class="toolbar-count">'+parts.length+' item'+(parts.length===1?'':'s')+'</span></div>' : (
     '<div class="toolbar no-print">'+
       '<div class="search-input"><input type="text" id="items-search" placeholder="Search items..." value="'+escAttr(itemsToolbar.q||'')+'"></div>'+
       '<select id="items-cat-filter"><option value="">All categories</option>'+knownGroups.map(g=>'<option value="'+escAttr(g)+'" '+(itemsToolbar.cat===g?'selected':'')+'>'+escAttr(g)+'</option>').join('')+'</select>'+
@@ -2207,120 +2220,62 @@ function renderItems(){
       '<div class="toolbar-spacer"></div>'+
       '<span class="toolbar-count">'+parts.length+' item'+(parts.length===1?'':'s')+'</span>'+
     '</div>'+
-    '<p class="note">Components and raw materials only — products live on the <b>BOM / Products</b> tab instead, so they don\'t clutter this list. Group items with the <b>Category</b> dropdown on each row — click <b>+ New category</b> above to add one, or manage the full list on the <b>Settings</b> tab. Click the pencil to edit a row.</p>'+
+    '<p class="note">Components and raw materials only — products live on the <b>BOM / Products</b> tab instead, so they don\'t clutter this list. Click <b>+ New category</b> above to add a category, or manage the full list on the <b>Settings</b> tab. Click a row to open it.</p>'+
     '<div class="card"><div class="card-body">'+
-    '<table class="list-table"><colgroup><col style="width:15%"><col style="width:13%"><col style="width:5%"><col style="width:8%"><col style="width:18%"><col style="width:15%"><col style="width:14%"><col style="width:12%"></colgroup>'+
-    '<thead><tr><th>Name</th><th>Category</th><th>UoM</th><th class="num">On Hand</th><th>Last Ordered</th><th>Reorder</th><th>Notes</th><th></th></tr></thead>'+
+    '<table class="list-table"><colgroup><col style="width:26%"><col style="width:13%"><col style="width:8%"><col style="width:19%"><col style="width:24%"><col style="width:10%"></colgroup>'+
+    '<thead><tr><th>Name</th><th>Last Ordered</th><th class="num">Qty</th><th>Primary Supplier</th><th>Notes</th><th></th></tr></thead>'+
     '<tbody id="items-tbody"></tbody></table>'+
-    '</div></div>';
+    '</div></div>'))+
+    '<div id="item-detail">'+(selectedItem ? renderItemCard(itemById(selectedItem)) : '')+'</div>';
   const tb=document.getElementById('items-tbody');
-  const groupOrder=knownGroups.concat(['']); // '' = Uncategorized / any stale value not in the list, rendered last
-  function rowHtml(it){
-    const fileChips=(it.docs&&it.docs.length)? docChips(it.docs) : '';
-    const s=cadenceStatus(it);
-    const statusHtml = s.cls==='none' ? '<span class="note" title="'+escAttr(s.title||'')+'">'+s.text+'</span>' : '<span class="badge '+s.cls+'" title="'+escAttr(s.title||'')+'">'+s.text+'</span>';
-    const editing=itemsEditingRow===it.id;
-    const mainRow = '<tr data-id="'+it.id+'" class="'+(editing?'row-editing':'row-view')+'">'+
-      '<td><span class="view-field" style="font-weight:500">'+escAttr(it.name)+'</span><input class="f-name editable-field" value="'+escAttr(it.name)+'"></td>'+
-      '<td>'+itemGroupSelect(it.itemGroup)+'</td>'+
-      '<td><span class="view-field">'+escAttr(it.uom)+'</span><input class="f-uom editable-field" value="'+escAttr(it.uom)+'"></td>'+
-      '<td class="num"><span class="view-field mono">'+it.onHand+' '+escAttr(it.uom)+'</span><input class="f-onhand num editable-field" type="number" value="'+it.onHand+'"></td>'+
-      '<td><div class="lastordered-cell"><input class="f-lastdate" type="date" value="'+(it.lastPurchaseDate||'')+'" title="Last purchase date"><input class="f-lastqty num" type="number" min="0" value="'+(it.lastPurchaseQty==null?'':it.lastPurchaseQty)+'" placeholder="qty" title="Qty on that order"></div></td>'+
-      '<td><div class="reorder-cell"><span class="cadence-days-wrap"><input class="f-cadence num" type="number" min="0" step="1" value="'+(it.reorderCadenceDays==null?'':it.reorderCadenceDays)+'" placeholder="—"> <span class="note" style="font-size:10px">days</span></span>'+statusHtml+'</div></td>'+
-      '<td><span class="view-field muted">'+(it.notes?escAttr(it.notes):'—')+'</span><input class="f-notes editable-field" value="'+escAttr(it.notes||'')+'" placeholder="—"></td>'+
-      '<td class="col-actions no-print">'+fileChips+'<div class="row-actions">'+
-        '<button class="btn sm icon-btn row-edit-btn'+(editing?' accent':'')+'" title="'+(editing?'Done editing':'Edit row')+'">'+(editing?'✓':'✎')+'</button>'+
-        '<label class="btn sm icon-btn file-btn" title="Attach a file">📎<input type="file" class="f-file"></label>'+
-        '<button class="btn sm icon-btn history-btn" title="Price history">🕘</button>'+
-        '<button class="btn sm icon-btn danger del-item" title="Delete item">🗑</button>'+
-      '</div></td>'+
-    '</tr>';
-    if(!editing) return mainRow;
-    const itLinks=it.links||[];
-    const linksRow = '<tr class="row-links-edit" data-links-for="'+it.id+'"><td colspan="8" style="padding:14px 16px;background:var(--steel-soft)">'+
-      '<div class="detail-section-title" style="margin-bottom:8px">Supplier links</div>'+
-      '<div class="links-rows">'+(itLinks.length? itLinks.map(l=>renderLinkRow(it,l)).join('') : '<p class="note links-empty">No links or phone numbers yet for '+escAttr(it.name)+'.</p>')+'</div>'+
-      '<button class="btn sm accent add-link-here no-print" data-id="'+it.id+'" style="margin-top:10px">+ Add link or phone</button>'+
-    '</td></tr>';
-    return mainRow + linksRow;
-  }
-  const visibleGroups=groupOrder.filter(g=>parts.some(it=> g==='' ? (!it.itemGroup || !knownGroups.includes(it.itemGroup)) : it.itemGroup===g));
-  tb.innerHTML = visibleGroups.map(g=>{
-    const rows=parts.filter(it=> g==='' ? (!it.itemGroup || !knownGroups.includes(it.itemGroup)) : it.itemGroup===g);
-    const label=g||'Uncategorized';
-    const key=g||'__uncategorized__';
-    const collapsed=!!collapsedItemGroups[key];
-    return '<tr class="item-group-row" data-key="'+escAttr(key)+'" style="cursor:pointer"><td colspan="8"><div class="cat-group-head'+(collapsed?' is-collapsed':'')+'" style="margin:-7px -10px"><span class="cat-caret">▾</span> '+escAttr(label)+' <span class="cat-count">('+rows.length+')</span></div></td></tr>'+
-      (collapsed? '' : rows.map(rowHtml).join(''));
-  }).join('') || '<tr><td colspan="8"><div class="empty-state"><div class="empty-title">No items match</div><div class="empty-sub">Try clearing the search or filters above.</div></div></td></tr>';
-  const toggleAllBtn=document.getElementById('toggle-all-groups');
-  const allCollapsed=visibleGroups.length>0 && visibleGroups.every(g=>collapsedItemGroups[g||'__uncategorized__']);
-  toggleAllBtn.textContent=allCollapsed?'Expand all':'Collapse all';
-  toggleAllBtn.addEventListener('click',()=>{
-    visibleGroups.forEach(g=>{ collapsedItemGroups[g||'__uncategorized__']=!allCollapsed; });
-    renderItems();
-  });
-  tb.querySelectorAll('tr.item-group-row').forEach(row=>{
-    row.addEventListener('click',()=>{
-      const key=row.dataset.key;
-      collapsedItemGroups[key]=!collapsedItemGroups[key];
+  if(tb){
+    const groupOrder=knownGroups.concat(['']); // '' = Uncategorized / any stale value not in the list, rendered last
+    const rowHtml=function(it){
+      const supplier=primarySupplierForItem(it);
+      const supplierHtml = supplier
+        ? escAttr(supplier.name)
+        : '<span class="badge" style="background:var(--amber-tint);color:var(--amber)">No supplier</span>';
+      return '<tr class="list-row'+(selectedItem===it.id?' is-selected':'')+'" data-id="'+it.id+'">'+
+        '<td style="font-weight:500">'+escAttr(it.name)+'</td>'+
+        '<td class="mono">'+(it.lastPurchaseDate?fmtDate(it.lastPurchaseDate):'<span style="color:var(--steel)">—</span>')+'</td>'+
+        '<td class="num mono">'+(it.lastPurchaseQty==null?'<span style="color:var(--steel)">—</span>':it.lastPurchaseQty)+'</td>'+
+        '<td>'+supplierHtml+'</td>'+
+        '<td>'+(it.notes?escAttr(it.notes):'<span style="color:var(--steel)">—</span>')+'</td>'+
+        '<td class="col-actions no-print"><button class="btn sm subtle item-row-open">Open →</button></td>'+
+      '</tr>';
+    };
+    const visibleGroups=groupOrder.filter(g=>parts.some(it=> g==='' ? (!it.itemGroup || !knownGroups.includes(it.itemGroup)) : it.itemGroup===g));
+    tb.innerHTML = visibleGroups.map(g=>{
+      const rows=parts.filter(it=> g==='' ? (!it.itemGroup || !knownGroups.includes(it.itemGroup)) : it.itemGroup===g);
+      const label=g||'Uncategorized';
+      const key=g||'__uncategorized__';
+      const collapsed=!!collapsedItemGroups[key];
+      return '<tr class="item-group-row" data-key="'+escAttr(key)+'" style="cursor:pointer"><td colspan="6"><div class="cat-group-head'+(collapsed?' is-collapsed':'')+'" style="margin:-7px -10px"><span class="cat-caret">▾</span> '+escAttr(label)+' <span class="cat-count">('+rows.length+')</span></div></td></tr>'+
+        (collapsed? '' : rows.map(rowHtml).join(''));
+    }).join('') || '<tr><td colspan="6"><div class="empty-state"><div class="empty-title">No items match</div><div class="empty-sub">Try clearing the search or filters above.</div></div></td></tr>';
+    const toggleAllBtn=document.getElementById('toggle-all-groups');
+    const allCollapsed=visibleGroups.length>0 && visibleGroups.every(g=>collapsedItemGroups[g||'__uncategorized__']);
+    toggleAllBtn.textContent=allCollapsed?'Expand all':'Collapse all';
+    toggleAllBtn.addEventListener('click',()=>{
+      visibleGroups.forEach(g=>{ collapsedItemGroups[g||'__uncategorized__']=!allCollapsed; });
       renderItems();
     });
-  });
-  tb.querySelectorAll('tr[data-id]').forEach(tr=>{
-    const id=tr.dataset.id; const it=itemById(id);
-    tr.querySelector('.f-name').addEventListener('change',e=>{it.name=e.target.value; save(); renderCounts();});
-    tr.querySelector('.f-itemgroup').addEventListener('change',e=>{it.itemGroup=e.target.value; save(); renderItems();});
-    tr.querySelector('.f-uom').addEventListener('change',e=>{it.uom=e.target.value; save();});
-    tr.querySelector('.f-onhand').addEventListener('change',e=>{it.onHand=Number(e.target.value)||0; save();});
-    tr.querySelector('.f-lastdate').addEventListener('change',e=>{it.lastPurchaseDate=e.target.value||null; save(); renderItems();});
-    tr.querySelector('.f-lastqty').addEventListener('change',e=>{it.lastPurchaseQty=e.target.value===''?null:(Number(e.target.value)||0); save();});
-    tr.querySelector('.f-cadence').addEventListener('change',e=>{it.reorderCadenceDays=e.target.value===''?null:(Number(e.target.value)||0); save(); renderItems();});
-    tr.querySelector('.f-notes').addEventListener('change',e=>{it.notes=e.target.value; save();});
-    enableFileDrop(tr.querySelector('.file-btn'), tr.querySelector('.f-file'));
-    tr.querySelector('.f-file').addEventListener('change', async e=>{
-      const f=e.target.files[0]; if(!f) return;
-      const dataUrl=await readFileAsDataURL(f);
-      it.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
-      save(); renderItems();
-    });
-    tr.querySelector('.history-btn').addEventListener('click',()=>{
-      const rows=priceHistoryFor(it.id);
-      const body=rows.length? renderHistoryTable(rows) : '<p class="note">No purchase order history for this item yet.</p>';
-      openModal('Price history — '+it.name, body);
-    });
-    tr.querySelector('.del-item').addEventListener('click',()=>{
-      confirmModal('Delete '+it.name+'? This also removes it from any BOM lines, links, demand plan rows, and PO lines that reference it.', ()=>{
-        deleteItemEverywhere(id);
-        save(); renderItems(); renderCounts();
+    tb.querySelectorAll('tr.item-group-row').forEach(row=>{
+      row.addEventListener('click',()=>{
+        const key=row.dataset.key;
+        collapsedItemGroups[key]=!collapsedItemGroups[key];
+        renderItems();
       });
     });
-    tr.querySelector('.row-edit-btn').addEventListener('click',()=>{
-      itemsEditingRow = (itemsEditingRow===id) ? null : id;
-      renderItems();
-      if(itemsEditingRow===id){
-        const newTr=tb.querySelector('tr[data-id="'+id+'"]');
-        const firstInput=newTr && newTr.querySelector('.f-name');
-        if(firstInput) firstInput.focus();
-      }
+    tb.querySelectorAll('tr.list-row').forEach(tr=>{
+      tr.addEventListener('click',()=>{
+        selectedItem=tr.dataset.id;
+        renderItems();
+        const d=document.getElementById('item-detail');
+        if(d) d.scrollIntoView({behavior:'smooth', block:'start'});
+      });
     });
-  });
-  tb.querySelectorAll('tr.row-links-edit').forEach(row=>{
-    wireItemLinksRows(row);
-    const addBtn=row.querySelector('.add-link-here');
-    if(addBtn) addBtn.addEventListener('click',()=>{
-      const item=itemById(addBtn.dataset.id);
-      item.links=item.links||[];
-      item.links.push({id:uid(), supplierId:'', cost:0, url:'', phone:'', contactType:'link', notes:''});
-      save(); renderItems(); renderCounts();
-      const freshRow=document.querySelector('tr.row-links-edit[data-links-for="'+item.id+'"]');
-      if(freshRow){
-        const inputs=freshRow.querySelectorAll('.link-row .f-value');
-        const last=inputs[inputs.length-1];
-        if(last) last.focus();
-      }
-    });
-  });
+  }
   document.getElementById('add-item').addEventListener('click', openAddItemModal);
   document.getElementById('add-item-group').addEventListener('click', openAddItemGroupModal);
   document.getElementById('export-pdf-items').addEventListener('click',()=>{
@@ -2333,9 +2288,9 @@ function renderItems(){
     });
     exportTablePDF('Dragon Seats - Items Catalog', head, body);
   });
-  document.getElementById('items-search').addEventListener('input',e=>{ itemsToolbar.q=e.target.value; renderItems(); });
-  document.getElementById('items-cat-filter').addEventListener('change',e=>{ itemsToolbar.cat=e.target.value; renderItems(); });
-  document.getElementById('items-status-filter').addEventListener('change',e=>{ itemsToolbar.status=e.target.value; renderItems(); });
+  const itemsSearchEl=document.getElementById('items-search'); if(itemsSearchEl) itemsSearchEl.addEventListener('input',e=>{ itemsToolbar.q=e.target.value; renderItems(); });
+  const itemsCatFilterEl=document.getElementById('items-cat-filter'); if(itemsCatFilterEl) itemsCatFilterEl.addEventListener('change',e=>{ itemsToolbar.cat=e.target.value; renderItems(); });
+  const itemsStatusFilterEl=document.getElementById('items-status-filter'); if(itemsStatusFilterEl) itemsStatusFilterEl.addEventListener('change',e=>{ itemsToolbar.status=e.target.value; renderItems(); });
   const supDD=document.getElementById('items-sup-filter');
   if(supDD){
     const reapplySup=()=>{ renderItems(); const nd=document.getElementById('items-sup-filter'); if(nd) nd.open=true; };
@@ -2347,9 +2302,134 @@ function renderItems(){
       reapplySup();
     }));
   }
+  const itemsBackBtn=document.getElementById('items-back-to-list'); if(itemsBackBtn) itemsBackBtn.addEventListener('click',()=>{ selectedItem=null; renderItems(); });
+  wireItemCard();
+}
+function renderItemCard(it){
+  const s=cadenceStatus(it);
+  const statusHtml = s.cls==='none' ? '<span class="note" title="'+escAttr(s.title||'')+'">'+s.text+'</span>' : '<span class="badge '+s.cls+'" style="margin-left:0" title="'+escAttr(s.title||'')+'">'+s.text+'</span>';
+  const links=it.links||[];
+  const linksRows = links.length
+    ? links.map(l=>renderLinkRow(it,l)).join('')
+    : '<p class="note links-empty">No links or phone numbers yet for '+escAttr(it.name)+'.</p>';
+  return '<div class="detail-drawer item-card" data-id="'+it.id+'">'+
+    '<div class="detail-drawer-head"><div><h2>'+escAttr(it.name)+'</h2><div class="sub">'+escAttr(it.itemGroup||'Uncategorized')+'</div></div>'+
+    '<div class="row-actions no-print"><button class="btn sm item-history-btn">Order history</button><button class="btn sm danger del-item">Delete item</button><button type="button" class="detail-drawer-close item-detail-close" title="Close">✕</button></div></div>'+
+    '<div class="detail-section">'+
+      '<div class="detail-section-title">Item information</div>'+
+      '<div class="po-meta detail-grid">'+
+        '<div><label>Name</label><input class="f-name" value="'+escAttr(it.name)+'"></div>'+
+        '<div><label>Category</label>'+itemGroupSelect(it.itemGroup)+'</div>'+
+        '<div><label>Unit of measure</label><input class="f-uom" value="'+escAttr(it.uom)+'"></div>'+
+        '<div><label>On hand</label><input class="f-onhand num" type="number" value="'+it.onHand+'"></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="detail-section">'+
+      '<div class="detail-section-title">Suppliers &amp; Links</div>'+
+      '<div id="item-links-rows">'+linksRows+'</div>'+
+      '<button class="btn sm accent add-link-here no-print" style="margin-top:10px">+ Add link or phone</button>'+
+    '</div>'+
+    '<div class="detail-section">'+
+      '<div class="detail-section-title">Ordering &amp; reorder</div>'+
+      '<div class="po-meta detail-grid">'+
+        '<div><label>Last ordered</label><input class="f-lastdate" type="date" value="'+(it.lastPurchaseDate||'')+'"></div>'+
+        '<div><label>Qty on that order</label><input class="f-lastqty num" type="number" min="0" value="'+(it.lastPurchaseQty==null?'':it.lastPurchaseQty)+'"></div>'+
+        '<div><label>Reorder every (days)</label><input class="f-cadence num" type="number" min="0" step="1" value="'+(it.reorderCadenceDays==null?'':it.reorderCadenceDays)+'"></div>'+
+        '<div><label>Status</label><div style="padding-top:9px">'+statusHtml+'</div></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="detail-section">'+
+      '<div class="detail-section-title">Notes</div>'+
+      '<input class="f-itemnotes" style="width:100%" value="'+escAttr(it.notes||'')+'" placeholder="—">'+
+    '</div>'+
+    '<div class="detail-section">'+
+      '<div class="detail-section-title">Attachments</div>'+
+      '<div class="dropzone-mini file-btn">'+docChips(it.docs)+'<label class="btn sm no-print">+ Add file<input type="file" class="item-file" style="position:absolute;opacity:0;width:1px;height:1px"></label></div>'+
+    '</div>'+
+  '</div>';
+}
+function wireItemCard(){
+  const wrap=document.getElementById('item-detail');
+  if(!wrap) return;
+  wrap.querySelectorAll('.item-card').forEach(card=>{
+    const id=card.dataset.id; const it=itemById(id);
+    if(!it) return;
+    const closeBtn=card.querySelector('.item-detail-close');
+    if(closeBtn) closeBtn.addEventListener('click',()=>{ selectedItem=null; renderItems(); });
+    card.querySelector('.f-name').addEventListener('change',e=>{ it.name=e.target.value; save(); renderItems(); renderCounts(); });
+    const catSel=card.querySelector('.f-itemgroup');
+    if(catSel) catSel.addEventListener('change',e=>{ it.itemGroup=e.target.value; save(); renderItems(); });
+    card.querySelector('.f-uom').addEventListener('change',e=>{ it.uom=e.target.value; save(); });
+    card.querySelector('.f-onhand').addEventListener('change',e=>{ it.onHand=Number(e.target.value)||0; save(); });
+    card.querySelector('.f-lastdate').addEventListener('change',e=>{ it.lastPurchaseDate=e.target.value||null; save(); renderItems(); });
+    card.querySelector('.f-lastqty').addEventListener('change',e=>{ it.lastPurchaseQty=e.target.value===''?null:(Number(e.target.value)||0); save(); });
+    card.querySelector('.f-cadence').addEventListener('change',e=>{ it.reorderCadenceDays=e.target.value===''?null:(Number(e.target.value)||0); save(); renderItems(); });
+    card.querySelector('.f-itemnotes').addEventListener('change',e=>{ it.notes=e.target.value; save(); });
+    const histBtn=card.querySelector('.item-history-btn');
+    if(histBtn) histBtn.addEventListener('click',()=>{
+      const rows=orderHistoryFor(it.id);
+      const body=rows.length? renderHistoryTable(rows) : '<p class="note">No orders on file for this item yet.</p>';
+      openModal('Order history — '+it.name, body);
+    });
+    const delBtn=card.querySelector('.del-item');
+    if(delBtn) delBtn.addEventListener('click',()=>{
+      confirmModal('Delete '+it.name+'? This also removes it from any BOM lines, links, demand plan rows, and PO lines that reference it.', ()=>{
+        deleteItemEverywhere(id);
+        selectedItem=null;
+        save(); renderItems(); renderCounts();
+      });
+    });
+    enableFileDrop(card.querySelector('.file-btn'), card.querySelector('.item-file'));
+    const fileInp=card.querySelector('.item-file');
+    if(fileInp) fileInp.addEventListener('change', async e=>{
+      const f=e.target.files[0]; if(!f) return;
+      const dataUrl=await readFileAsDataURL(f);
+      it.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
+      save(); renderItems();
+    });
+    const addLinkBtn=card.querySelector('.add-link-here');
+    if(addLinkBtn) addLinkBtn.addEventListener('click',()=>{
+      it.links=it.links||[];
+      it.links.push({id:uid(), supplierId:'', cost:0, url:'', phone:'', contactType:'link', notes:''});
+      save(); renderItems(); renderCounts();
+      setTimeout(()=>{
+        const freshCard=document.querySelector('.item-card[data-id="'+id+'"]');
+        const rows=freshCard? freshCard.querySelectorAll('.link-row .f-value') : [];
+        const last=rows[rows.length-1];
+        if(last) last.focus();
+      },30);
+    });
+    card.querySelectorAll('.link-row').forEach(row=>{
+      const linkId=row.dataset.link;
+      const link=(it.links||[]).find(l=>l.id===linkId);
+      if(!link) return;
+      row.querySelectorAll('.seg-btn').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+          if(link.contactType===btn.dataset.type) return;
+          link.contactType=btn.dataset.type;
+          save(); renderItems();
+        });
+      });
+      const valueInput=row.querySelector('.f-value');
+      const goLink=row.querySelector('.link-go');
+      const syncGoLink=v=>{
+        if(!goLink) return;
+        const href = link.contactType==='phone' ? telHref(v) : orderLinkHref(v);
+        if(href){ goLink.href=href; goLink.classList.remove('is-disabled'); goLink.tabIndex=0; goLink.setAttribute('aria-disabled','false'); }
+        else{ goLink.href='#'; goLink.classList.add('is-disabled'); goLink.tabIndex=-1; goLink.setAttribute('aria-disabled','true'); }
+      };
+      valueInput.addEventListener('input',e=>syncGoLink(e.target.value));
+      valueInput.addEventListener('change',e=>{
+        if(link.contactType==='phone') link.phone=e.target.value; else link.url=e.target.value;
+        save();
+      });
+      row.querySelector('.supplier-select').addEventListener('change',e=>{ link.supplierId=e.target.value; save(); renderItems(); });
+      row.querySelector('.f-notes').addEventListener('change',e=>{ link.notes=e.target.value; save(); });
+      row.querySelector('.del-link').addEventListener('click',()=>{ it.links=it.links.filter(l=>l.id!==linkId); save(); renderItems(); renderCounts(); });
+    });
+  });
 }
 
-/* ---------------- BOM tab ---------------- */
 function itemOptionsExcluding(ancestry){ return DB.items.filter(i=>!ancestry.includes(i.id)); }
 function itemSelectForBomLine(selId, ancestry){
   const opts=itemOptionsExcluding(ancestry);
@@ -2997,45 +3077,44 @@ function renderLinkRow(item, link){
   '</div>';
 }
 
-/* Wires a single "Supplier links" row injected under an Items-page row that's
-   open for editing (see rowHtml() in renderItems()). Adapted from the old
-   standalone Links tab's per-link-row wiring -- same markup (renderLinkRow),
-   just retargeted to re-render the Items page instead of a Links page, and to
-   re-query the DOM fresh after each render rather than reuse a stale node. */
-function wireItemLinksRows(container){
-  container.querySelectorAll('.link-row').forEach(row=>{
-    const itemId=row.dataset.item; const linkId=row.dataset.link;
-    const item=itemById(itemId); const link=item?(item.links||[]).find(l=>l.id===linkId):null;
-    if(!item||!link) return;
-
-    row.querySelectorAll('.seg-btn').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        if(link.contactType===btn.dataset.type) return;
-        link.contactType=btn.dataset.type;
-        save(); renderItems();
-      });
-    });
-    const valueInput=row.querySelector('.f-value');
-    const goLink=row.querySelector('.link-go');
-    const syncGoLink=v=>{
-      if(!goLink) return;
-      const href = link.contactType==='phone' ? telHref(v) : orderLinkHref(v);
-      if(href){ goLink.href=href; goLink.classList.remove('is-disabled'); goLink.tabIndex=0; goLink.setAttribute('aria-disabled','false'); }
-      else{ goLink.href='#'; goLink.classList.add('is-disabled'); goLink.tabIndex=-1; goLink.setAttribute('aria-disabled','true'); }
-    };
-    valueInput.addEventListener('input',e=>syncGoLink(e.target.value));
-    valueInput.addEventListener('change',e=>{
-      if(link.contactType==='phone') link.phone=e.target.value; else link.url=e.target.value;
-      save();
-    });
-    row.querySelector('.supplier-select').addEventListener('change',e=>{ link.supplierId=e.target.value; save(); renderCounts(); });
-    row.querySelector('.f-notes').addEventListener('change',e=>{ link.notes=e.target.value; save(); });
-    row.querySelector('.del-link').addEventListener('click',()=>{ item.links=item.links.filter(l=>l.id!==linkId); save(); renderItems(); renderCounts(); });
-  });
-}
-
 /* ---------------- Suppliers tab ---------------- */
 let supplierSearch=''; // transient UI state (not saved) — Suppliers-tab search box
+function openAddSupplierModal(){
+  const bodyHtml=
+    '<div class="po-meta">'+
+      '<div><label>Name</label><br><input type="text" id="new-supplier-name" style="width:100%;font:inherit;box-sizing:border-box" placeholder="e.g. Acme Fasteners"></div>'+
+      '<div><label>Contact</label><br><input type="text" id="new-supplier-contact" style="width:100%;font:inherit;box-sizing:border-box" placeholder="e.g. Jane Smith"></div>'+
+      '<div><label>Email</label><br><input type="text" id="new-supplier-email" style="width:100%;font:inherit;box-sizing:border-box" placeholder="—"></div>'+
+      '<div><label>Phone</label><br><input type="text" id="new-supplier-phone" style="width:100%;font:inherit;box-sizing:border-box" placeholder="—"></div>'+
+    '</div>'+
+    '<div style="margin-top:10px"><label>Specialty</label><br><input type="text" id="new-supplier-spec" style="width:100%;font:inherit;box-sizing:border-box" placeholder="e.g. Hardware, Wheels"></div>'+
+    '<div style="margin-top:10px"><label>Notes</label><br><input type="text" id="new-supplier-notes" style="width:100%;font:inherit;box-sizing:border-box" placeholder="—"></div>'+
+    '<div class="toolbar" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="new-supplier-cancel">Cancel</button><button class="btn accent" id="new-supplier-save">Save</button></div>';
+  openModal('New supplier', bodyHtml);
+  const nameInp=document.getElementById('new-supplier-name');
+  nameInp.focus();
+  const commit=()=>{
+    const name=nameInp.value.trim();
+    if(!name){ nameInp.focus(); return; }
+    const contact=document.getElementById('new-supplier-contact').value.trim();
+    const email=document.getElementById('new-supplier-email').value.trim();
+    const phone=document.getElementById('new-supplier-phone').value.trim();
+    const spec=document.getElementById('new-supplier-spec').value.trim();
+    const notes=document.getElementById('new-supplier-notes').value.trim();
+    const s={id:uid(), name, contact, email, phone, specialty:spec, notes};
+    DB.suppliers.unshift(s);
+    save(); closeModal(); renderSuppliers(); renderCounts();
+    setTimeout(()=>{
+      const row=document.querySelector('tr.sup-row[data-id="'+s.id+'"]');
+      if(row) row.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 30);
+  };
+  document.getElementById('new-supplier-save').addEventListener('click', commit);
+  document.getElementById('new-supplier-cancel').addEventListener('click', closeModal);
+  ['new-supplier-name','new-supplier-contact','new-supplier-email','new-supplier-phone','new-supplier-spec','new-supplier-notes'].forEach(id=>{
+    document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
+  });
+}
 function renderSuppliers(){
   const el=document.getElementById('panel-suppliers');
   const sq=(supplierSearch||'').trim().toLowerCase();
@@ -3084,10 +3163,7 @@ function renderSuppliers(){
   tb.querySelectorAll('.view-sup-doc').forEach(btn=>{
     btn.addEventListener('click',()=>{ jumpToSupplierDoc(btn.dataset.type, btn.dataset.id); });
   });
-  document.getElementById('add-supplier').addEventListener('click',()=>{
-    DB.suppliers.push({id:uid(),name:'New Supplier',contact:'',email:'',phone:'',specialty:'',notes:''});
-    save(); renderSuppliers(); renderCounts();
-  });
+  document.getElementById('add-supplier').addEventListener('click', openAddSupplierModal);
 }
 
 /* Gathers every PO/Quote/Receipt on file for a supplier, most-recent-first within each group. */
@@ -3135,7 +3211,6 @@ function jumpToSupplierDoc(type, id){
   if(type==='po') selectedPO=id;
   else if(type==='quotes') selectedQuote=id;
   else if(type==='receipts') selectedReceipt=id;
-  else if(type==='deliveries') selectedDelivery=id;
   currentTab=type; setTab(type); renderCounts();
   setTimeout(()=>{
     const card=document.querySelector('.detail-drawer[data-id="'+id+'"]');
@@ -3446,15 +3521,16 @@ function renderPoCard(po){
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Line items</div>'+
-      '<table><colgroup><col style="width:45%"><col style="width:18%"><col style="width:20%"><col style="width:17%"></colgroup>'+
-      '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th></th></tr></thead>'+
+      '<table><colgroup><col style="width:36%"><col style="width:13%"><col style="width:15%"><col style="width:21%"><col style="width:15%"></colgroup>'+
+      '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th>In Stock</th><th></th></tr></thead>'+
       '<tbody class="po-lines-tbody">'+((po.lines||[]).map((l,i)=>
         '<tr data-i="'+i+'">'+
           '<td>'+itemSelectSimple(l.itemId)+'</td>'+
           '<td class="num"><input class="f-qty num" type="number" value="'+l.qty+'"></td>'+
           '<td class="num"><input class="f-price num" type="number" step="0.01" value="'+(l.unitPrice||0)+'"></td>'+
+          '<td class="col-actions no-print">'+(l.received?('<span class="status-badge closed" title="'+(l.receivedAt?('Added '+fmtDate(l.receivedAt)):'')+'">✓ In stock</span> <button class="btn sm subtle line-undo-receive">Undo</button>'):'<button class="btn sm accent line-add-inventory">Add to inventory</button>')+'</td>'+
           '<td class="col-actions no-print"><button class="btn sm danger po-del-line">Remove</button></td>'+
-        '</tr>').join('') || '<tr><td colspan="4" class="note">No line items yet.</td></tr>')+'</tbody></table>'+
+        '</tr>').join('') || '<tr><td colspan="5" class="note">No line items yet.</td></tr>')+'</tbody></table>'+
       '<button class="btn sm po-add-line no-print" style="margin-top:8px">+ Add line item</button>'+
     '</div>'+
     '<div class="detail-section">'+
@@ -3485,8 +3561,12 @@ function wirePO(){
     card.querySelector('.f-ponotes').addEventListener('change',e=>{po.notes=e.target.value; save();});
     const recv=card.querySelector('.receive-po');
     if(recv) recv.addEventListener('click',()=>{
-      confirmModal('Add all line-item quantities to on-hand stock and mark this PO '+closedStatusName()+'?', ()=>{
-        (po.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it){ it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); recordPurchase(it, l.qty, todayISO()); } });
+      confirmModal('Add any remaining line-item quantities to on-hand stock and mark this PO '+closedStatusName()+'? Lines already checked in individually won\'t be double-counted.', ()=>{
+        (po.lines||[]).forEach(l=>{
+          if(l.received) return;
+          const it=itemById(l.itemId); if(it){ it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); recordPurchase(it, l.qty, todayISO()); }
+          l.received=true; l.receivedAt=todayISO();
+        });
         po.status=closedStatusName();
         save(); renderPO(); renderCounts(); runMRP();
       }, {okLabel:'Receive'});
@@ -3500,6 +3580,20 @@ function wirePO(){
       const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ po.lines[i].qty=Number(e.target.value)||0; save(); });
       const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ po.lines[i].unitPrice=Number(e.target.value)||0; save(); });
       const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ po.lines.splice(i,1); save(); renderPO(); });
+      const addInv=tr.querySelector('.line-add-inventory');
+      if(addInv) addInv.addEventListener('click',()=>{
+        const l=po.lines[i]; const it=itemById(l.itemId);
+        if(it){ it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); recordPurchase(it, l.qty, todayISO()); }
+        l.received=true; l.receivedAt=todayISO();
+        save(); renderPO(); renderCounts(); runMRP();
+      });
+      const undoRecv=tr.querySelector('.line-undo-receive');
+      if(undoRecv) undoRecv.addEventListener('click',()=>{
+        const l=po.lines[i]; const it=itemById(l.itemId);
+        if(it) it.onHand=(Number(it.onHand)||0)-Number(l.qty||0);
+        l.received=false; l.receivedAt=null;
+        save(); renderPO(); renderCounts(); runMRP();
+      });
     });
     enableFileDrop(card.querySelector('.file-btn'), card.querySelector('.po-file'));
     card.querySelector('.po-file').addEventListener('change', async e=>{
@@ -3624,15 +3718,15 @@ function wireQuotes(){
     card.querySelector('.f-qdate').addEventListener('change',e=>{q.quoteDate=e.target.value; save();});
     card.querySelector('.f-vuntil').addEventListener('change',e=>{q.validUntil=e.target.value; save();});
     card.querySelector('.f-status').addEventListener('change',e=>{q.status=e.target.value; save(); renderQuotes(); renderCounts();});
-    card.querySelector('.f-ponotes').addEventListener('change',e=>{q.notes=e.target.value; save();});
     card.querySelector('.f-ordertotal').addEventListener('change',e=>{ const v=e.target.value; q.orderTotal=(v===''?null:Number(v)); save(); renderQuotes(); });
+    card.querySelector('.f-ponotes').addEventListener('change',e=>{q.notes=e.target.value; save();});
     const conv=card.querySelector('.convert-quote');
     if(conv) conv.addEventListener('click',()=>{
       confirmModal('Create a new Purchase Order pre-filled from this quote? The quote will be kept as history and marked Converted to PO.', ()=>{
         const po={
           id:uid(), poNumber:'', supplierId:q.supplierId, orderDate:todayISO(), expectedDate:addDays(todayISO(),14),
           status:DB.lists.poStatus[0], lines:(q.lines||[]).map(l=>({id:uid(), itemId:l.itemId, qty:l.qty, unitPrice:l.unitPrice})),
-          docs:[], notes:'Converted from quote '+(q.quoteNumber||q.id)
+          docs:[], notes:'Converted from quote '+(q.quoteNumber||q.id), orderTotal:(q.orderTotal!=null?q.orderTotal:null)
         };
         DB.purchaseOrders.unshift(po);
         q.status='Converted to PO';
@@ -3747,15 +3841,16 @@ function renderReceiptCard(r){
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Line items</div>'+
-      '<table><colgroup><col style="width:45%"><col style="width:18%"><col style="width:20%"><col style="width:17%"></colgroup>'+
-      '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th></th></tr></thead>'+
+      '<table><colgroup><col style="width:36%"><col style="width:13%"><col style="width:15%"><col style="width:21%"><col style="width:15%"></colgroup>'+
+      '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th>In Stock</th><th></th></tr></thead>'+
       '<tbody class="po-lines-tbody">'+((r.lines||[]).map((l,i)=>
         '<tr data-i="'+i+'">'+
           '<td>'+itemSelectSimple(l.itemId)+'</td>'+
           '<td class="num"><input class="f-qty num" type="number" value="'+l.qty+'"></td>'+
           '<td class="num"><input class="f-price num" type="number" step="0.01" value="'+(l.unitPrice||0)+'"></td>'+
+          '<td class="col-actions no-print">'+(l.received?('<span class="status-badge closed" title="'+(l.receivedAt?('Added '+fmtDate(l.receivedAt)):'')+'">✓ In stock</span> <button class="btn sm subtle line-undo-receive">Undo</button>'):'<button class="btn sm accent line-add-inventory">Add to inventory</button>')+'</td>'+
           '<td class="col-actions no-print"><button class="btn sm danger po-del-line">Remove</button></td>'+
-        '</tr>').join('') || '<tr><td colspan="4" class="note">No line items yet.</td></tr>')+'</tbody></table>'+
+        '</tr>').join('') || '<tr><td colspan="5" class="note">No line items yet.</td></tr>')+'</tbody></table>'+
       '<button class="btn sm po-add-line no-print" style="margin-top:8px">+ Add line item</button>'+
     '</div>'+
     '<div class="detail-section">'+
@@ -3786,8 +3881,12 @@ function wireReceipts(){
     const applyBtn=card.querySelector('.apply-receipt');
     if(applyBtn) applyBtn.addEventListener('click',()=>{
       const warn = r.poId ? ' This receipt is linked to a PO — if that PO was already received to stock, adding this too will double-count it.' : '';
-      confirmModal('Add all line-item quantities on this receipt to on-hand stock?'+warn, ()=>{
-        (r.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it){ it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); recordPurchase(it, l.qty, r.receiptDate||todayISO()); } });
+      confirmModal('Add any remaining line-item quantities on this receipt to on-hand stock? Lines already checked in individually won\'t be double-counted.'+warn, ()=>{
+        (r.lines||[]).forEach(l=>{
+          if(l.received) return;
+          const it=itemById(l.itemId); if(it){ it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); recordPurchase(it, l.qty, r.receiptDate||todayISO()); }
+          l.received=true; l.receivedAt=r.receiptDate||todayISO();
+        });
         r.appliedToStock=true; r.appliedAt=todayISO();
         // Matching this receipt to its PO is what closes the loop on the request — flip the
         // linked PO straight to the terminal status so it doesn't have to be updated twice.
@@ -3799,7 +3898,7 @@ function wireReceipts(){
     const undoBtn=card.querySelector('.undo-receipt');
     if(undoBtn) undoBtn.addEventListener('click',()=>{
       confirmModal('Remove this receipt\'s quantities back out of on-hand stock? Only do this if it was applied by mistake.', ()=>{
-        (r.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it) it.onHand=(Number(it.onHand)||0)-Number(l.qty||0); });
+        (r.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it) it.onHand=(Number(it.onHand)||0)-Number(l.qty||0); l.received=false; l.receivedAt=null; });
         r.appliedToStock=false; r.appliedAt=null;
         // Reverse the auto-close too, so the PO doesn't sit marked Received with nothing behind it.
         const linkedPo=r.poId?poById(r.poId):null;
@@ -3816,6 +3915,20 @@ function wireReceipts(){
       const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ r.lines[i].qty=Number(e.target.value)||0; save(); });
       const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ r.lines[i].unitPrice=Number(e.target.value)||0; save(); });
       const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ r.lines.splice(i,1); save(); renderReceipts(); });
+      const addInv=tr.querySelector('.line-add-inventory');
+      if(addInv) addInv.addEventListener('click',()=>{
+        const l=r.lines[i]; const it=itemById(l.itemId);
+        if(it){ it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); recordPurchase(it, l.qty, r.receiptDate||todayISO()); }
+        l.received=true; l.receivedAt=r.receiptDate||todayISO();
+        save(); renderReceipts(); renderCounts(); runMRP();
+      });
+      const undoRecv=tr.querySelector('.line-undo-receive');
+      if(undoRecv) undoRecv.addEventListener('click',()=>{
+        const l=r.lines[i]; const it=itemById(l.itemId);
+        if(it) it.onHand=(Number(it.onHand)||0)-Number(l.qty||0);
+        l.received=false; l.receivedAt=null;
+        save(); renderReceipts(); renderCounts(); runMRP();
+      });
     });
     enableFileDrop(card.querySelector('.file-btn'), card.querySelector('.po-file'));
     card.querySelector('.po-file').addEventListener('change', async e=>{
@@ -3823,150 +3936,6 @@ function wireReceipts(){
       const dataUrl=await readFileAsDataURL(f);
       r.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
       save(); renderReceipts();
-    });
-  });
-}
-
-/* ---------------- Deliveries / Load-Outs tab ----------------
-   What leaves the shop on a truck or trailer for a job and gets used up (extension cords,
-   nozzles, heater duct, AC duct, etc.) — separate from Cheqroom, which is the system of
-   record for equipment that gets checked out and comes back. This is a simple standalone
-   log for now (not tied to a specific booking/event yet); each line's qty comes straight
-   out of on-hand once you mark it "used". */
-function renderDeliveries(){
-  const el=document.getElementById('panel-deliveries');
-  let sorted=DB.deliveries.slice().sort((a,b)=>{
-    if(a.appliedToStock!==b.appliedToStock) return a.appliedToStock?1:-1; // pending (not yet removed from stock) first
-    return (b.deliveryDate||'')<(a.deliveryDate||'')?-1:1;
-  });
-  const dq=(docSearch.deliveries||'').trim().toLowerCase();
-  if(dq) sorted=sorted.filter(d=>(d.label||'').toLowerCase().includes(dq));
-  const pendingCount=DB.deliveries.filter(d=>!d.appliedToStock).length;
-  if(selectedDelivery && !deliveryById(selectedDelivery)) selectedDelivery=null;
-  el.innerHTML=
-    (selectedDelivery ? '<div class="toolbar no-print"><button class="btn sm subtle" id="deliveries-back-to-list">← Back to Load-outs</button><div class="toolbar-spacer"></div><span class="toolbar-count">'+sorted.length+' load-out'+(sorted.length===1?'':'s')+'</span></div>' : (
-    '<div class="toolbar no-print">'+
-      '<button class="btn accent" id="add-delivery">+ New load-out</button>'+
-      '<button class="btn" id="export-pdf-deliveries">Export</button>'+
-      '<div class="search-input"><input type="text" id="deliveries-search" placeholder="Search load-outs..." value="'+escAttr(docSearch.deliveries||'')+'"></div>'+
-      '<div class="toolbar-spacer"></div><span class="toolbar-count">'+sorted.length+' load-out'+(sorted.length===1?'':'s')+'</span>'+
-    '</div>'+
-    '<p class="note">Log what goes out on a truck or trailer for a job — extension cords, nozzles, heater duct, AC duct, anything that gets used up rather than checked back in through Cheqroom. Once the truck is loaded (or back), click <b>Mark as used</b> so on-hand stock reflects what was actually consumed. Click a row to open it.</p>'+
-    (pendingCount? '<div class="callout">'+pendingCount+' load-out'+(pendingCount===1?'':'s')+' not yet marked as used — stock still shows these items as on-hand even though they may already be loaded or gone.</div>' : '')+
-    '<div class="card"><div class="card-body">'+
-    (sorted.length ?
-      '<table class="list-table"><colgroup><col style="width:20%"><col style="width:11%"><col style="width:36%"><col style="width:14%"><col style="width:19%"></colgroup>'+
-      '<thead><tr><th>Load-out</th><th>Date</th><th>Item(s)</th><th>Status</th><th></th></tr></thead>'+
-      '<tbody>'+sorted.map(d=>{
-        const applied=!!d.appliedToStock;
-        return '<tr class="list-row'+(selectedDelivery===d.id?' is-selected':'')+'" data-id="'+d.id+'">'+
-          '<td>'+escAttr(d.label||'Load-out — '+fmtDate(d.deliveryDate))+'</td>'+
-          '<td class="mono">'+fmtDate(d.deliveryDate)+'</td>'+
-          '<td title="'+escAttr(lineItemsPlain(d.lines))+'">'+lineItemsSummary(d.lines)+'</td>'+
-          '<td><span class="status-badge '+(applied?'closed':'open')+'">'+(applied?'Used':'Pending')+'</span></td>'+
-          '<td class="col-actions no-print"><button class="btn sm subtle">Open →</button></td>'+
-        '</tr>';
-      }).join('')+'</tbody></table>'
-      : '<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">No load-outs logged yet</div><div class="empty-sub">Click + New load-out to log one.</div></div>')+
-    '</div></div>'))+
-    '<div id="delivery-detail">'+(selectedDelivery ? renderDeliveryCard(deliveryById(selectedDelivery)) : '')+'</div>';
-  wireDeliveries();
-  const deliveriesSearchEl=document.getElementById('deliveries-search'); if(deliveriesSearchEl) deliveriesSearchEl.addEventListener('input',e=>{ docSearch.deliveries=e.target.value; renderDeliveries(); });
-  el.querySelectorAll('tr.list-row').forEach(tr=>{
-    tr.addEventListener('click',()=>{ selectedDelivery=tr.dataset.id; renderDeliveries(); const d=document.getElementById('delivery-detail'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'}); });
-  });
-  const addDeliveryBtn=document.getElementById('add-delivery'); if(addDeliveryBtn) addDeliveryBtn.addEventListener('click',()=>{
-    const d={id:uid(), label:'', deliveryDate:todayISO(), lines:[], docs:[], notes:'', appliedToStock:false, appliedAt:null};
-    DB.deliveries.unshift(d);
-    selectedDelivery=d.id;
-    save(); renderDeliveries(); renderCounts();
-  });
-  const exportDeliveriesBtn=document.getElementById('export-pdf-deliveries'); if(exportDeliveriesBtn) exportDeliveriesBtn.addEventListener('click',()=>{
-    const head=['Load-out','Date','Lines','Used?'];
-    const body=sorted.map(d=>[d.label||'(no label)', fmtDate(d.deliveryDate), String((d.lines||[]).length), d.appliedToStock?'Yes':'Pending']);
-    exportTablePDF('Dragon Seats - Deliveries', head, body);
-  });
-  const deliveriesBackBtn=document.getElementById('deliveries-back-to-list'); if(deliveriesBackBtn) deliveriesBackBtn.addEventListener('click',()=>{ selectedDelivery=null; renderDeliveries(); });
-}
-function renderDeliveryCard(d){
-  const applied=!!d.appliedToStock;
-  return '<div class="detail-drawer po-card" data-id="'+d.id+'">'+
-    '<div class="detail-drawer-head"><div><h2>'+escAttr(d.label||'Load-out — '+fmtDate(d.deliveryDate))+' <span class="status-badge '+(applied?'closed':'open')+'">'+(applied?'Used — removed from stock':'Pending — still in stock')+'</span></h2>'+(applied? '<div class="sub">Removed from stock '+fmtDate(d.appliedAt)+'</div>':'')+'</div>'+
-    '<div class="row-actions no-print">'+
-      (applied
-        ? '<button class="btn sm undo-delivery">Undo — restore to stock</button>'
-        : '<button class="btn sm accent apply-delivery">Mark as used → remove from stock</button>')+
-      '<button class="btn sm danger del-delivery">Delete load-out</button><button type="button" class="detail-drawer-close delivery-detail-close" title="Close">✕</button></div></div>'+
-    '<div class="detail-section">'+
-      '<div class="detail-section-title">Load-out information</div>'+
-      '<div class="po-meta detail-grid">'+
-        '<div><label>Label / destination</label><input class="f-dlabel" placeholder="e.g. Truck — Auburn game 9/5" value="'+escAttr(d.label||'')+'"></div>'+
-        '<div><label>Date</label><input class="f-ddate" type="date" value="'+(d.deliveryDate||'')+'"></div>'+
-      '</div>'+
-    '</div>'+
-    '<div class="detail-section">'+
-      '<div class="detail-section-title">Items</div>'+
-      '<table><colgroup><col style="width:60%"><col style="width:25%"><col style="width:15%"></colgroup>'+
-      '<thead><tr><th>Item</th><th class="num">Qty used</th><th></th></tr></thead>'+
-      '<tbody class="delivery-lines-tbody">'+((d.lines||[]).map((l,i)=>
-        '<tr data-i="'+i+'">'+
-          '<td>'+itemSelectSimple(l.itemId)+'</td>'+
-          '<td class="num"><input class="f-qty num" type="number" value="'+l.qty+'"></td>'+
-          '<td class="col-actions no-print"><button class="btn sm danger po-del-line">Remove</button></td>'+
-        '</tr>').join('') || '<tr><td colspan="3" class="note">No items yet.</td></tr>')+'</tbody></table>'+
-      '<button class="btn sm delivery-add-line no-print" style="margin-top:8px">+ Add item</button>'+
-    '</div>'+
-    '<div class="detail-section">'+
-      '<div class="detail-section-title">Attachments</div>'+
-      '<div class="dropzone-mini file-btn">'+docChips(d.docs)+'<label class="btn sm no-print">+ Add file<input type="file" class="delivery-file" style="position:absolute;opacity:0;width:1px;height:1px"></label></div>'+
-    '</div>'+
-    '<div class="detail-section">'+
-      '<div class="detail-section-title">Notes</div>'+
-      '<input class="f-dnotes" style="width:100%" value="'+escAttr(d.notes||'')+'">'+
-    '</div>'+
-  '</div>';
-}
-function wireDeliveries(){
-  const list=document.getElementById('delivery-detail');
-  if(!list) return;
-  list.querySelectorAll('.po-card').forEach(card=>{
-    const id=card.dataset.id; const d=deliveryById(id);
-    const closeBtn=card.querySelector('.delivery-detail-close');
-    if(closeBtn) closeBtn.addEventListener('click',()=>{ selectedDelivery=null; renderDeliveries(); });
-    card.querySelector('.f-dlabel').addEventListener('change',e=>{d.label=e.target.value; save(); renderDeliveries();});
-    card.querySelector('.f-ddate').addEventListener('change',e=>{d.deliveryDate=e.target.value; save(); renderDeliveries();});
-    card.querySelector('.f-dnotes').addEventListener('change',e=>{d.notes=e.target.value; save();});
-    card.querySelector('.del-delivery').addEventListener('click',()=>{ confirmModal('Delete this load-out?', ()=>{ DB.deliveries=DB.deliveries.filter(x=>x.id!==id); save(); renderDeliveries(); renderCounts(); }); });
-    const applyBtn=card.querySelector('.apply-delivery');
-    if(applyBtn) applyBtn.addEventListener('click',()=>{
-      confirmModal('Remove all item quantities on this load-out from on-hand stock? Only do this once the truck has actually gone out with these items.', ()=>{
-        (d.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it) it.onHand=(Number(it.onHand)||0)-Number(l.qty||0); });
-        d.appliedToStock=true; d.appliedAt=todayISO();
-        save(); renderDeliveries(); renderCounts(); runMRP();
-      }, {okLabel:'Mark as used'});
-    });
-    const undoBtn=card.querySelector('.undo-delivery');
-    if(undoBtn) undoBtn.addEventListener('click',()=>{
-      confirmModal('Add this load-out\'s quantities back into on-hand stock? Only do this if it was marked used by mistake.', ()=>{
-        (d.lines||[]).forEach(l=>{ const it=itemById(l.itemId); if(it) it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); });
-        d.appliedToStock=false; d.appliedAt=null;
-        save(); renderDeliveries(); renderCounts(); runMRP();
-      }, {okLabel:'Undo'});
-    });
-    card.querySelector('.delivery-add-line').addEventListener('click',()=>{ d.lines=d.lines||[]; d.lines.push({id:uid(), itemId:(DB.items[0]||{}).id||'', qty:1}); save(); renderDeliveries(); });
-    card.querySelectorAll('.delivery-lines-tbody tr').forEach(tr=>{
-      const i=Number(tr.dataset.i);
-      const isel=tr.querySelector('.item-select');
-      if(isel) isel.addEventListener('change',e=>{ d.lines[i].itemId=e.target.value; save(); });
-      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ d.lines[i].qty=Number(e.target.value)||0; save(); });
-      const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ d.lines.splice(i,1); save(); renderDeliveries(); });
-    });
-    enableFileDrop(card.querySelector('.file-btn'), card.querySelector('.delivery-file'));
-    card.querySelector('.delivery-file').addEventListener('change', async e=>{
-      const f=e.target.files[0]; if(!f) return;
-      const dataUrl=await readFileAsDataURL(f);
-      d.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
-      save(); renderDeliveries();
     });
   });
 }
@@ -4035,55 +4004,59 @@ function findDuplicateItems(){
 function renderDataAudit(){
   const {nameDupes, mixedUsage, unpricedAssemblies}=findDuplicateItems();
   if(!nameDupes.length && !mixedUsage.length && !unpricedAssemblies.length){
-    return '<p class="note">No duplicate names, mixed bundle/direct usage, or un-grouped sub-assemblies found across your items and products right now.</p>';
+    return '';
   }
   let html='';
   if(unpricedAssemblies.length){
-    html+='<p class="note" style="margin-bottom:6px"><b>Sub-assembly not grouped as a bundle</b> — these items have their own recipe (so they\'re a sub-assembly, not a raw part) but no price of their own set on <i>this exact item</i> (no Standard Cost, pack price, price breaks, PO/receipt history, or link cost). So instead of showing as one bundle-priced line, every component underneath needs its own price. If this should be one bundle price (like a vendor that quotes one price for the whole kit), open it on the Items tab and set a Standard Cost, pack price, or price breaks directly on it — click the 🏷️ next to its Standard Cost. If two entries with a similar name showed up above under "Same name, multiple entries," that\'s the most likely cause: the priced one and the one your bench actually uses are two different items.</p>';
-    html+='<ul style="margin:0 0 14px 18px;padding:0">'+unpricedAssemblies.map(x=>
-      '<li style="margin-bottom:4px">"'+escAttr(x.item.name)+'" ('+x.item.id+') — '+x.childCount+' component'+(x.childCount>1?'s':'')+' in its recipe, no price of its own</li>'
-    ).join('')+'</ul>';
+    html+='<div style="margin-bottom:12px"><b>Sub-assembly not grouped as a bundle</b> ('+unpricedAssemblies.length+')'+
+      '<ul style="margin:6px 0 0 18px;padding:0">'+unpricedAssemblies.map(x=>
+        '<li style="margin-bottom:2px">'+escAttr(x.item.name)+' — '+x.childCount+' component'+(x.childCount>1?'s':'')+', no price of its own</li>'
+      ).join('')+'</ul></div>';
   }
   if(nameDupes.length){
-    html+='<p class="note" style="margin-bottom:6px"><b>Same name, multiple entries</b> — these look like duplicates. Pick which one to keep, move any real data (on-hand, notes, links) onto it, then delete the rest from the Items tab.</p>';
-    html+='<ul style="margin:0 0 14px 18px;padding:0">'+nameDupes.map(g=>
-      '<li style="margin-bottom:4px">"'+escAttr(g[0].name)+'" — '+g.length+' entries ('+g.map(it=>it.id).join(', ')+')</li>'
-    ).join('')+'</ul>';
+    html+='<div style="margin-bottom:12px"><b>Same name, multiple entries</b> ('+nameDupes.length+')'+
+      '<ul style="margin:6px 0 0 18px;padding:0">'+nameDupes.map(g=>
+        '<li style="margin-bottom:2px">'+escAttr(g[0].name)+' — '+g.length+' entries</li>'
+      ).join('')+'</ul></div>';
   }
   if(mixedUsage.length){
-    html+='<p class="note" style="margin-bottom:6px"><b>Bundled in one place, listed separately in another</b> — these parts are already covered by a bundle price under one product, but also show up needing their own price under another. If that\'s really the same physical part, remove the separate line (or fold it into the bundle); if it\'s legitimately priced separately for that other product, no action needed.</p>';
-    html+='<ul style="margin:0;padding:0 0 0 18px">'+mixedUsage.map(x=>
-      '<li style="margin-bottom:6px">"'+escAttr(x.item.name)+'" — '+x.uses.map(u=>
-        (u.type==='included' ? 'included in a bundle via '+escAttr(u.vias.join(', ')) : 'needs its own price via '+escAttr(u.vias.join(', ')))+' ('+escAttr(u.product)+')'
-      ).join('; ')+'</li>'
-    ).join('')+'</ul>';
+    html+='<div><b>Bundled in one place, listed separately in another</b> ('+mixedUsage.length+')'+
+      '<ul style="margin:6px 0 0 18px;padding:0">'+mixedUsage.map(x=>
+        '<li style="margin-bottom:2px">'+escAttr(x.item.name)+'</li>'
+      ).join('')+'</ul></div>';
   }
+  html+=helpNote('What do these mean?',
+    '<b>Sub-assembly not grouped as a bundle</b> — this item has its own recipe (so it\'s a sub-assembly, not a raw part) but no price of its own (no Standard Cost, pack price, price breaks, PO/receipt history, or link cost). So instead of showing as one bundle-priced line, every component underneath needs its own price. If this should be one bundle price, open it on the Items tab and set a Standard Cost, pack price, or price breaks directly on it.<br><br>'+
+    '<b>Same name, multiple entries</b> — these look like duplicates. Pick which one to keep, move any real data (on-hand, notes, links) onto it, then delete the rest from the Items tab.<br><br>'+
+    '<b>Bundled in one place, listed separately in another</b> — this part is already covered by a bundle price under one product, but also shows up needing its own price under another. If it\'s really the same physical part, remove the separate line or fold it into the bundle; if it\'s legitimately priced separately for that other product, no action needed.'
+  );
   return html;
 }
 function renderSettings(){
   const el=document.getElementById('panel-settings');
   const bigSize = JSON.stringify(DB).length >= SIZE_WARN_THRESHOLD;
+  const auditHtml=renderDataAudit();
   el.innerHTML=
     '<div class="callout '+(bigSize?'':'hidden')+'" id="size-warn">This file has gotten large (attachments included). Saving may start to feel a little slower. Consider removing large attachments you no longer need if things feel sluggish.</div>'+
-    '<div class="card"><div class="card-head"><h3>Data audit</h3></div><div class="card-body">'+renderDataAudit()+'</div></div>'+
+    (auditHtml? '<div class="card"><div class="card-head"><h3>Data audit</h3></div><div class="card-body">'+auditHtml+'</div></div>' : '')+
     '<div class="card"><div class="card-head"><h3>Data management</h3></div><div class="card-body">'+
-      '<p class="note"><b>Export data</b> — download a JSON backup of everything (items, BOM, links, suppliers, demand plan, purchase orders, attached files).</p>'+
-      '<button class="btn" id="export-data">Export data (JSON)</button><br><br>'+
-      '<p class="note"><b>Import data</b> — restore from a JSON backup.</p>'+
-      '<button class="btn" id="import-data">Import data</button>'+
-      '<input type="file" id="import-file" accept="application/json" class="hidden"><br><br>'+
-      '<p class="note"><b>Reset to sample</b> — reloads the starter data. This does not touch the Materials Tracker app.</p>'+
-      '<button class="btn danger" id="reset-sample">Reset to sample</button>'+
+      '<div class="toolbar no-print" style="flex-wrap:wrap">'+
+        '<button class="btn" id="export-data">Export data (JSON)</button>'+
+        '<button class="btn" id="import-data">Import data</button>'+
+        '<input type="file" id="import-file" accept="application/json" class="hidden">'+
+        '<button class="btn danger" id="reset-sample">Reset to sample</button>'+
+      '</div>'+
+      helpNote('What do these do?', '<b>Export data</b> — download a JSON backup of everything (items, BOM, links, suppliers, demand plan, purchase orders, attached files).<br><b>Import data</b> — restore from a JSON backup.<br><b>Reset to sample</b> — reloads the starter data. This does not touch the Materials Tracker app.')+
     '</div></div>'+
     '<div class="card"><div class="card-head"><h3>Purchase order statuses</h3></div><div class="card-body">'+
-      '<p class="note">These are the status options available on each Purchase Order. The <b>last one in this list</b> is treated as "received / closed" — hitting "Receive" on a PO sets it to that status and adds its quantities to stock.</p>'+
       '<div id="po-status-list"></div>'+
       '<div class="toolbar no-print"><input id="new-status-input" placeholder="New status name" style="width:220px"><button class="btn sm" id="add-status-btn">+ Add</button></div>'+
+      helpNote('How does this work?', 'These are the status options available on each Purchase Order. The <b>last one in this list</b> is treated as "received / closed" — hitting "Receive" on a PO sets it to that status and adds its quantities to stock.')+
     '</div></div>'+
     '<div class="card"><div class="card-head"><h3>Item categories</h3></div><div class="card-body">'+
-      '<p class="note">These are the category options available on each component/part on the <b>Items</b> tab — pick one per item from the dropdown there to group the list. Anything left blank shows under "Uncategorized".</p>'+
       '<div id="item-group-list"></div>'+
       '<div class="toolbar no-print"><input id="new-item-group-input" placeholder="New category name" style="width:220px"><button class="btn sm" id="add-item-group-btn">+ Add</button></div>'+
+      helpNote('How does this work?', 'These are the category options available on each component/part on the <b>Items</b> tab — pick one per item from the dropdown there to group the list. Anything left blank shows under "Uncategorized".')+
     '</div></div>';
   document.getElementById('export-data').addEventListener('click',()=>{
     const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
@@ -4123,7 +4096,7 @@ const NAV_STATE_KEY='dragon-seats-mrp-navstate-v1';
 function loadNavState(){ try{ return JSON.parse(localStorage.getItem(NAV_STATE_KEY))||{}; }catch(e){ return {}; } }
 function saveNavState(){ try{ localStorage.setItem(NAV_STATE_KEY, JSON.stringify(navState)); }catch(e){} }
 let navState=loadNavState();
-const TAB_GROUP={items:'catalog',bom:'catalog',links:'catalog',suppliers:'catalog',demand:'planning',plan:'planning'};
+const TAB_GROUP={items:'catalog',bom:'catalog',suppliers:'catalog',demand:'planning',plan:'planning'};
 function applyNavState(){
   ['catalog','planning'].forEach(g=>{
     const expanded=navState[g]!==false;
