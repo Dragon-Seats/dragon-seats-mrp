@@ -3508,7 +3508,7 @@ function renderPoCard(po){
   const closed=closedStatusName();
   return '<div class="detail-drawer po-card" data-id="'+po.id+'">'+
     '<div class="detail-drawer-head"><div><h2>PO '+escAttr(po.poNumber||'(no number)')+' <span class="status-badge '+(po.status===closed?'closed':(po.status===DB.lists.poStatus[0]?'open':''))+'">'+escAttr(po.status)+'</span></h2><div class="sub">'+escAttr((supplierById(po.supplierId)||{}).name||'No supplier')+'</div></div>'+
-    '<div class="row-actions no-print">'+(po.status!==closed?'<button class="btn sm accent receive-po">Receive → add to stock</button>':'')+'<button class="btn sm danger del-po">Delete PO</button><button type="button" class="detail-drawer-close po-detail-close" title="Close">✕</button></div></div>'+
+    '<div class="row-actions no-print">'+'<button class="btn sm doc-pdf" title="Download this document as a PDF">Download PDF</button>'+(po.status!==closed?'<button class="btn sm accent receive-po">Receive → add to stock</button>':'')+'<button class="btn sm danger del-po">Delete PO</button><button type="button" class="detail-drawer-close po-detail-close" title="Close">✕</button></div></div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Order information</div>'+
       '<div class="po-meta detail-grid">'+
@@ -3553,6 +3553,7 @@ function wirePO(){
   list.querySelectorAll('.po-card').forEach(card=>{
     const id=card.dataset.id; const po=poById(id);
     const closeBtn=card.querySelector('.po-detail-close');
+    const pdfBtn=card.querySelector('.doc-pdf'); if(pdfBtn) pdfBtn.addEventListener('click',()=>exportDocPDF('po', po));
     if(closeBtn) closeBtn.addEventListener('click',()=>{ selectedPO=null; renderPO(); });
     card.querySelector('.f-ponum').addEventListener('change',e=>{po.poNumber=e.target.value; save(); renderPO();});
     card.querySelector('.supplier-select').addEventListener('change',e=>{po.supplierId=e.target.value; save();});
@@ -3685,7 +3686,7 @@ function renderQuoteCard(q){
   const converted=q.status==='Converted to PO';
   return '<div class="detail-drawer po-card" data-id="'+q.id+'">'+
     '<div class="detail-drawer-head"><div><h2>Quote '+escAttr(q.quoteNumber||'(no number)')+' <span class="status-badge '+(converted?'closed':(q.status===DB.lists.quoteStatus[0]?'open':''))+'">'+escAttr(q.status)+'</span></h2><div class="sub">'+escAttr((supplierById(q.supplierId)||{}).name||'No supplier')+'</div></div>'+
-    '<div class="row-actions no-print">'+(!converted?'<button class="btn sm accent convert-quote">Convert to PO</button>':'')+'<button class="btn sm danger del-quote">Delete quote</button><button type="button" class="detail-drawer-close quote-detail-close" title="Close">✕</button></div></div>'+
+    '<div class="row-actions no-print">'+'<button class="btn sm doc-pdf" title="Download this document as a PDF">Download PDF</button>'+(!converted?'<button class="btn sm accent convert-quote">Convert to PO</button>':'')+'<button class="btn sm danger del-quote">Delete quote</button><button type="button" class="detail-drawer-close quote-detail-close" title="Close">✕</button></div></div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Quote information</div>'+
       '<div class="po-meta detail-grid">'+
@@ -3733,6 +3734,7 @@ function wireQuotes(){
   list.querySelectorAll('.po-card').forEach(card=>{
     const id=card.dataset.id; const q=quoteById(id);
     const closeBtn=card.querySelector('.quote-detail-close');
+    const pdfBtn=card.querySelector('.doc-pdf'); if(pdfBtn) pdfBtn.addEventListener('click',()=>exportDocPDF('quote', q));
     if(closeBtn) closeBtn.addEventListener('click',()=>{ selectedQuote=null; renderQuotes(); });
     card.querySelector('.f-qnum').addEventListener('change',e=>{q.quoteNumber=e.target.value; save(); renderQuotes();});
     card.querySelector('.supplier-select').addEventListener('change',e=>{q.supplierId=e.target.value; save();});
@@ -3855,6 +3857,7 @@ function renderReceiptCard(r){
   return '<div class="detail-drawer po-card" data-id="'+r.id+'">'+
     '<div class="detail-drawer-head"><div><h2>Receipt '+escAttr(r.receiptNumber||'(no number)')+' <span class="status-badge '+(applied?'closed':'open')+'">'+(applied?'Added to inventory':'Pending — not in stock')+'</span></h2><div class="sub">'+escAttr((supplierById(r.supplierId)||{}).name||'No supplier')+(applied? ' · added '+fmtDate(r.appliedAt):'')+'</div></div>'+
     '<div class="row-actions no-print">'+
+      '<button class="btn sm doc-pdf" title="Download this document as a PDF">Download PDF</button>'+
       (applied
         ? '<button class="btn sm undo-receipt">Undo — remove from stock</button>'
         : '<button class="btn sm accent apply-receipt">Add to inventory</button>')+
@@ -3910,6 +3913,7 @@ function wireReceipts(){
   list.querySelectorAll('.po-card').forEach(card=>{
     const id=card.dataset.id; const r=receiptById(id);
     const closeBtn=card.querySelector('.receipt-detail-close');
+    const pdfBtn=card.querySelector('.doc-pdf'); if(pdfBtn) pdfBtn.addEventListener('click',()=>exportDocPDF('receipt', r));
     if(closeBtn) closeBtn.addEventListener('click',()=>{ selectedReceipt=null; renderReceipts(); });
     card.querySelector('.f-rnum').addEventListener('change',e=>{r.receiptNumber=e.target.value; save(); renderReceipts();});
     card.querySelector('.supplier-select').addEventListener('change',e=>{r.supplierId=e.target.value; save();});
@@ -3992,6 +3996,158 @@ function exportTablePDF(title, head, body){
   doc.setFontSize(9); doc.text('Dragon Seats MRP — generated '+new Date().toLocaleString(), 14, 22);
   doc.autoTable({ head:[head], body, startY:28, styles:{fontSize:8}, headStyles:{fillColor:[170,2,1]} });
   doc.save(title.replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.pdf');
+}
+
+/* ---------------- Single-document PDF (PO / Quote / Receipt) ----------------
+   One clean, emailable PDF per document. Read-only: never changes the record. */
+function pdfSafe(s){
+  // jsPDF's built-in Helvetica only covers Latin-1; swap the common typographic
+  // characters used around the app so they don't render as garbage.
+  return String(s==null?'':s)
+    .replace(/[–—−]/g,'-').replace(/[‘’]/g,"'").replace(/[“”]/g,'"')
+    .replace(/…/g,'...').replace(/[·•]/g,'-').replace(/→/g,'->').replace(/[✓✔]/g,'')
+    .replace(/[^\x00-\xFF]/g,'');
+}
+function pdfMoney(n){ return '$'+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function exportDocPDF(type, rec){
+  if(!rec) return;
+  if(!pdfAvailable()){ alertModal("PDF library didn't load -- try Print instead."); return; }
+  const jsPDFCtor=window.jspdf.jsPDF;
+  const doc=new jsPDFCtor({orientation:'portrait', unit:'mm', format:'letter'});
+  const pageW=doc.internal.pageSize.getWidth(), pageH=doc.internal.pageSize.getHeight();
+  const M=14, RED=[170,2,1], STEEL=[110,110,110];
+  const now=new Date();
+  const createdStr=now.toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'})+' '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  const supplier=supplierById(rec.supplierId)||null;
+  const lines=rec.lines||[];
+
+  // --- per-type fields ---
+  let title, number, status, purchasedISO, meta=[], subtotal, total, totalLabel, showStock=true;
+  if(type==='po'){
+    title='PURCHASE ORDER'; number=rec.poNumber; status=rec.status;
+    purchasedISO=rec.orderDate||'';
+    subtotal=poLineTotal(rec); total=poDisplayTotal(rec); totalLabel='Order total';
+    meta=[['Order date', fmtDate(rec.orderDate)], ['Expected date', fmtDate(rec.expectedDate)],
+          ['Requested by', rec.requestedBy||'-'], ['Approved by (Finance)', rec.approvedBy||'-']];
+  } else if(type==='quote'){
+    title='QUOTE'; number=rec.quoteNumber; status=rec.status; showStock=false;
+    purchasedISO='';
+    subtotal=quoteLineTotal(rec); total=quoteDisplayTotal(rec); totalLabel='Quote total';
+    meta=[['Quote date', fmtDate(rec.quoteDate)], ['Valid until', fmtDate(rec.validUntil)]];
+  } else {
+    title='RECEIPT'; number=rec.receiptNumber; status=rec.appliedToStock?'Added to inventory':'Pending - not in stock';
+    purchasedISO=rec.receiptDate||'';
+    subtotal=receiptLineTotal(rec); total=receiptDisplayTotal(rec); totalLabel='Receipt total';
+    const linkedPo=rec.poId?poById(rec.poId):null;
+    meta=[['Purchase date', fmtDate(rec.receiptDate)], ['Added to inventory', rec.appliedToStock?fmtDate(rec.appliedAt):'Not yet'],
+          ['Linked PO', linkedPo?((/^po/i.test(linkedPo.poNumber||'')?'':'PO ')+(linkedPo.poNumber||'(no number)')):'-'], ['Requested / bought by', rec.requestedBy||'-']];
+  }
+
+  // --- header ---
+  let y=16;
+  let textX=M;
+  try{
+    const logo=document.querySelector('.sb-brand img');
+    if(logo && logo.src && logo.src.indexOf('data:image/png')===0){ doc.addImage(logo.src,'PNG',M,9,17,13); textX=M+20; }
+  }catch(e){ /* logo is optional */ }
+  doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(0);
+  doc.text('Dragon Seats', textX, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...STEEL);
+  doc.text('MRP Planner', textX, y+5);
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(...RED);
+  doc.text(title, pageW-M, y, {align:'right'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(0);
+  doc.text(pdfSafe('# '+(number||'(no number)')), pageW-M, y+6, {align:'right'});
+  doc.setFontSize(8.5); doc.setTextColor(...STEEL);
+  doc.text(pdfSafe('Status: '+(status||'-')), pageW-M, y+11, {align:'right'});
+  doc.text('PDF created: '+createdStr, pageW-M, y+15.5, {align:'right'});
+  y=36;
+  doc.setDrawColor(...RED); doc.setLineWidth(0.6); doc.line(M, y, pageW-M, y);
+  y+=7;
+
+  // --- supplier (left) + document info (right) ---
+  const colR=pageW/2+4;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...STEEL);
+  doc.text('SUPPLIER', M, y); doc.text('DETAILS', colR, y);
+  let yl=y+5, yr=y+5;
+  doc.setTextColor(0); doc.setFontSize(10.5);
+  doc.text(pdfSafe(supplier?supplier.name:'No supplier'), M, yl); yl+=5;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  if(supplier){ [supplier.contact, supplier.email, supplier.phone].filter(Boolean).forEach(v=>{ doc.text(pdfSafe(v), M, yl); yl+=4.5; }); }
+  meta.forEach(([k,v])=>{
+    doc.setTextColor(...STEEL); doc.text(pdfSafe(k), colR, yr);
+    doc.setTextColor(0); doc.text(pdfSafe(v), pageW-M, yr, {align:'right'});
+    yr+=5;
+  });
+  y=Math.max(yl,yr)+4;
+
+  // --- line items ---
+  const stockCell=l=>{
+    if(l.received) return l.receivedAt?fmtDate(l.receivedAt):'Yes (date not recorded)';
+    if(type==='po' && rec.status===closedStatusName()) return 'Received';
+    return 'Not yet';
+  };
+  const head=['Item','Qty','Unit Price','Line Total'];
+  if(showStock){ head.push('Purchased','Put Into Stock'); }
+  const body=lines.map(l=>{
+    const it=itemById(l.itemId);
+    const qty=Number(l.qty||0), price=Number(l.unitPrice||0);
+    const row=[pdfSafe(it?it.name:'(item removed)'), pdfSafe(fmtQty(qty)+' '+((it&&it.uom)||'ea')), price?pdfMoney(price):'-', price?pdfMoney(qty*price):'-'];
+    if(showStock){ row.push(purchasedISO?fmtDate(purchasedISO):'-', stockCell(l)); }
+    return row;
+  });
+  if(!body.length) body.push([{content:'No line items on this document.', colSpan:head.length, styles:{textColor:STEEL, fontStyle:'italic'}}]);
+
+  const foot=[];
+  const span=head.length-1;
+  const entered=rec.orderTotal!=null && Number(rec.orderTotal)>0;
+  foot.push([{content:'Items subtotal', colSpan:span, styles:{halign:'right', fontStyle:'normal', textColor:[60,60,60]}}, {content:pdfMoney(subtotal), styles:{halign:'right', fontStyle:'normal'}}]);
+  foot.push([{content:totalLabel+(entered?' (as billed)':''), colSpan:span, styles:{halign:'right'}}, {content:pdfMoney(total), styles:{halign:'right'}}]);
+
+  const colStyles= showStock
+    ? {0:{cellWidth:'auto'},1:{halign:'right',cellWidth:20},2:{halign:'right',cellWidth:24},3:{halign:'right',cellWidth:26},4:{cellWidth:25},5:{cellWidth:29}}
+    : {0:{cellWidth:'auto'},1:{halign:'right',cellWidth:24},2:{halign:'right',cellWidth:30},3:{halign:'right',cellWidth:32}};
+  doc.autoTable({
+    head:[head], body, foot, startY:y,
+    margin:{left:M, right:M, bottom:18},
+    styles:{fontSize:9, cellPadding:2.2, overflow:'linebreak'},
+    headStyles:{fillColor:RED, textColor:255, fontStyle:'bold'},
+    footStyles:{fillColor:[247,246,244], textColor:[23,24,26], fontStyle:'bold'},
+    columnStyles:colStyles,
+    didParseCell:d=>{ if(d.section==='head' && d.column.index>=1 && d.column.index<=3) d.cell.styles.halign='right'; },
+    showFoot:'lastPage'
+  });
+  y=doc.lastAutoTable.finalY+8;
+
+  // --- notes ---
+  const notes=pdfSafe(rec.notes||'').trim();
+  if(notes){
+    const wrapped=doc.splitTextToSize(notes, pageW-2*M);
+    if(y+8+wrapped.length*4.5>pageH-20){ doc.addPage(); y=20; }
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...STEEL);
+    doc.text('NOTES', M, y); y+=5;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(0);
+    doc.text(wrapped, M, y); y+=wrapped.length*4.5+4;
+  }
+  if(type==='quote'){
+    doc.setFontSize(8.5); doc.setTextColor(...STEEL);
+    if(y>pageH-24){ doc.addPage(); y=20; }
+    doc.text('Quote only - nothing on this document has been purchased or put into stock.', M, y);
+  }
+
+  // --- footer on every page ---
+  const pages=doc.internal.getNumberOfPages();
+  for(let p=1;p<=pages;p++){
+    doc.setPage(p);
+    doc.setDrawColor(220); doc.setLineWidth(0.2); doc.line(M, pageH-12, pageW-M, pageH-12);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...STEEL);
+    doc.text(pdfSafe('Dragon Seats - '+title.charAt(0)+title.slice(1).toLowerCase()+' '+(number||'')+' - PDF created '+createdStr), M, pageH-7);
+    doc.text('Page '+p+' of '+pages, pageW-M, pageH-7, {align:'right'});
+  }
+
+  const slug={po:'PO',quote:'Quote',receipt:'Receipt'}[type];
+  const safeNum=String(number||'no-number').replace(new RegExp('^'+slug+'[\\s#:-]*','i'),'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'');
+  doc.save('Dragon-Seats-'+slug+'-'+safeNum+'-'+todayISO()+'.pdf');
 }
 
 /* ---------------- Settings tab ---------------- */
