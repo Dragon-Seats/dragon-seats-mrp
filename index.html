@@ -1434,18 +1434,16 @@ function openAddDocumentModal(){
     '<div class="po-meta">'+
       '<div><label>Document type</label><select id="add-doc-type"><option value="receipt" selected>Receipt</option><option value="po">Purchase Order</option><option value="quote">Quote</option></select></div>'+
       '<div><label>Supplier</label><div id="add-doc-supplier-wrap">'+supplierSelectSimple((DB.suppliers[0]||{}).id||'')+'</div></div>'+
-      '<div id="add-doc-reqby-wrap"><label>Requested by / bought by</label><input type="text" id="add-doc-reqby" placeholder="Name — e.g. a service tech or front office"></div>'+
     '</div>'+
-    '<div class="subtabs" id="add-doc-source-toggle" style="margin:10px 0">'+
+    '<div class="subtabs hidden" id="add-doc-source-toggle" style="margin:10px 0">'+
       '<button type="button" class="subtab active" data-source="file">File</button>'+
-      '<button type="button" class="subtab" data-source="link">Web order link</button>'+
     '</div>'+
     '<div id="add-doc-file-wrap" class="dropzone"><label>File</label><br><input type="file" id="add-doc-file" accept=".pdf,.docx,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.heic"><div class="note" style="margin-top:6px">Drag &amp; drop a file here, or click to browse.</div></div>'+
     '<div id="add-doc-link-wrap" class="hidden"><label>Order link</label><br>'+
       '<input type="text" id="add-doc-link" style="width:100%;font:inherit;box-sizing:border-box" placeholder="Paste the link to the order or order-confirmation page (e.g. an Amazon or Home Depot order)">'+
       '<div class="note" style="margin-top:6px">No file needed — just the link. Add the item lines and supplier below once it\'s saved.</div>'+
     '</div>'+
-    '<p class="note" id="add-doc-status">Choose a file, or switch to "Web order link". Pick the document type and supplier above, then fill in the number, date, and line items below after saving. Manual entry from each tab\'s "+ New blank" button works too.</p>'+
+    '<p class="note" id="add-doc-status">Choose a file (e.g. a photo of the receipt). Pick the document type and supplier above, then add the items and quantities after saving. Manual entry from each tab\'s "+ New blank" button works too.</p>'+
     '<div class="toolbar" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="add-doc-cancel">Cancel</button><button class="btn accent" id="add-doc-save" disabled>Save</button></div>';
   openModal('Add Document', bodyHtml);
 
@@ -1494,11 +1492,6 @@ function openAddDocumentModal(){
     statusEl.textContent='File attached — fill in the number, date, and line items below after saving.';
     saveBtn.disabled=false;
   });
-  function toggleReqByVisibility(){
-    document.getElementById('add-doc-reqby-wrap').classList.toggle('hidden', typeSelect.value==='quote');
-  }
-  toggleReqByVisibility();
-  typeSelect.addEventListener('change', toggleReqByVisibility);
   document.getElementById('add-doc-cancel').addEventListener('click', closeModal);
   saveBtn.addEventListener('click',()=>{
     if(!pendingName) return;
@@ -1521,8 +1514,7 @@ function openAddDocumentModal(){
     } else if(type==='receipt'){
       const r={
         id:uid(), receiptNumber:'', supplierId:chosenSupplierId,
-        receiptDate:todayISO(), poId:'', orderLink:pendingLink||'',
-        requestedBy:(document.getElementById('add-doc-reqby')||{}).value||'',
+        receiptDate:todayISO(), poId:'',
         lines:lines, docs:docs, notes:notes, appliedToStock:false, appliedAt:null
       };
       DB.receipts.unshift(r);
@@ -1531,7 +1523,7 @@ function openAddDocumentModal(){
       const po={
         id:uid(), poNumber:'', supplierId:chosenSupplierId,
         orderDate:todayISO(), expectedDate:addDays(todayISO(),14),
-        status:DB.lists.poStatus[0], requestedBy:(document.getElementById('add-doc-reqby')||{}).value||'', approvedBy:'',
+        status:DB.lists.poStatus[0], approvedBy:'',
         lines:lines, docs:docs, notes: source==='link'&&pendingLink? (notes+' Link: '+pendingLink) : notes
       };
       DB.purchaseOrders.unshift(po);
@@ -2059,7 +2051,6 @@ function openNewRequestModal(){
     '<div class="po-meta">'+
       '<div><label>Item</label><div id="new-req-item-wrap">'+itemSelectSimple((DB.items[0]||{}).id||'')+'</div></div>'+
       '<div><label>Qty needed</label><input type="number" id="new-req-qty" min="1" step="1" value="1"></div>'+
-      '<div><label>Requested by</label><input type="text" id="new-req-reqby" placeholder="Name — e.g. a service tech or front office"></div>'+
       '<div><label>Needed by (optional)</label><input type="date" id="new-req-needdate"></div>'+
     '</div>'+
     '<div><label>Notes</label><br><textarea id="new-req-notes" rows="3" style="width:100%;font:inherit;box-sizing:border-box" placeholder="Anything else about what was asked for"></textarea></div>'+
@@ -2072,14 +2063,13 @@ function openNewRequestModal(){
     const itemId=itemSel?itemSel.value:'';
     if(!itemId) return;
     const qty=Number(document.getElementById('new-req-qty').value)||1;
-    const requestedBy=document.getElementById('new-req-reqby').value||'';
     const needDate=document.getElementById('new-req-needdate').value||'';
     const notes=document.getElementById('new-req-notes').value||'';
     const po={
       id:uid(), poNumber:'', supplierId:(DB.suppliers[0]||{}).id||'',
       orderDate:todayISO(), expectedDate:needDate||addDays(todayISO(),14),
-      status:DB.lists.poStatus[0], requestedBy:requestedBy, approvedBy:'',
-      lines:[{id:uid(), itemId:itemId, qty:qty, unitPrice:0}], docs:[], notes:notes
+      status:DB.lists.poStatus[0], approvedBy:'',
+      lines:[{id:uid(), itemId:itemId, qty:qty, unitPrice:itemPriceSpot(itemId)}], docs:[], notes:notes
     };
     DB.purchaseOrders.push(po);
     save();
@@ -2317,12 +2307,17 @@ function renderItemCard(it){
     '<div class="detail-drawer-head"><div><h2>'+escAttr(it.name)+'</h2><div class="sub">'+escAttr(it.itemGroup||'Uncategorized')+'</div></div>'+
     '<div class="row-actions no-print"><button class="btn sm item-history-btn">Order history</button><button class="btn sm danger del-item">Delete item</button><button type="button" class="detail-drawer-close item-detail-close" title="Close">✕</button></div></div>'+
     '<div class="detail-section">'+
+      '<div class="detail-section-title">Notes</div>'+
+      '<input class="f-itemnotes" style="width:100%" value="'+escAttr(it.notes||'')+'" placeholder="—">'+
+    '</div>'+
+    '<div class="detail-section">'+
       '<div class="detail-section-title">Item information</div>'+
       '<div class="po-meta detail-grid">'+
         '<div><label>Name</label><input class="f-name" value="'+escAttr(it.name)+'"></div>'+
         '<div><label>Category</label>'+itemGroupSelect(it.itemGroup)+'</div>'+
         '<div><label>Unit of measure</label><input class="f-uom" value="'+escAttr(it.uom)+'"></div>'+
         '<div><label>On hand</label><input class="f-onhand num" type="number" value="'+it.onHand+'"></div>'+
+        '<div><label>Price (each)</label><input class="f-pricespot num" type="number" step="0.01" min="0" placeholder="0.00" value="'+(Number(it.standardCost)>0?Number(it.standardCost).toFixed(2):'')+'"></div>'+
       '</div>'+
     '</div>'+
     '<div class="detail-section">'+
@@ -2338,10 +2333,6 @@ function renderItemCard(it){
         '<div><label>Reorder every (days)</label><input class="f-cadence num" type="number" min="0" step="1" value="'+(it.reorderCadenceDays==null?'':it.reorderCadenceDays)+'"></div>'+
         '<div><label>Status</label><div style="padding-top:9px">'+statusHtml+'</div></div>'+
       '</div>'+
-    '</div>'+
-    '<div class="detail-section">'+
-      '<div class="detail-section-title">Notes</div>'+
-      '<input class="f-itemnotes" style="width:100%" value="'+escAttr(it.notes||'')+'" placeholder="—">'+
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Attachments</div>'+
@@ -2362,6 +2353,7 @@ function wireItemCard(){
     if(catSel) catSel.addEventListener('change',e=>{ it.itemGroup=e.target.value; save(); renderItems(); });
     card.querySelector('.f-uom').addEventListener('change',e=>{ it.uom=e.target.value; save(); });
     card.querySelector('.f-onhand').addEventListener('change',e=>{ it.onHand=Number(e.target.value)||0; save(); });
+    card.querySelector('.f-pricespot').addEventListener('change',e=>{ const v=Math.max(0,Number(e.target.value)||0); it.standardCost=v; e.target.value=v?v.toFixed(2):''; save(); });
     card.querySelector('.f-lastdate').addEventListener('change',e=>{ it.lastPurchaseDate=e.target.value||null; save(); renderItems(); });
     card.querySelector('.f-lastqty').addEventListener('change',e=>{ it.lastPurchaseQty=e.target.value===''?null:(Number(e.target.value)||0); save(); });
     card.querySelector('.f-cadence').addEventListener('change',e=>{ it.reorderCadenceDays=e.target.value===''?null:(Number(e.target.value)||0); save(); renderItems(); });
@@ -3045,6 +3037,9 @@ function wireBomCosting(){
 }
 
 /* ---------------- Links tab ---------------- */
+/* Price spot: the price saved on an item's page (Items tab -> Price). New document lines
+   pick it up automatically so prices don't have to be re-typed on every receipt/PO/quote. */
+function itemPriceSpot(itemId){ const it=itemById(itemId); return it? (Number(effectiveStandardCost(it))||0) : 0; }
 function itemSelectSimple(selId){ return '<select class="item-select">'+DB.items.map(i=>'<option value="'+i.id+'" '+(i.id===selId?'selected':'')+'>'+escAttr(i.name)+'</option>').join('')+'</select>'; }
 function supplierSelectSimple(selId){ return '<select class="supplier-select">'+DB.suppliers.map(s=>'<option value="'+s.id+'" '+(s.id===selId?'selected':'')+'>'+escAttr(s.name)+'</option>').join('')+'</select>'; }
 function supplierSelectOptional(selId){
@@ -3462,14 +3457,13 @@ function renderPO(){
     '<div class="card"><div class="card-body">'+
     (filteredPOs.length ?
       '<table class="list-table"><colgroup><col style="width:10%"><col style="width:13%"><col style="width:10%"><col style="width:9%"><col style="width:8%"><col style="width:8%"><col style="width:22%"><col style="width:8%"><col style="width:12%"></colgroup>'+
-      '<thead><tr><th>PO #</th><th>Supplier</th><th>Status</th><th>Requested By</th><th>Order Date</th><th>Expected</th><th>Item(s)</th><th class="num">Total</th><th></th></tr></thead>'+
+      '<thead><tr><th>PO #</th><th>Supplier</th><th>Status</th><th>Order Date</th><th>Expected</th><th>Item(s)</th><th class="num">Total</th><th></th></tr></thead>'+
       '<tbody>'+filteredPOs.map(po=>{
         const total=poDisplayTotal(po);
         return '<tr class="list-row'+(selectedPO===po.id?' is-selected':'')+'" data-id="'+po.id+'">'+
           '<td>'+escAttr(po.poNumber||'(no number)')+'</td>'+
           '<td>'+escAttr((supplierById(po.supplierId)||{}).name||'—')+'</td>'+
           '<td><span class="status-badge '+(po.status===closed?'closed':(po.status===DB.lists.poStatus[0]?'open':''))+'">'+escAttr(po.status)+'</span></td>'+
-          '<td>'+escAttr(po.requestedBy||'—')+'</td>'+
           '<td class="mono">'+fmtDate(po.orderDate)+'</td>'+
           '<td class="mono">'+fmtDate(po.expectedDate)+'</td>'+
           '<td title="'+escAttr(lineItemsPlain(po.lines))+'">'+lineItemsSummary(po.lines)+'</td>'+
@@ -3495,10 +3489,10 @@ function renderPO(){
     save(); renderPO(); renderCounts();
   });
   const exportPoBtn=document.getElementById('export-pdf-po'); if(exportPoBtn) exportPoBtn.addEventListener('click',()=>{
-    const head=['PO #','Supplier','Status','Order Date','Expected Date','Requested By','Approved By','Total $'];
+    const head=['PO #','Supplier','Status','Order Date','Expected Date','Approved By','Total $'];
     const body=filteredPOs.map(po=>{
       const total=poDisplayTotal(po);
-      return [po.poNumber||'', (supplierById(po.supplierId)||{}).name||'', po.status, fmtDate(po.orderDate), fmtDate(po.expectedDate), po.requestedBy||'', po.approvedBy||'', '$'+total.toFixed(2)];
+      return [po.poNumber||'', (supplierById(po.supplierId)||{}).name||'', po.status, fmtDate(po.orderDate), fmtDate(po.expectedDate), po.approvedBy||'', '$'+total.toFixed(2)];
     });
     exportTablePDF('Dragon Seats - Purchase Orders', head, body);
   });
@@ -3510,6 +3504,10 @@ function renderPoCard(po){
     '<div class="detail-drawer-head"><div><h2>PO '+escAttr(po.poNumber||'(no number)')+' <span class="status-badge '+(po.status===closed?'closed':(po.status===DB.lists.poStatus[0]?'open':''))+'">'+escAttr(po.status)+'</span></h2><div class="sub">'+escAttr((supplierById(po.supplierId)||{}).name||'No supplier')+'</div></div>'+
     '<div class="row-actions no-print">'+'<button class="btn sm doc-pdf" title="Download this document as a PDF">Download PDF</button>'+(po.status!==closed?'<button class="btn sm accent receive-po">Receive → add to stock</button>':'')+'<button class="btn sm danger del-po">Delete PO</button><button type="button" class="detail-drawer-close po-detail-close" title="Close">✕</button></div></div>'+
     '<div class="detail-section">'+
+      '<div class="detail-section-title">Notes</div>'+
+      '<input class="f-ponotes" style="width:100%" value="'+escAttr(po.notes||'')+'">'+
+    '</div>'+
+    '<div class="detail-section">'+
       '<div class="detail-section-title">Order information</div>'+
       '<div class="po-meta detail-grid">'+
         '<div><label>PO #</label><input class="f-ponum" value="'+escAttr(po.poNumber||'')+'"></div>'+
@@ -3517,33 +3515,26 @@ function renderPoCard(po){
         '<div><label>Order date</label><input class="f-odate" type="date" value="'+(po.orderDate||'')+'"></div>'+
         '<div><label>Expected date</label><input class="f-edate" type="date" value="'+(po.expectedDate||'')+'"></div>'+
         '<div><label>Status</label><select class="f-status">'+DB.lists.poStatus.map(s=>'<option value="'+escAttr(s)+'" '+(s===po.status?'selected':'')+'>'+escAttr(s)+'</option>').join('')+'</select></div>'+
-        '<div><label>Requested by</label><input class="f-reqby" placeholder="Who needs this" value="'+escAttr(po.requestedBy||'')+'"></div>'+
         '<div><label>Approved by (Finance)</label><input class="f-approvedby" placeholder="Finance sign-off name" value="'+escAttr(po.approvedBy||'')+'"></div>'+
-        '<div><label>Order total (optional)</label><input class="f-ordertotal num" type="number" step="0.01" placeholder="Only if billed as one lump sum" value="'+(po.orderTotal!=null?po.orderTotal:'')+'"></div>'+
+        '<div><label>Total</label><input class="f-ordertotal num" type="number" step="0.01" min="0" placeholder="'+poLineTotal(po).toFixed(2)+'" value="'+(po.orderTotal!=null?po.orderTotal:'')+'"></div>'+
       '</div>'+
-      '<p class="note" style="margin-top:8px">If the supplier billed this as one lump sum instead of pricing each item, enter it as the <b>Order total</b> above -- it\'s used as this PO\'s total on the list and in exports. Line item prices below (when filled in) still drive item cost history, so add those too when you have them.</p>'+
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Line items</div>'+
-      '<table><colgroup><col style="width:36%"><col style="width:13%"><col style="width:15%"><col style="width:21%"><col style="width:15%"></colgroup>'+
-      '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th>In Stock</th><th></th></tr></thead>'+
+      '<table><colgroup><col style="width:50%"><col style="width:15%"><col style="width:22%"><col style="width:13%"></colgroup>'+
+      '<thead><tr><th>Item</th><th class="num">Qty</th><th>In Stock</th><th></th></tr></thead>'+
       '<tbody class="po-lines-tbody">'+((po.lines||[]).map((l,i)=>
         '<tr data-i="'+i+'">'+
           '<td>'+itemSelectSimple(l.itemId)+'</td>'+
           '<td class="num"><input class="f-qty num" type="number" value="'+l.qty+'"></td>'+
-          '<td class="num"><input class="f-price num" type="number" step="0.01" value="'+(l.unitPrice||0)+'"></td>'+
           '<td class="col-actions no-print">'+(l.received?('<span class="status-badge closed" title="'+(l.receivedAt?('Added '+fmtDate(l.receivedAt)):'')+'">✓ In stock</span> <button class="btn sm subtle line-undo-receive">Undo</button>'):'<button class="btn sm accent line-add-inventory">Add to inventory</button>')+'</td>'+
           '<td class="col-actions no-print"><button class="btn sm danger po-del-line">Remove</button></td>'+
-        '</tr>').join('') || '<tr><td colspan="5" class="note">No line items yet.</td></tr>')+'</tbody></table>'+
+        '</tr>').join('') || '<tr><td colspan="4" class="note">No line items yet.</td></tr>')+'</tbody></table>'+
       '<button class="btn sm po-add-line no-print" style="margin-top:8px">+ Add line item</button>'+
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Attachments</div>'+
       '<div class="dropzone-mini file-btn">'+docChips(po.docs)+'<label class="btn sm no-print">+ Add file<input type="file" class="po-file" style="position:absolute;opacity:0;width:1px;height:1px"></label></div>'+
-    '</div>'+
-    '<div class="detail-section">'+
-      '<div class="detail-section-title">Notes</div>'+
-      '<input class="f-ponotes" style="width:100%" value="'+escAttr(po.notes||'')+'">'+
     '</div>'+
   '</div>';
 }
@@ -3560,7 +3551,6 @@ function wirePO(){
     card.querySelector('.f-odate').addEventListener('change',e=>{po.orderDate=e.target.value; save();});
     card.querySelector('.f-edate').addEventListener('change',e=>{po.expectedDate=e.target.value; save();});
     card.querySelector('.f-status').addEventListener('change',e=>{po.status=e.target.value; save(); renderPO(); renderCounts();});
-    card.querySelector('.f-reqby').addEventListener('change',e=>{po.requestedBy=e.target.value; save();});
     card.querySelector('.f-approvedby').addEventListener('change',e=>{po.approvedBy=e.target.value; save();});
     card.querySelector('.f-ordertotal').addEventListener('change',e=>{ const v=e.target.value; po.orderTotal=(v===''?null:Number(v)); save(); renderPO(); });
     card.querySelector('.f-ponotes').addEventListener('change',e=>{po.notes=e.target.value; save();});
@@ -3577,12 +3567,12 @@ function wirePO(){
       }, {okLabel:'Receive'});
     });
     card.querySelector('.del-po').addEventListener('click',()=>{ confirmModal('Delete this purchase order?', ()=>{ DB.purchaseOrders=DB.purchaseOrders.filter(x=>x.id!==id); save(); renderPO(); renderCounts(); }); });
-    card.querySelector('.po-add-line').addEventListener('click',()=>{ po.lines=po.lines||[]; po.lines.push({id:uid(), itemId:(DB.items[0]||{}).id||'', qty:1, unitPrice:0}); save(); renderPO(); });
+    card.querySelector('.po-add-line').addEventListener('click',()=>{ po.lines=po.lines||[]; const _iid=(DB.items[0]||{}).id||''; po.lines.push({id:uid(), itemId:_iid, qty:1, unitPrice:itemPriceSpot(_iid)}); save(); renderPO(); });
     card.querySelectorAll('.po-lines-tbody tr').forEach(tr=>{
       const i=Number(tr.dataset.i);
       const isel=tr.querySelector('.item-select');
-      if(isel) isel.addEventListener('change',e=>{ po.lines[i].itemId=e.target.value; save(); });
-      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ po.lines[i].qty=Number(e.target.value)||0; save(); });
+      if(isel) isel.addEventListener('change',e=>{ po.lines[i].itemId=e.target.value; po.lines[i].unitPrice=itemPriceSpot(e.target.value); save(); renderPO(); });
+      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ po.lines[i].qty=Number(e.target.value)||0; save(); const t=card.querySelector('.f-ordertotal'); if(t) t.placeholder=poLineTotal(po).toFixed(2); });
       const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ po.lines[i].unitPrice=Number(e.target.value)||0; save(); });
       const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ po.lines.splice(i,1); save(); renderPO(); });
       const addInv=tr.querySelector('.line-add-inventory');
@@ -3688,6 +3678,10 @@ function renderQuoteCard(q){
     '<div class="detail-drawer-head"><div><h2>Quote '+escAttr(q.quoteNumber||'(no number)')+' <span class="status-badge '+(converted?'closed':(q.status===DB.lists.quoteStatus[0]?'open':''))+'">'+escAttr(q.status)+'</span></h2><div class="sub">'+escAttr((supplierById(q.supplierId)||{}).name||'No supplier')+'</div></div>'+
     '<div class="row-actions no-print">'+'<button class="btn sm doc-pdf" title="Download this document as a PDF">Download PDF</button>'+(!converted?'<button class="btn sm accent convert-quote">Convert to PO</button>':'')+'<button class="btn sm danger del-quote">Delete quote</button><button type="button" class="detail-drawer-close quote-detail-close" title="Close">✕</button></div></div>'+
     '<div class="detail-section">'+
+      '<div class="detail-section-title">Notes</div>'+
+      '<input class="f-ponotes" style="width:100%" value="'+escAttr(q.notes||'')+'">'+
+    '</div>'+
+    '<div class="detail-section">'+
       '<div class="detail-section-title">Quote information</div>'+
       '<div class="po-meta detail-grid">'+
         '<div><label>Quote #</label><input class="f-qnum" value="'+escAttr(q.quoteNumber||'')+'"></div>'+
@@ -3699,32 +3693,23 @@ function renderQuoteCard(q){
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Line items</div>'+
-      '<table><colgroup><col style="width:38%"><col style="width:13%"><col style="width:17%"><col style="width:17%"><col style="width:15%"></colgroup>'+
-      '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th class="num">Line Total</th><th></th></tr></thead>'+
+      '<table><colgroup><col style="width:62%"><col style="width:20%"><col style="width:18%"></colgroup>'+
+      '<thead><tr><th>Item</th><th class="num">Qty</th><th></th></tr></thead>'+
       '<tbody class="po-lines-tbody">'+((q.lines||[]).map((l,i)=>
         '<tr data-i="'+i+'">'+
           '<td>'+itemSelectSimple(l.itemId)+'</td>'+
           '<td class="num"><input class="f-qty num" type="number" value="'+l.qty+'"></td>'+
-          '<td class="num"><input class="f-price num" type="number" step="0.01" value="'+(l.unitPrice||0)+'"></td>'+
-          '<td class="num mono q-line-total">$'+(Number(l.qty||0)*Number(l.unitPrice||0)).toFixed(2)+'</td>'+
           '<td class="col-actions no-print"><button class="btn sm danger po-del-line">Remove</button></td>'+
-        '</tr>').join('') || '<tr><td colspan="5" class="note">No line items yet.</td></tr>')+'</tbody>'+
+        '</tr>').join('') || '<tr><td colspan="3" class="note">No line items yet.</td></tr>')+'</tbody>'+
       '<tfoot class="q-totals">'+
-        '<tr><td colspan="3" class="num" style="color:var(--steel)">Items subtotal</td><td class="num mono q-subtotal">$'+quoteLineTotal(q).toFixed(2)+'</td><td></td></tr>'+
-        '<tr><td colspan="3" class="num" style="font-weight:600">Quote total</td>'+
-          '<td class="num"><input class="f-ordertotal num" type="number" step="0.01" min="0" style="font-weight:600" placeholder="'+quoteLineTotal(q).toFixed(2)+'" value="'+(q.orderTotal!=null?q.orderTotal:'')+'"></td>'+
-          '<td class="note q-total-hint">'+((q.orderTotal!=null && Number(q.orderTotal)>0)?'Entered':'= subtotal')+'</td></tr>'+
+        '<tr><td class="num" style="font-weight:600">Total</td>'+
+          '<td class="num"><input class="f-ordertotal num" type="number" step="0.01" min="0" style="font-weight:600" placeholder="'+quoteLineTotal(q).toFixed(2)+'" value="'+(q.orderTotal!=null?q.orderTotal:'')+'"></td><td></td></tr>'+
       '</tfoot></table>'+
-      '<p class="note" style="margin-top:6px">Type the supplier\'s quoted total in <b>Quote total</b> (freight, tax, lump-sum pricing, etc.). Leave it blank to use the items subtotal. It\'s what shows on the quote list, the supplier\'s Documents panel, and exports.</p>'+
       '<button class="btn sm po-add-line no-print" style="margin-top:8px">+ Add line item</button>'+
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Attachments</div>'+
       '<div class="dropzone-mini file-btn">'+docChips(q.docs)+'<label class="btn sm no-print">+ Add file<input type="file" class="po-file" style="position:absolute;opacity:0;width:1px;height:1px"></label></div>'+
-    '</div>'+
-    '<div class="detail-section">'+
-      '<div class="detail-section-title">Notes</div>'+
-      '<input class="f-ponotes" style="width:100%" value="'+escAttr(q.notes||'')+'">'+
     '</div>'+
   '</div>';
 }
@@ -3757,11 +3742,11 @@ function wireQuotes(){
       }, {okLabel:'Convert'});
     });
     card.querySelector('.del-quote').addEventListener('click',()=>{ confirmModal('Delete this quote?', ()=>{ DB.quotes=DB.quotes.filter(x=>x.id!==id); save(); renderQuotes(); renderCounts(); }); });
-    card.querySelector('.po-add-line').addEventListener('click',()=>{ q.lines=q.lines||[]; q.lines.push({id:uid(), itemId:(DB.items[0]||{}).id||'', qty:1, unitPrice:0}); save(); renderQuotes(); });
+    card.querySelector('.po-add-line').addEventListener('click',()=>{ q.lines=q.lines||[]; const _iid=(DB.items[0]||{}).id||''; q.lines.push({id:uid(), itemId:_iid, qty:1, unitPrice:itemPriceSpot(_iid)}); save(); renderQuotes(); });
     card.querySelectorAll('.po-lines-tbody tr').forEach(tr=>{
       const i=Number(tr.dataset.i);
       const isel=tr.querySelector('.item-select');
-      if(isel) isel.addEventListener('change',e=>{ q.lines[i].itemId=e.target.value; save(); });
+      if(isel) isel.addEventListener('change',e=>{ q.lines[i].itemId=e.target.value; q.lines[i].unitPrice=itemPriceSpot(e.target.value); save(); refreshQuoteTotals(card,q); });
       const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ q.lines[i].qty=Number(e.target.value)||0; save(); refreshQuoteTotals(card,q); });
       const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ q.lines[i].unitPrice=Number(e.target.value)||0; save(); refreshQuoteTotals(card,q); });
       const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ q.lines.splice(i,1); save(); renderQuotes(); });
@@ -3810,18 +3795,17 @@ function renderReceipts(){
       filterDropdownHtml('filter-receipts', docSupplierFilter.receipts)+
       '<div class="toolbar-spacer"></div><span class="toolbar-count">'+filteredReceipts.length+' receipt'+(filteredReceipts.length===1?'':'s')+'</span>'+
     '</div>'+
-    '<p class="note">This is the intake point for everything the team buys — a physical receipt, a packing slip, or just a link to a web order — whether or not it was ever tied to a formal PO. When the service team or front office hands you a receipt, log it here and fill in <b>Requested by / bought by</b> so there\'s a record of who bought it, even without a PO. Then use <b>Add to inventory</b> once the items are actually in hand. Click a row to open it.</p>'+
+    '<p class="note">This is the intake point for everything the team buys — a physical receipt or a packing slip — whether or not it was ever tied to a formal PO. When the service team or front office hands you a receipt, log it here with the items and quantities (the paper receipt has the rest). Then use <b>Add to inventory</b> once the items are actually in hand. Click a row to open it.</p>'+
     (pendingCount? '<div class="callout">'+pendingCount+' receipt'+(pendingCount===1?'':'s')+' not yet added to inventory — items may already be on the shelf but not reflected in stock counts until you click <b>Add to inventory</b>.</div>' : '')+
     '<div class="card"><div class="card-body">'+
     (filteredReceipts.length ?
-      '<table class="list-table"><colgroup><col style="width:12%"><col style="width:14%"><col style="width:12%"><col style="width:10%"><col style="width:11%"><col style="width:21%"><col style="width:10%"><col style="width:10%"></colgroup>'+
-      '<thead><tr><th>Receipt</th><th>Supplier</th><th>Requested By</th><th>Date</th><th>Status</th><th>Item(s)</th><th class="num">Total</th><th></th></tr></thead>'+
+      '<table class="list-table"><colgroup><col style="width:13%"><col style="width:17%"><col style="width:11%"><col style="width:12%"><col style="width:27%"><col style="width:10%"><col style="width:10%"></colgroup>'+
+      '<thead><tr><th>Receipt</th><th>Supplier</th><th>Date</th><th>Status</th><th>Item(s)</th><th class="num">Total</th><th></th></tr></thead>'+
       '<tbody>'+filteredReceipts.map(r=>{
         const applied=!!r.appliedToStock;
         return '<tr class="list-row'+(selectedReceipt===r.id?' is-selected':'')+'" data-id="'+r.id+'">'+
           '<td>'+escAttr(r.receiptNumber||'(no number)')+'</td>'+
           '<td>'+escAttr((supplierById(r.supplierId)||{}).name||'—')+'</td>'+
-          '<td>'+escAttr(r.requestedBy||'—')+'</td>'+
           '<td class="mono">'+fmtDate(r.receiptDate)+'</td>'+
           '<td><span class="status-badge '+(applied?'closed':'open')+'">'+(applied?'In inventory':'Pending')+'</span></td>'+
           '<td title="'+escAttr(lineItemsPlain(r.lines))+'">'+lineItemsSummary(r.lines)+'</td>'+
@@ -3845,15 +3829,14 @@ function renderReceipts(){
     save(); renderReceipts(); renderCounts();
   });
   const exportReceiptsBtn=document.getElementById('export-pdf-receipts'); if(exportReceiptsBtn) exportReceiptsBtn.addEventListener('click',()=>{
-    const head=['Receipt #','Supplier','Requested By','Receipt Date','Linked PO','In Stock?','Total $'];
-    const body=filteredReceipts.map(r=>[r.receiptNumber||'', (supplierById(r.supplierId)||{}).name||'', r.requestedBy||'', fmtDate(r.receiptDate), (poById(r.poId)||{}).poNumber||'', r.appliedToStock?'Yes':'Pending', '$'+receiptDisplayTotal(r).toFixed(2)]);
+    const head=['Receipt #','Supplier','Receipt Date','Linked PO','In Stock?','Total $'];
+    const body=filteredReceipts.map(r=>[r.receiptNumber||'', (supplierById(r.supplierId)||{}).name||'', fmtDate(r.receiptDate), (poById(r.poId)||{}).poNumber||'', r.appliedToStock?'Yes':'Pending', '$'+receiptDisplayTotal(r).toFixed(2)]);
     exportTablePDF('Dragon Seats - Receipts', head, body);
   });
   const receiptsBackBtn=document.getElementById('receipts-back-to-list'); if(receiptsBackBtn) receiptsBackBtn.addEventListener('click',()=>{ selectedReceipt=null; renderReceipts(); });
 }
 function renderReceiptCard(r){
   const applied=!!r.appliedToStock;
-  const linkHref=orderLinkHref(r.orderLink);
   return '<div class="detail-drawer po-card" data-id="'+r.id+'">'+
     '<div class="detail-drawer-head"><div><h2>Receipt '+escAttr(r.receiptNumber||'(no number)')+' <span class="status-badge '+(applied?'closed':'open')+'">'+(applied?'Added to inventory':'Pending — not in stock')+'</span></h2><div class="sub">'+escAttr((supplierById(r.supplierId)||{}).name||'No supplier')+(applied? ' · added '+fmtDate(r.appliedAt):'')+'</div></div>'+
     '<div class="row-actions no-print">'+
@@ -3863,47 +3846,38 @@ function renderReceiptCard(r){
         : '<button class="btn sm accent apply-receipt">Add to inventory</button>')+
       '<button class="btn sm danger del-receipt">Delete receipt</button><button type="button" class="detail-drawer-close receipt-detail-close" title="Close">✕</button></div></div>'+
     '<div class="detail-section">'+
+      '<div class="detail-section-title">Notes</div>'+
+      '<input class="f-ponotes" style="width:100%" value="'+escAttr(r.notes||'')+'">'+
+    '</div>'+
+    '<div class="detail-section">'+
       '<div class="detail-section-title">Receipt information</div>'+
       '<div class="po-meta detail-grid">'+
         '<div><label>Receipt #</label><input class="f-rnum" value="'+escAttr(r.receiptNumber||'')+'"></div>'+
         '<div><label>Supplier</label>'+supplierSelectSimple(r.supplierId)+'</div>'+
         '<div><label>Receipt date</label><input class="f-rdate" type="date" value="'+(r.receiptDate||'')+'"></div>'+
         '<div><label>Linked PO (optional)</label><select class="f-poid"><option value="">— none —</option>'+DB.purchaseOrders.map(po=>'<option value="'+po.id+'" '+(po.id===r.poId?'selected':'')+'>PO '+escAttr(po.poNumber||po.id)+'</option>').join('')+'</select></div>'+
-        '<div><label>Requested by / bought by</label><input class="f-reqby" placeholder="e.g. a service tech or front office" value="'+escAttr(r.requestedBy||'')+'"></div>'+
-      '</div>'+
-      '<div style="margin-top:12px"><label class="note">Order link (optional)</label><br><input class="f-rlink" style="width:100%;box-sizing:border-box" placeholder="Link to the web order / order confirmation, if there is no file" value="'+escAttr(r.orderLink||'')+'">'+
-        (linkHref? ' <a href="'+escAttr(linkHref)+'" target="_blank" rel="noopener" class="btn sm" style="margin-top:6px;display:inline-block">Open link</a>' : '')+
       '</div>'+
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Line items</div>'+
-      '<table><colgroup><col style="width:30%"><col style="width:11%"><col style="width:14%"><col style="width:14%"><col style="width:19%"><col style="width:12%"></colgroup>'+
-      '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit Price</th><th class="num">Line Total</th><th>In Stock</th><th></th></tr></thead>'+
+      '<table><colgroup><col style="width:50%"><col style="width:15%"><col style="width:22%"><col style="width:13%"></colgroup>'+
+      '<thead><tr><th>Item</th><th class="num">Qty</th><th>In Stock</th><th></th></tr></thead>'+
       '<tbody class="po-lines-tbody">'+((r.lines||[]).map((l,i)=>
         '<tr data-i="'+i+'">'+
           '<td>'+itemSelectSimple(l.itemId)+'</td>'+
           '<td class="num"><input class="f-qty num" type="number" value="'+l.qty+'"></td>'+
-          '<td class="num"><input class="f-price num" type="number" step="0.01" value="'+(l.unitPrice||0)+'"></td>'+
-          '<td class="num mono q-line-total">$'+(Number(l.qty||0)*Number(l.unitPrice||0)).toFixed(2)+'</td>'+
           '<td class="col-actions no-print">'+(l.received?('<span class="status-badge closed" title="'+(l.receivedAt?('Added '+fmtDate(l.receivedAt)):'')+'">✓ In stock</span> <button class="btn sm subtle line-undo-receive">Undo</button>'):'<button class="btn sm accent line-add-inventory">Add to inventory</button>')+'</td>'+
           '<td class="col-actions no-print"><button class="btn sm danger po-del-line">Remove</button></td>'+
-        '</tr>').join('') || '<tr><td colspan="6" class="note">No line items yet.</td></tr>')+'</tbody>'+
+        '</tr>').join('') || '<tr><td colspan="4" class="note">No line items yet.</td></tr>')+'</tbody>'+
       '<tfoot class="q-totals">'+
-        '<tr><td colspan="3" class="num" style="color:var(--steel)">Items subtotal</td><td class="num mono q-subtotal">$'+receiptLineTotal(r).toFixed(2)+'</td><td colspan="2"></td></tr>'+
-        '<tr><td colspan="3" class="num" style="font-weight:600">Receipt total</td>'+
-          '<td class="num"><input class="f-ordertotal num" type="number" step="0.01" min="0" style="font-weight:600" placeholder="'+receiptLineTotal(r).toFixed(2)+'" value="'+(r.orderTotal!=null?r.orderTotal:'')+'"></td>'+
-          '<td colspan="2" class="note q-total-hint">'+((r.orderTotal!=null && Number(r.orderTotal)>0)?'Entered':'= subtotal')+'</td></tr>'+
+        '<tr><td class="num" style="font-weight:600">Total</td>'+
+          '<td class="num"><input class="f-ordertotal num" type="number" step="0.01" min="0" style="font-weight:600" placeholder="'+receiptLineTotal(r).toFixed(2)+'" value="'+(r.orderTotal!=null?r.orderTotal:'')+'"></td><td colspan="2"></td></tr>'+
       '</tfoot></table>'+
-      '<p class="note" style="margin-top:6px">Type what was actually paid in <b>Receipt total</b> (freight, tax, lump-sum pricing, etc.). Leave it blank to use the items subtotal. It\'s what shows on the receipts list, the supplier\'s Documents panel, and exports.</p>'+
       '<button class="btn sm po-add-line no-print" style="margin-top:8px">+ Add line item</button>'+
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Attachments</div>'+
       '<div class="dropzone-mini file-btn">'+docChips(r.docs)+'<label class="btn sm no-print">+ Add file<input type="file" class="po-file" style="position:absolute;opacity:0;width:1px;height:1px"></label></div>'+
-    '</div>'+
-    '<div class="detail-section">'+
-      '<div class="detail-section-title">Notes</div>'+
-      '<input class="f-ponotes" style="width:100%" value="'+escAttr(r.notes||'')+'">'+
     '</div>'+
   '</div>';
 }
@@ -3919,8 +3893,6 @@ function wireReceipts(){
     card.querySelector('.supplier-select').addEventListener('change',e=>{r.supplierId=e.target.value; save();});
     card.querySelector('.f-rdate').addEventListener('change',e=>{r.receiptDate=e.target.value; save(); renderReceipts();});
     card.querySelector('.f-poid').addEventListener('change',e=>{r.poId=e.target.value; save();});
-    card.querySelector('.f-reqby').addEventListener('change',e=>{r.requestedBy=e.target.value; save(); renderReceipts();});
-    card.querySelector('.f-rlink').addEventListener('change',e=>{r.orderLink=e.target.value.trim(); save(); renderReceipts();});
     card.querySelector('.f-ponotes').addEventListener('change',e=>{r.notes=e.target.value; save();});
     card.querySelector('.f-ordertotal').addEventListener('change',e=>{ const v=e.target.value; r.orderTotal=(v===''?null:Number(v)); save(); renderReceipts(); });
     card.querySelector('.del-receipt').addEventListener('click',()=>{ confirmModal('Delete this receipt?', ()=>{ DB.receipts=DB.receipts.filter(x=>x.id!==id); save(); renderReceipts(); renderCounts(); }); });
@@ -3953,11 +3925,11 @@ function wireReceipts(){
         save(); renderReceipts(); renderCounts(); runMRP();
       }, {okLabel:'Undo'});
     });
-    card.querySelector('.po-add-line').addEventListener('click',()=>{ r.lines=r.lines||[]; r.lines.push({id:uid(), itemId:(DB.items[0]||{}).id||'', qty:1, unitPrice:0}); save(); renderReceipts(); });
+    card.querySelector('.po-add-line').addEventListener('click',()=>{ r.lines=r.lines||[]; const _iid=(DB.items[0]||{}).id||''; r.lines.push({id:uid(), itemId:_iid, qty:1, unitPrice:itemPriceSpot(_iid)}); save(); renderReceipts(); });
     card.querySelectorAll('.po-lines-tbody tr').forEach(tr=>{
       const i=Number(tr.dataset.i);
       const isel=tr.querySelector('.item-select');
-      if(isel) isel.addEventListener('change',e=>{ r.lines[i].itemId=e.target.value; save(); });
+      if(isel) isel.addEventListener('change',e=>{ r.lines[i].itemId=e.target.value; r.lines[i].unitPrice=itemPriceSpot(e.target.value); save(); refreshReceiptTotals(card,r); });
       const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ r.lines[i].qty=Number(e.target.value)||0; save(); refreshReceiptTotals(card,r); });
       const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ r.lines[i].unitPrice=Number(e.target.value)||0; save(); refreshReceiptTotals(card,r); });
       const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ r.lines.splice(i,1); save(); renderReceipts(); });
@@ -4027,8 +3999,7 @@ function exportDocPDF(type, rec){
     title='PURCHASE ORDER'; number=rec.poNumber; status=rec.status;
     purchasedISO=rec.orderDate||'';
     subtotal=poLineTotal(rec); total=poDisplayTotal(rec); totalLabel='Order total';
-    meta=[['Order date', fmtDate(rec.orderDate)], ['Expected date', fmtDate(rec.expectedDate)],
-          ['Requested by', rec.requestedBy||'-'], ['Approved by (Finance)', rec.approvedBy||'-']];
+    meta=[['Order date', fmtDate(rec.orderDate)], ['Expected date', fmtDate(rec.expectedDate)], ['Approved by (Finance)', rec.approvedBy||'-']];
   } else if(type==='quote'){
     title='QUOTE'; number=rec.quoteNumber; status=rec.status; showStock=false;
     purchasedISO='';
@@ -4040,7 +4011,7 @@ function exportDocPDF(type, rec){
     subtotal=receiptLineTotal(rec); total=receiptDisplayTotal(rec); totalLabel='Receipt total';
     const linkedPo=rec.poId?poById(rec.poId):null;
     meta=[['Purchase date', fmtDate(rec.receiptDate)], ['Added to inventory', rec.appliedToStock?fmtDate(rec.appliedAt):'Not yet'],
-          ['Linked PO', linkedPo?((/^po/i.test(linkedPo.poNumber||'')?'':'PO ')+(linkedPo.poNumber||'(no number)')):'-'], ['Requested / bought by', rec.requestedBy||'-']];
+          ['Linked PO', linkedPo?((/^po/i.test(linkedPo.poNumber||'')?'':'PO ')+(linkedPo.poNumber||'(no number)')):'-']];
   }
 
   // --- header ---
@@ -4087,12 +4058,12 @@ function exportDocPDF(type, rec){
     if(type==='po' && rec.status===closedStatusName()) return 'Received';
     return 'Not yet';
   };
-  const head=['Item','Qty','Unit Price','Line Total'];
+  const head=['Item','Qty'];
   if(showStock){ head.push('Purchased','Put Into Stock'); }
   const body=lines.map(l=>{
     const it=itemById(l.itemId);
     const qty=Number(l.qty||0), price=Number(l.unitPrice||0);
-    const row=[pdfSafe(it?it.name:'(item removed)'), pdfSafe(fmtQty(qty)+' '+((it&&it.uom)||'ea')), price?pdfMoney(price):'-', price?pdfMoney(qty*price):'-'];
+    const row=[pdfSafe(it?it.name:'(item removed)'), pdfSafe(fmtQty(qty)+' '+((it&&it.uom)||'ea'))];
     if(showStock){ row.push(purchasedISO?fmtDate(purchasedISO):'-', stockCell(l)); }
     return row;
   });
@@ -4101,12 +4072,11 @@ function exportDocPDF(type, rec){
   const foot=[];
   const span=head.length-1;
   const entered=rec.orderTotal!=null && Number(rec.orderTotal)>0;
-  foot.push([{content:'Items subtotal', colSpan:span, styles:{halign:'right', fontStyle:'normal', textColor:[60,60,60]}}, {content:pdfMoney(subtotal), styles:{halign:'right', fontStyle:'normal'}}]);
-  foot.push([{content:totalLabel+(entered?' (as billed)':''), colSpan:span, styles:{halign:'right'}}, {content:pdfMoney(total), styles:{halign:'right'}}]);
+  if(total>0) foot.push([{content:'Total', colSpan:span, styles:{halign:'right'}}, {content:pdfMoney(total), styles:{halign:'right'}}]);
 
   const colStyles= showStock
-    ? {0:{cellWidth:'auto'},1:{halign:'right',cellWidth:20},2:{halign:'right',cellWidth:24},3:{halign:'right',cellWidth:26},4:{cellWidth:25},5:{cellWidth:29}}
-    : {0:{cellWidth:'auto'},1:{halign:'right',cellWidth:24},2:{halign:'right',cellWidth:30},3:{halign:'right',cellWidth:32}};
+    ? {0:{cellWidth:'auto'},1:{halign:'right',cellWidth:28},2:{cellWidth:30},3:{cellWidth:32}}
+    : {0:{cellWidth:'auto'},1:{halign:'right',cellWidth:36}};
   doc.autoTable({
     head:[head], body, foot, startY:y,
     margin:{left:M, right:M, bottom:18},
@@ -4114,7 +4084,7 @@ function exportDocPDF(type, rec){
     headStyles:{fillColor:RED, textColor:255, fontStyle:'bold'},
     footStyles:{fillColor:[247,246,244], textColor:[23,24,26], fontStyle:'bold'},
     columnStyles:colStyles,
-    didParseCell:d=>{ if(d.section==='head' && d.column.index>=1 && d.column.index<=3) d.cell.styles.halign='right'; },
+    didParseCell:d=>{ if(d.section==='head' && d.column.index===1) d.cell.styles.halign='right'; },
     showFoot:'lastPage'
   });
   y=doc.lastAutoTable.finalY+8;
