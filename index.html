@@ -393,6 +393,38 @@ tr.row-editing{background:#fbf7f0}
 .status-pill-select{display:inline-flex}
 .activity-table td{vertical-align:middle}
 .activity-type-tag{font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;color:var(--steel);background:var(--steel-soft);border-radius:6px;padding:2px 6px}
+
+/* Items tab: split view (list left, item panel right) */
+.items-split{display:grid;grid-template-columns:minmax(340px,5fr) minmax(0,6fr);gap:16px;align-items:start}
+.items-split .card{margin-bottom:0}
+.items-split .list-table td,.items-split .list-table th{padding-top:7px;padding-bottom:7px}
+.items-split tr.list-row{cursor:pointer}
+.items-split .list-table td.num{white-space:nowrap;overflow:visible}
+.items-split tr.list-row.is-selected td{background:#fbeaea}
+.items-split tr.list-row.is-selected td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+.item-panel{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;margin-top:0}
+.item-panel-empty{border:1px dashed var(--line);border-radius:var(--radius-lg);padding:48px 24px;text-align:center;color:var(--steel);background:var(--card)}
+.item-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.item-stat label{display:block;font-size:11px;color:var(--steel);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.item-stat input{width:100%;box-sizing:border-box;font-size:18px;font-weight:600;padding:6px 8px}
+.item-stat .stat-text{font-size:15px;font-weight:600;padding-top:8px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item-stat .money-wrap{position:relative}
+.item-stat .money-wrap span{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--steel);font-size:15px}
+.item-stat .money-wrap input{padding-left:22px}
+.item-notes-wrap{padding:14px 18px;border-bottom:1px solid var(--line)}
+.item-notes-wrap textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:58px}
+.item-panel details.item-sec{border-bottom:1px solid var(--line)}
+.item-panel details.item-sec:last-child{border-bottom:0}
+.item-panel details.item-sec>summary{list-style:none;cursor:pointer;padding:12px 18px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--graphite);display:flex;align-items:center;gap:8px}
+.item-panel details.item-sec>summary::-webkit-details-marker{display:none}
+.item-panel details.item-sec>summary::before{content:'\25B8';color:var(--steel);transition:transform .12s}
+.item-panel details.item-sec[open]>summary::before{transform:rotate(90deg)}
+.item-panel details.item-sec>summary:hover{background:var(--steel-soft)}
+.item-panel details.item-sec .sec-count{font-weight:500;color:var(--steel);text-transform:none;letter-spacing:0}
+.item-panel details.item-sec .sec-body{padding:0 18px 16px}
+.item-panel .detail-grid input,.item-panel .detail-grid select{width:100%;box-sizing:border-box}
+.item-panel .detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+@media (max-width:1000px){.items-split{grid-template-columns:1fr}.item-panel{position:static;max-height:none;order:-1}}
 </style>
 </head>
 <body>
@@ -1767,6 +1799,7 @@ let bomSubTab='recipes';
 let docSupplierFilter={po:[], quotes:[], receipts:[]};
 let collapsedItemGroups={}; // transient UI state (not saved) — which Items-tab category sections are collapsed
 let itemsToolbar={q:'', cat:'', status:''}; // transient UI state (not saved) — Items-tab search/filter toolbar
+let openItemSections={}; // transient UI state — which collapsible sections are open in the item panel
 let selectedItem=null; // transient UI state (not saved) — which Items-tab row is open in the detail panel
 /* transient UI state (not saved) — which record's detail drawer is open on the PO/Quotes/Receipts/Deliveries list views */
 let selectedPO=null, selectedQuote=null, selectedReceipt=null;
@@ -2200,8 +2233,8 @@ function renderItems(){
     '<button class="btn" id="export-pdf-items">Export</button>'+
     '<button class="btn accent" id="add-item">+ New item</button>';
   if(selectedItem && !itemById(selectedItem)) selectedItem=null;
+  const countLabel=parts.length+' item'+(parts.length===1?'':'s');
   el.innerHTML=
-    (selectedItem ? '<div class="toolbar no-print"><button class="btn sm subtle" id="items-back-to-list">← Back to Items</button><div class="toolbar-spacer"></div><span class="toolbar-count">'+parts.length+' item'+(parts.length===1?'':'s')+'</span></div>' : (
     '<div class="toolbar no-print">'+
       '<div class="search-input"><input type="text" id="items-search" placeholder="Search items..." value="'+escAttr(itemsToolbar.q||'')+'"></div>'+
       '<select id="items-cat-filter"><option value="">All categories</option>'+knownGroups.map(g=>'<option value="'+escAttr(g)+'" '+(itemsToolbar.cat===g?'selected':'')+'>'+escAttr(g)+'</option>').join('')+'</select>'+
@@ -2209,30 +2242,29 @@ function renderItems(){
       '<select id="items-status-filter">'+ITEMS_STATUS_FILTER_OPTS.map(([v,l])=>'<option value="'+v+'" '+(itemsToolbar.status===v?'selected':'')+'>'+l+'</option>').join('')+'</select>'+
       '<button class="btn" id="toggle-all-groups"></button>'+
       '<div class="toolbar-spacer"></div>'+
-      '<span class="toolbar-count">'+parts.length+' item'+(parts.length===1?'':'s')+'</span>'+
+      '<span class="toolbar-count">'+countLabel+'</span>'+
     '</div>'+
-    '<p class="note">Components and raw materials only — products live on the <b>BOM / Products</b> tab instead, so they don\'t clutter this list. Click <b>+ New category</b> above to add a category, or manage the full list on the <b>Settings</b> tab. Click a row to open it.</p>'+
-    '<div class="card"><div class="card-body">'+
-    '<table class="list-table"><colgroup><col style="width:26%"><col style="width:13%"><col style="width:8%"><col style="width:19%"><col style="width:24%"><col style="width:10%"></colgroup>'+
-    '<thead><tr><th>Name</th><th>Last Ordered</th><th class="num">Qty</th><th>Primary Supplier</th><th>Notes</th><th></th></tr></thead>'+
-    '<tbody id="items-tbody"></tbody></table>'+
-    '</div></div>'))+
-    '<div id="item-detail">'+(selectedItem ? renderItemCard(itemById(selectedItem)) : '')+'</div>';
+    '<div class="items-split">'+
+      '<div class="card"><div class="card-body">'+
+      '<table class="list-table"><colgroup><col style="width:42%"><col style="width:14%"><col style="width:22%"><col style="width:22%"></colgroup>'+
+      '<thead><tr><th>Name</th><th class="num">Stock</th><th class="num">Price</th><th>Supplier</th></tr></thead>'+
+      '<tbody id="items-tbody"></tbody></table>'+
+      '</div></div>'+
+      '<div id="item-detail">'+(selectedItem ? renderItemCard(itemById(selectedItem)) :
+        '<div class="item-panel-empty"><div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:4px">Pick an item</div>Click any item on the left to see and edit it here.</div>')+'</div>'+
+    '</div>';
   const tb=document.getElementById('items-tbody');
   if(tb){
     const groupOrder=knownGroups.concat(['']); // '' = Uncategorized / any stale value not in the list, rendered last
     const rowHtml=function(it){
       const supplier=primarySupplierForItem(it);
-      const supplierHtml = supplier
-        ? escAttr(supplier.name)
-        : '<span class="badge" style="background:var(--amber-tint);color:var(--amber)">No supplier</span>';
+      const price=Number(effectiveStandardCost(it))||0;
+      const dash='<span style="color:var(--steel)">—</span>';
       return '<tr class="list-row'+(selectedItem===it.id?' is-selected':'')+'" data-id="'+it.id+'">'+
-        '<td style="font-weight:500">'+escAttr(it.name)+'</td>'+
-        '<td class="mono">'+(it.lastPurchaseDate?fmtDate(it.lastPurchaseDate):'<span style="color:var(--steel)">—</span>')+'</td>'+
-        '<td class="num mono">'+(it.lastPurchaseQty==null?'<span style="color:var(--steel)">—</span>':it.lastPurchaseQty)+'</td>'+
-        '<td>'+supplierHtml+'</td>'+
-        '<td>'+(it.notes?escAttr(it.notes):'<span style="color:var(--steel)">—</span>')+'</td>'+
-        '<td class="col-actions no-print"><button class="btn sm subtle item-row-open">Open →</button></td>'+
+        '<td style="font-weight:500">'+escAttr(it.name)+(it.notes?' <span title="'+escAttr(it.notes)+'" style="color:var(--steel);font-size:11px">&#9998;</span>':'')+'</td>'+
+        '<td class="num mono">'+(Number(it.onHand)||0)+'</td>'+
+        '<td class="num mono">'+(price?'$'+price.toFixed(2):dash)+'</td>'+
+        '<td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(supplier?escAttr(supplier.name):dash)+'</td>'+
       '</tr>';
     };
     const visibleGroups=groupOrder.filter(g=>parts.some(it=> g==='' ? (!it.itemGroup || !knownGroups.includes(it.itemGroup)) : it.itemGroup===g));
@@ -2241,9 +2273,9 @@ function renderItems(){
       const label=g||'Uncategorized';
       const key=g||'__uncategorized__';
       const collapsed=!!collapsedItemGroups[key];
-      return '<tr class="item-group-row" data-key="'+escAttr(key)+'" style="cursor:pointer"><td colspan="6"><div class="cat-group-head'+(collapsed?' is-collapsed':'')+'" style="margin:-7px -10px"><span class="cat-caret">▾</span> '+escAttr(label)+' <span class="cat-count">('+rows.length+')</span></div></td></tr>'+
+      return '<tr class="item-group-row" data-key="'+escAttr(key)+'" style="cursor:pointer"><td colspan="4"><div class="cat-group-head'+(collapsed?' is-collapsed':'')+'" style="margin:-7px -10px"><span class="cat-caret">▾</span> '+escAttr(label)+' <span class="cat-count">('+rows.length+')</span></div></td></tr>'+
         (collapsed? '' : rows.map(rowHtml).join(''));
-    }).join('') || '<tr><td colspan="6"><div class="empty-state"><div class="empty-title">No items match</div><div class="empty-sub">Try clearing the search or filters above.</div></div></td></tr>';
+    }).join('') || '<tr><td colspan="4"><div class="empty-state"><div class="empty-title">No items match</div><div class="empty-sub">Try clearing the search or filters above.</div></div></td></tr>';
     const toggleAllBtn=document.getElementById('toggle-all-groups');
     const allCollapsed=visibleGroups.length>0 && visibleGroups.every(g=>collapsedItemGroups[g||'__uncategorized__']);
     toggleAllBtn.textContent=allCollapsed?'Expand all':'Collapse all';
@@ -2262,8 +2294,7 @@ function renderItems(){
       tr.addEventListener('click',()=>{
         selectedItem=tr.dataset.id;
         renderItems();
-        const d=document.getElementById('item-detail');
-        if(d) d.scrollIntoView({behavior:'smooth', block:'start'});
+        if(window.innerWidth<=1000){ const d=document.getElementById('item-detail'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'}); }
       });
     });
   }
@@ -2293,7 +2324,6 @@ function renderItems(){
       reapplySup();
     }));
   }
-  const itemsBackBtn=document.getElementById('items-back-to-list'); if(itemsBackBtn) itemsBackBtn.addEventListener('click',()=>{ selectedItem=null; renderItems(); });
   wireItemCard();
 }
 function renderItemCard(it){
@@ -2303,42 +2333,45 @@ function renderItemCard(it){
   const linksRows = links.length
     ? links.map(l=>renderLinkRow(it,l)).join('')
     : '<p class="note links-empty">No links or phone numbers yet for '+escAttr(it.name)+'.</p>';
-  return '<div class="detail-drawer item-card" data-id="'+it.id+'">'+
-    '<div class="detail-drawer-head"><div><h2>'+escAttr(it.name)+'</h2><div class="sub">'+escAttr(it.itemGroup||'Uncategorized')+'</div></div>'+
-    '<div class="row-actions no-print"><button class="btn sm item-history-btn">Order history</button><button class="btn sm danger del-item">Delete item</button><button type="button" class="detail-drawer-close item-detail-close" title="Close">✕</button></div></div>'+
-    '<div class="detail-section">'+
-      '<div class="detail-section-title">Notes</div>'+
-      '<input class="f-itemnotes" style="width:100%" value="'+escAttr(it.notes||'')+'" placeholder="—">'+
+  const supplier=primarySupplierForItem(it);
+  const sec=(key,title,count,body)=>'<details class="item-sec" data-sec="'+key+'"'+(openItemSections[key]?' open':'')+'><summary>'+title+(count!=null?' <span class="sec-count">('+count+')</span>':'')+'</summary><div class="sec-body">'+body+'</div></details>';
+  return '<div class="detail-drawer item-card item-panel" data-id="'+it.id+'">'+
+    '<div class="detail-drawer-head"><div><h2>'+escAttr(it.name)+'</h2><div class="sub">'+escAttr(it.itemGroup||'Uncategorized')+' · '+statusHtml+'</div></div>'+
+    '<div class="row-actions no-print"><button class="btn sm item-history-btn">Order history</button><button class="btn sm danger del-item">Delete</button><button type="button" class="detail-drawer-close item-detail-close" title="Close">✕</button></div></div>'+
+    '<div class="item-stats">'+
+      '<div class="item-stat"><label>On hand ('+escAttr(it.uom||'ea')+')</label><input class="f-onhand num" type="number" value="'+(Number(it.onHand)||0)+'"></div>'+
+      '<div class="item-stat"><label>Price (each)</label><div class="money-wrap"><span>$</span><input class="f-pricespot num" type="number" step="0.01" min="0" placeholder="0.00" value="'+(Number(it.standardCost)>0?Number(it.standardCost).toFixed(2):'')+'"></div></div>'+
+      '<div class="item-stat"><label>Supplier</label><span class="stat-text" title="'+escAttr(supplier?supplier.name:'')+'">'+(supplier?escAttr(supplier.name):'<span style="color:var(--steel);font-weight:400">None yet</span>')+'</span></div>'+
     '</div>'+
-    '<div class="detail-section">'+
-      '<div class="detail-section-title">Item information</div>'+
-      '<div class="po-meta detail-grid">'+
-        '<div><label>Name</label><input class="f-name" value="'+escAttr(it.name)+'"></div>'+
-        '<div><label>Category</label>'+itemGroupSelect(it.itemGroup)+'</div>'+
-        '<div><label>Unit of measure</label><input class="f-uom" value="'+escAttr(it.uom)+'"></div>'+
-        '<div><label>On hand</label><input class="f-onhand num" type="number" value="'+it.onHand+'"></div>'+
-        '<div><label>Price (each)</label><input class="f-pricespot num" type="number" step="0.01" min="0" placeholder="0.00" value="'+(Number(it.standardCost)>0?Number(it.standardCost).toFixed(2):'')+'"></div>'+
-      '</div>'+
-    '</div>'+
-    '<div class="detail-section">'+
-      '<div class="detail-section-title">Suppliers &amp; Links</div>'+
+    '<div class="item-notes-wrap"><label class="note" style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Notes</label>'+
+      '<textarea class="f-itemnotes" rows="2" placeholder="Anything worth remembering about this item">'+escAttr(it.notes||'')+'</textarea></div>'+
+    sec('info','Item details',null,
+      '<div class="detail-grid">'+
+        '<div><label class="note">Name</label><input class="f-name" value="'+escAttr(it.name)+'"></div>'+
+        '<div><label class="note">Category</label>'+itemGroupSelect(it.itemGroup)+'</div>'+
+        '<div><label class="note">Unit of measure</label><input class="f-uom" value="'+escAttr(it.uom)+'"></div>'+
+      '</div>')+
+    sec('links','Suppliers &amp; links',links.length,
       '<div id="item-links-rows">'+linksRows+'</div>'+
-      '<button class="btn sm accent add-link-here no-print" style="margin-top:10px">+ Add link or phone</button>'+
-    '</div>'+
-    '<div class="detail-section">'+
-      '<div class="detail-section-title">Ordering &amp; reorder</div>'+
-      '<div class="po-meta detail-grid">'+
-        '<div><label>Last ordered</label><input class="f-lastdate" type="date" value="'+(it.lastPurchaseDate||'')+'"></div>'+
-        '<div><label>Qty on that order</label><input class="f-lastqty num" type="number" min="0" value="'+(it.lastPurchaseQty==null?'':it.lastPurchaseQty)+'"></div>'+
-        '<div><label>Reorder every (days)</label><input class="f-cadence num" type="number" min="0" step="1" value="'+(it.reorderCadenceDays==null?'':it.reorderCadenceDays)+'"></div>'+
-        '<div><label>Status</label><div style="padding-top:9px">'+statusHtml+'</div></div>'+
-      '</div>'+
-    '</div>'+
-    '<div class="detail-section">'+
-      '<div class="detail-section-title">Attachments</div>'+
-      '<div class="dropzone-mini file-btn">'+docChips(it.docs)+'<label class="btn sm no-print">+ Add file<input type="file" class="item-file" style="position:absolute;opacity:0;width:1px;height:1px"></label></div>'+
-    '</div>'+
+      '<button class="btn sm accent add-link-here no-print" style="margin-top:10px">+ Add link or phone</button>')+
+    sec('reorder','Reorder',null,
+      '<div class="detail-grid">'+
+        '<div><label class="note">Last ordered</label><input class="f-lastdate" type="date" value="'+(it.lastPurchaseDate||'')+'"></div>'+
+        '<div><label class="note">Qty on that order</label><input class="f-lastqty num" type="number" min="0" value="'+(it.lastPurchaseQty==null?'':it.lastPurchaseQty)+'"></div>'+
+        '<div><label class="note">Reorder every (days)</label><input class="f-cadence num" type="number" min="0" step="1" value="'+(it.reorderCadenceDays==null?'':it.reorderCadenceDays)+'"></div>'+
+      '</div>')+
+    sec('files','Attachments',(it.docs||[]).length,
+      '<div class="dropzone-mini file-btn">'+docChips(it.docs)+'<label class="btn sm no-print">+ Add file<input type="file" class="item-file" style="position:absolute;opacity:0;width:1px;height:1px"></label></div>')+
   '</div>';
+}
+/* Update one row of the Items list in place (on hand / price) without re-rendering the
+   whole tab, so the cursor isn't pulled out of the next box in the item panel. */
+function refreshItemListRow(it){
+  const tr=document.querySelector('#items-tbody tr.list-row[data-id="'+it.id+'"]');
+  if(!tr || tr.cells.length<3) return;
+  const price=Number(effectiveStandardCost(it))||0;
+  tr.cells[1].textContent=String(Number(it.onHand)||0);
+  tr.cells[2].innerHTML=price?'$'+price.toFixed(2):'<span style="color:var(--steel)">—</span>';
 }
 function wireItemCard(){
   const wrap=document.getElementById('item-detail');
@@ -2346,14 +2379,15 @@ function wireItemCard(){
   wrap.querySelectorAll('.item-card').forEach(card=>{
     const id=card.dataset.id; const it=itemById(id);
     if(!it) return;
+    card.querySelectorAll('details.item-sec').forEach(d=>d.addEventListener('toggle',()=>{ openItemSections[d.dataset.sec]=d.open; }));
     const closeBtn=card.querySelector('.item-detail-close');
     if(closeBtn) closeBtn.addEventListener('click',()=>{ selectedItem=null; renderItems(); });
     card.querySelector('.f-name').addEventListener('change',e=>{ it.name=e.target.value; save(); renderItems(); renderCounts(); });
     const catSel=card.querySelector('.f-itemgroup');
     if(catSel) catSel.addEventListener('change',e=>{ it.itemGroup=e.target.value; save(); renderItems(); });
     card.querySelector('.f-uom').addEventListener('change',e=>{ it.uom=e.target.value; save(); });
-    card.querySelector('.f-onhand').addEventListener('change',e=>{ it.onHand=Number(e.target.value)||0; save(); });
-    card.querySelector('.f-pricespot').addEventListener('change',e=>{ const v=Math.max(0,Number(e.target.value)||0); it.standardCost=v; e.target.value=v?v.toFixed(2):''; save(); });
+    card.querySelector('.f-onhand').addEventListener('change',e=>{ it.onHand=Number(e.target.value)||0; save(); refreshItemListRow(it); });
+    card.querySelector('.f-pricespot').addEventListener('change',e=>{ const v=Math.max(0,Number(e.target.value)||0); it.standardCost=v; e.target.value=v?v.toFixed(2):''; save(); refreshItemListRow(it); });
     card.querySelector('.f-lastdate').addEventListener('change',e=>{ it.lastPurchaseDate=e.target.value||null; save(); renderItems(); });
     card.querySelector('.f-lastqty').addEventListener('change',e=>{ it.lastPurchaseQty=e.target.value===''?null:(Number(e.target.value)||0); save(); });
     card.querySelector('.f-cadence').addEventListener('change',e=>{ it.reorderCadenceDays=e.target.value===''?null:(Number(e.target.value)||0); save(); renderItems(); });
@@ -2382,7 +2416,7 @@ function wireItemCard(){
     });
     const addLinkBtn=card.querySelector('.add-link-here');
     if(addLinkBtn) addLinkBtn.addEventListener('click',()=>{
-      it.links=it.links||[];
+      it.links=it.links||[]; openItemSections.links=true;
       it.links.push({id:uid(), supplierId:'', cost:0, url:'', phone:'', contactType:'link', notes:''});
       save(); renderItems(); renderCounts();
       setTimeout(()=>{
