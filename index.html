@@ -2310,7 +2310,7 @@ function renderItems(){
     });
     exportTablePDF('Dragon Seats - Items Catalog', head, body);
   });
-  const itemsSearchEl=document.getElementById('items-search'); if(itemsSearchEl) itemsSearchEl.addEventListener('input',e=>{ itemsToolbar.q=e.target.value; renderItems(); });
+  const itemsSearchEl=document.getElementById('items-search'); if(itemsSearchEl) itemsSearchEl.addEventListener('input',e=>{ const pos=e.target.selectionStart; itemsToolbar.q=e.target.value; renderItems(); refocusSearch('items-search',pos); });
   const itemsCatFilterEl=document.getElementById('items-cat-filter'); if(itemsCatFilterEl) itemsCatFilterEl.addEventListener('change',e=>{ itemsToolbar.cat=e.target.value; renderItems(); });
   const itemsStatusFilterEl=document.getElementById('items-status-filter'); if(itemsStatusFilterEl) itemsStatusFilterEl.addEventListener('change',e=>{ itemsToolbar.status=e.target.value; renderItems(); });
   const supDD=document.getElementById('items-sup-filter');
@@ -3074,6 +3074,13 @@ function wireBomCosting(){
 /* Price spot: the price saved on an item's page (Items tab -> Price). New document lines
    pick it up automatically so prices don't have to be re-typed on every receipt/PO/quote. */
 function itemPriceSpot(itemId){ const it=itemById(itemId); return it? (Number(effectiveStandardCost(it))||0) : 0; }
+/* Search boxes re-render their whole tab on every keystroke, which rebuilds the input and
+   drops focus. Put the cursor back where it was so typing continues uninterrupted. */
+function refocusSearch(id, pos){
+  const el=document.getElementById(id); if(!el) return;
+  el.focus();
+  try{ el.setSelectionRange(pos,pos); }catch(e){}
+}
 function itemSelectSimple(selId){ return '<select class="item-select">'+DB.items.map(i=>'<option value="'+i.id+'" '+(i.id===selId?'selected':'')+'>'+escAttr(i.name)+'</option>').join('')+'</select>'; }
 function supplierSelectSimple(selId){ return '<select class="supplier-select">'+DB.suppliers.map(s=>'<option value="'+s.id+'" '+(s.id===selId?'selected':'')+'>'+escAttr(s.name)+'</option>').join('')+'</select>'; }
 function supplierSelectOptional(selId){
@@ -3161,7 +3168,7 @@ function renderSuppliers(){
     '<thead><tr><th>Name</th><th>Contact</th><th>Email</th><th>Phone</th><th>Specialty</th><th>Notes</th><th></th></tr></thead>'+
     '<tbody id="sup-tbody"></tbody></table>'+
     '</div></div>';
-  document.getElementById('sup-search').addEventListener('input',e=>{ supplierSearch=e.target.value; renderSuppliers(); });
+  document.getElementById('sup-search').addEventListener('input',e=>{ const pos=e.target.selectionStart; supplierSearch=e.target.value; renderSuppliers(); refocusSearch('sup-search',pos); });
   const tb=document.getElementById('sup-tbody');
   tb.innerHTML=visibleSuppliers.map(s=>{
     const docCount=supplierDocGroups(s).total;
@@ -3510,7 +3517,7 @@ function renderPO(){
     '<div id="po-detail">'+(selectedPO ? renderPoCard(poById(selectedPO)) : '')+'</div>';
   wirePO();
   wireFilterDropdown('filter-po','po',renderPO);
-  const poSearchEl=document.getElementById('po-search'); if(poSearchEl) poSearchEl.addEventListener('input',e=>{ docSearch.po=e.target.value; renderPO(); });
+  const poSearchEl=document.getElementById('po-search'); if(poSearchEl) poSearchEl.addEventListener('input',e=>{ const pos=e.target.selectionStart; docSearch.po=e.target.value; renderPO(); refocusSearch('po-search',pos); });
   const poStatusFilterEl=document.getElementById('po-status-filter'); if(poStatusFilterEl) poStatusFilterEl.addEventListener('change',e=>{ docStatusFilter.po=e.target.value; renderPO(); });
   el.querySelectorAll('tr.list-row').forEach(tr=>{
     const openIt=()=>{ selectedPO=tr.dataset.id; renderPO(); const d=document.getElementById('po-detail'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'}); };
@@ -3688,7 +3695,7 @@ function renderQuotes(){
     '<div id="quote-detail">'+(selectedQuote ? renderQuoteCard(quoteById(selectedQuote)) : '')+'</div>';
   wireQuotes();
   wireFilterDropdown('filter-quotes','quotes',renderQuotes);
-  const quotesSearchEl=document.getElementById('quotes-search'); if(quotesSearchEl) quotesSearchEl.addEventListener('input',e=>{ docSearch.quotes=e.target.value; renderQuotes(); });
+  const quotesSearchEl=document.getElementById('quotes-search'); if(quotesSearchEl) quotesSearchEl.addEventListener('input',e=>{ const pos=e.target.selectionStart; docSearch.quotes=e.target.value; renderQuotes(); refocusSearch('quotes-search',pos); });
   const quotesStatusFilterEl=document.getElementById('quotes-status-filter'); if(quotesStatusFilterEl) quotesStatusFilterEl.addEventListener('change',e=>{ docStatusFilter.quotes=e.target.value; renderQuotes(); });
   el.querySelectorAll('tr.list-row').forEach(tr=>{
     tr.addEventListener('click',()=>{ selectedQuote=tr.dataset.id; renderQuotes(); const d=document.getElementById('quote-detail'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'}); });
@@ -3852,7 +3859,7 @@ function renderReceipts(){
     '<div id="receipt-detail">'+(selectedReceipt ? renderReceiptCard(receiptById(selectedReceipt)) : '')+'</div>';
   wireReceipts();
   wireFilterDropdown('filter-receipts','receipts',renderReceipts);
-  const receiptsSearchEl=document.getElementById('receipts-search'); if(receiptsSearchEl) receiptsSearchEl.addEventListener('input',e=>{ docSearch.receipts=e.target.value; renderReceipts(); });
+  const receiptsSearchEl=document.getElementById('receipts-search'); if(receiptsSearchEl) receiptsSearchEl.addEventListener('input',e=>{ const pos=e.target.selectionStart; docSearch.receipts=e.target.value; renderReceipts(); refocusSearch('receipts-search',pos); });
   el.querySelectorAll('tr.list-row').forEach(tr=>{
     tr.addEventListener('click',()=>{ selectedReceipt=tr.dataset.id; renderReceipts(); const d=document.getElementById('receipt-detail'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'}); });
   });
