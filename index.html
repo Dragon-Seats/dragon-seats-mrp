@@ -425,6 +425,105 @@ tr.row-editing{background:#fbf7f0}
 .item-panel .detail-grid input,.item-panel .detail-grid select{width:100%;box-sizing:border-box}
 .item-panel .detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 @media (max-width:1000px){.items-split{grid-template-columns:1fr}.item-panel{position:static;max-height:none;order:-1}}
+/* ===== Items: category boxes + item cards ===== */
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.cat-tile{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:10px;min-height:136px;padding:16px 18px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);transition:border-color .12s,box-shadow .12s,transform .12s}
+.cat-tile:hover{border-color:var(--graphite);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.cat-tile:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.ct-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.ct-name{font-family:'Space Grotesk',system-ui,sans-serif;font-size:16px;font-weight:600;color:var(--ink)}
+.ct-count{font-size:20px;font-weight:600;color:var(--graphite)}
+.ct-preview{font-size:12px;color:var(--steel);line-height:1.45;flex:1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.ct-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ct-value{margin-left:auto;font-size:11px;color:var(--steel)}
+.cat-tile-new{align-items:center;justify-content:center;border-style:dashed;box-shadow:none;color:var(--steel);font-weight:600;gap:4px;background:transparent}
+.cat-tile-new .ct-plus{font-size:26px;line-height:1;color:var(--steel)}
+.items-crumb{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.items-crumb h2{margin:0;font-size:19px;font-weight:600}
+.item-group-label{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--graphite);margin:4px 0 8px}
+.item-group-label .mono{font-weight:400;color:var(--steel);margin-left:4px}
+.item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:18px}
+.item-tile{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border-left:3px solid var(--line);transition:border-color .12s,box-shadow .12s}
+.item-tile:hover{border-color:var(--graphite);box-shadow:var(--shadow-md)}
+.item-tile:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.item-tile.is-late{border-left-color:var(--red)}
+.item-tile.is-soon{border-left-color:var(--amber)}
+.item-tile.is-selected{border-color:var(--red);box-shadow:0 0 0 2px rgba(170,2,1,.15);background:#fffafa}
+.it-name{font-weight:600;font-size:13.5px;line-height:1.3;color:var(--ink)}
+.it-stock{font-size:11.5px;color:var(--steel)}
+.it-stock b{font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--ink);font-weight:600}
+.it-meta{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--steel)}
+.it-meta .it-price{color:var(--ink);font-weight:500}
+.it-meta .it-price.is-empty{font-family:'Inter',system-ui,sans-serif;color:var(--steel);font-weight:400}
+.it-meta .it-sup{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.items-split{grid-template-columns:minmax(0,1fr) minmax(360px,460px)}
+.items-split .item-grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.items-split .cat-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+/* ===== Documents ===== */
+.doc-drop{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:var(--card);border:2px dashed #d6d3ce;border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:16px;transition:.15s}
+.doc-drop.drag-over{border-color:var(--red);background:var(--red-tint)}
+.doc-drop .dd-ico{font-size:26px;width:46px;height:46px;border-radius:50%;background:var(--red-tint);color:var(--red);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.doc-drop .dd-text{flex:1;min-width:220px}
+.doc-drop .dd-title{font-family:'Space Grotesk',system-ui,sans-serif;font-size:16px;font-weight:600;margin-bottom:2px}
+.doc-drop .btn{position:relative}
+.doc-drop-modal{flex-direction:column;text-align:center;padding:34px 20px}
+.doc-drop-modal .dd-ico{margin:0 auto}
+.blank-dd summary{min-height:var(--control-h)}
+.blank-dd .filter-options{display:flex;flex-direction:column;align-items:stretch;right:0;left:auto}
+.intake-blank{margin-top:14px;text-align:center;font-size:12.5px;color:var(--steel);display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap}
+.setup-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--amber-tint);border:1px solid var(--amber-tint-border);color:var(--amber-tint-text);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px}
+.setup-done{color:var(--green);font-weight:600;font-size:12.5px}
+.doc-toolbar{gap:10px}
+.doc-pills{display:flex;gap:6px;flex-wrap:wrap}
+.doc-pill{all:unset;cursor:pointer;padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:var(--card);font-size:12.5px;font-weight:600;color:var(--graphite);display:inline-flex;gap:6px;align-items:center}
+.doc-pill .mono{font-size:11px;color:var(--steel);font-weight:400}
+.doc-pill:hover{border-color:var(--graphite)}
+.doc-pill.active{background:var(--ink);border-color:var(--ink);color:#fff}
+.doc-pill.active .mono{color:#c9cacc}
+.doc-type-tag{display:inline-block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:6px;background:var(--steel-soft);color:var(--graphite)}
+.doc-type-tag.t-receipts{background:var(--green-tint);color:var(--green)}
+.doc-type-tag.t-quotes{background:var(--amber-tint);color:var(--amber-tint-text)}
+.doc-type-tag.t-po{background:var(--red-tint);color:var(--red-dark)}
+.doc-list td{padding-top:10px;padding-bottom:10px}
+table.doc-lines td{vertical-align:middle}
+.line-doc-text{font-size:11px;color:var(--steel);font-style:italic;margin:3px 2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.q-totals td{border-bottom:none;padding-top:6px;padding-bottom:6px}
+.q-totals td.tot-label{font-family:'Inter',system-ui,sans-serif;font-size:12.5px;color:var(--steel);font-weight:600}
+.q-totals tr.tot-grand td.tot-label{color:var(--ink);font-size:14px}
+.q-totals tr.tot-grand td{border-top:1.5px solid var(--ink);font-size:15px;font-weight:700;color:var(--ink)}
+button.doc-chip{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:4px;background:var(--steel-soft);border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:11.5px;margin:0 4px 4px 0;color:var(--ink)}
+button.doc-chip:hover{border-color:var(--graphite)}
+/* Intake review */
+.modal-box.modal-wide{max-width:1180px;width:96%;max-height:92vh}
+.intake-reading{display:flex;gap:16px;align-items:center;padding:20px 6px}
+.spinner{width:30px;height:30px;border-radius:50%;border:3px solid var(--steel-soft);border-top-color:var(--red);animation:ds-spin .8s linear infinite;flex:0 0 auto}
+@keyframes ds-spin{to{transform:rotate(360deg)}}
+.intake-review{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:18px;align-items:start}
+.ir-preview{position:sticky;top:0;border:1px solid var(--line);border-radius:var(--radius-md);background:#f3f1ee;height:72vh;overflow:auto;display:flex;align-items:flex-start;justify-content:center}
+.ir-preview img{max-width:100%;display:block}
+.ir-preview iframe{width:100%;height:100%;border:0;background:#fff}
+.ir-preview pre{white-space:pre-wrap;font-size:11.5px;padding:12px;margin:0;width:100%}
+.ir-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px 14px;margin:12px 0 14px}
+.ir-grid label{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--steel)}
+.ir-grid input,.ir-grid select{text-transform:none;letter-spacing:0;font-weight:400;width:100%}
+.ir-lines td{vertical-align:top;padding:6px 6px}
+.ir-lines tr.is-skip td{opacity:.55}
+.ir-lines tr.is-new td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+.ir-newitem{display:grid;grid-template-columns:3fr 2fr;gap:6px;margin-top:6px}
+.ir-totals{margin:12px 0 0 auto;max-width:360px;display:flex;flex-direction:column;gap:6px}
+.ir-totals>div{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;color:var(--steel)}
+.ir-totals .ir-grand{border-top:1.5px solid var(--ink);padding-top:8px;font-size:16px;color:var(--ink);font-weight:700}
+.ir-match{font-size:12px;font-weight:600;margin-left:auto}
+.ir-match.ok{color:var(--green)}
+.ir-match.bad{color:var(--red)}
+.ir-options{display:flex;flex-direction:column;gap:6px;margin-top:14px;font-size:13px}
+.ir-options label{display:flex;gap:8px;align-items:center;cursor:pointer}
+.ir-options input{min-height:0}
+.ir-drive{margin-top:10px;padding:8px 10px;background:var(--steel-soft);border-radius:8px;word-break:break-all}
+.callout.green-callout{background:var(--green-tint);border-color:#bfe0c9;color:#185c2f}
+.settings-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--line)}
+.settings-row:last-child{border-bottom:0}
+@media (max-width:900px){.intake-review{grid-template-columns:1fr}.ir-preview{position:static;height:300px}}
 </style>
 </head>
 <body>
@@ -459,7 +558,7 @@ tr.row-editing{background:#fbf7f0}
   <div class="main">
     <div class="topbar">
       <div><h1 id="pagetitle">Dashboard</h1><div class="sub" id="pagesub">MRP overview</div></div>
-      <div class="no-print topbar-actions"><span class="topbar-actions" id="page-actions"></span><button class="btn accent hidden" id="add-doc-btn">+ Add Document</button></div>
+      <div class="no-print topbar-actions"><span class="topbar-actions" id="page-actions"></span><button class="btn accent hidden" id="add-doc-btn">+ Add document</button></div>
     </div>
     <div class="content">
       <div class="panel" id="panel-dash"></div>
@@ -476,14 +575,8 @@ tr.row-editing{background:#fbf7f0}
       <div class="panel hidden" id="panel-demand"></div>
       <div class="panel hidden" id="panel-plan"></div>
       <div class="panel hidden" id="panel-docs">
-        <div class="doc-subnav no-print">
-          <button class="subtab" data-subtab="po">Purchase Orders <span class="count" id="cnt-po">0</span></button>
-          <button class="subtab" data-subtab="quotes">Quotes <span class="count" id="cnt-quotes">0</span></button>
-          <button class="subtab" data-subtab="receipts">Receipts <span class="count" id="cnt-receipts">0</span></button>
-        </div>
-        <div class="doc-subpanel hidden" id="panel-po"></div>
-        <div class="doc-subpanel hidden" id="panel-quotes"></div>
-        <div class="doc-subpanel hidden" id="panel-receipts"></div>
+        <div id="docs-home"></div>
+        <span class="hidden"><span id="cnt-po">0</span><span id="cnt-quotes">0</span><span id="cnt-receipts">0</span></span>
       </div>
       <div class="panel hidden" id="panel-settings"></div>
     </div>
@@ -1357,6 +1450,13 @@ function ensureShape(){
     if(typeof d.appliedToStock!=='boolean') d.appliedToStock=false;
     if(d.appliedAt===undefined) d.appliedAt=null;
   });
+  [DB.purchaseOrders, DB.quotes, DB.receipts].forEach(list=>list.forEach(d=>{
+    if(d.extraCharges===undefined || d.extraCharges===null){
+      const sub=docLinesSubtotal(d);
+      d.extraCharges=(d.orderTotal!=null && Number(d.orderTotal)>0) ? round2(Number(d.orderTotal)-sub) : 0;
+    }
+    d.orderTotal=null;
+  }));
   DB.bookings=[]; // Equipment booking/Availability Calendar feature retired — always empty now.
 }
 
@@ -1394,10 +1494,10 @@ function deliveryById(id){ return DB.deliveries.find(d=>d.id===id); }
 function closedStatusName(){ return DB.lists.poStatus.includes('Closed') ? 'Closed' : DB.lists.poStatus[DB.lists.poStatus.length-1]; }
 
 /* ---------------- modal helper ---------------- */
-function openModal(title, bodyHtml){
+function openModal(title, bodyHtml, opts){
   let m=document.getElementById('modal-root');
   if(!m){ m=document.createElement('div'); m.id='modal-root'; document.body.appendChild(m); }
-  m.innerHTML='<div class="modal-backdrop"><div class="modal-box"><div class="modal-head"><h3>'+escAttr(title)+'</h3><button class="btn sm" id="modal-close">Close</button></div><div class="modal-body">'+bodyHtml+'</div></div></div>';
+  m.innerHTML='<div class="modal-backdrop"><div class="modal-box'+(opts&&opts.wide?' modal-wide':'')+'"><div class="modal-head"><h3>'+escAttr(title)+'</h3><button class="btn sm" id="modal-close">Close</button></div><div class="modal-body">'+bodyHtml+'</div></div></div>';
   document.getElementById('modal-close').addEventListener('click',closeModal);
   m.querySelector('.modal-backdrop').addEventListener('click',e=>{ if(e.target.classList.contains('modal-backdrop')) closeModal(); });
 }
@@ -1453,115 +1553,14 @@ function isImageDoc(d){
 function docChips(docs){
   if(!docs || !docs.length) return '<span class="note">no files</span>';
   return docs.map(d=>{
+    if(d.drivePath){
+      return '<button type="button" class="doc-chip drive-doc" data-path="'+escAttr(d.drivePath)+'" title="Saved in Google Drive: '+escAttr(d.drivePath)+'">📁 '+escAttr(d.name)+'</button>';
+    }
     if(isImageDoc(d)){
       return '<a class="doc-chip doc-chip-img" href="'+d.dataUrl+'" download="'+escAttr(d.name)+'" title="'+escAttr(d.name)+'"><img class="doc-thumb" src="'+d.dataUrl+'" alt="'+escAttr(d.name)+'"></a>';
     }
     return '<a class="doc-chip" href="'+d.dataUrl+'" download="'+escAttr(d.name)+'">📎 '+escAttr(d.name)+'</a>';
   }).join('');
-}
-
-/* ---------------- shared "Add Document" entry point (PO / Quote / Receipt, unified) ---------------- */
-function openAddDocumentModal(){
-  const bodyHtml=
-    '<div class="po-meta">'+
-      '<div><label>Document type</label><select id="add-doc-type"><option value="receipt" selected>Receipt</option><option value="po">Purchase Order</option><option value="quote">Quote</option></select></div>'+
-      '<div><label>Supplier</label><div id="add-doc-supplier-wrap">'+supplierSelectSimple((DB.suppliers[0]||{}).id||'')+'</div></div>'+
-    '</div>'+
-    '<div class="subtabs hidden" id="add-doc-source-toggle" style="margin:10px 0">'+
-      '<button type="button" class="subtab active" data-source="file">File</button>'+
-    '</div>'+
-    '<div id="add-doc-file-wrap" class="dropzone"><label>File</label><br><input type="file" id="add-doc-file" accept=".pdf,.docx,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.heic"><div class="note" style="margin-top:6px">Drag &amp; drop a file here, or click to browse.</div></div>'+
-    '<div id="add-doc-link-wrap" class="hidden"><label>Order link</label><br>'+
-      '<input type="text" id="add-doc-link" style="width:100%;font:inherit;box-sizing:border-box" placeholder="Paste the link to the order or order-confirmation page (e.g. an Amazon or Home Depot order)">'+
-      '<div class="note" style="margin-top:6px">No file needed — just the link. Add the item lines and supplier below once it\'s saved.</div>'+
-    '</div>'+
-    '<p class="note" id="add-doc-status">Choose a file (e.g. a photo of the receipt). Pick the document type and supplier above, then add the items and quantities after saving. Manual entry from each tab\'s "+ New blank" button works too.</p>'+
-    '<div class="toolbar" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="add-doc-cancel">Cancel</button><button class="btn accent" id="add-doc-save" disabled>Save</button></div>';
-  openModal('Add Document', bodyHtml);
-
-  let source='file';
-  let pendingName='', pendingDataUrl='', pendingLink='';
-  const fileInput=document.getElementById('add-doc-file');
-  const linkInput=document.getElementById('add-doc-link');
-  const fileWrap=document.getElementById('add-doc-file-wrap');
-  const linkWrap=document.getElementById('add-doc-link-wrap');
-  const typeSelect=document.getElementById('add-doc-type');
-  const statusEl=document.getElementById('add-doc-status');
-  const saveBtn=document.getElementById('add-doc-save');
-  const supplierWrap=document.getElementById('add-doc-supplier-wrap');
-  const sourceBtns=document.querySelectorAll('#add-doc-source-toggle .subtab');
-  enableFileDrop(fileWrap, fileInput);
-
-  function resetPending(){
-    pendingName=''; pendingDataUrl=''; pendingLink=''; saveBtn.disabled=true;
-  }
-  function setSource(s){
-    source=s;
-    sourceBtns.forEach(b=>b.classList.toggle('active', b.dataset.source===s));
-    fileWrap.classList.toggle('hidden', s!=='file');
-    linkWrap.classList.toggle('hidden', s!=='link');
-    resetPending();
-    fileInput.value=''; linkInput.value='';
-    statusEl.textContent = s==='file'
-      ? 'Choose a file to attach to the new document.'
-      : 'Paste the order link, then pick the supplier and add item lines after saving.';
-  }
-  sourceBtns.forEach(b=>b.addEventListener('click',()=>setSource(b.dataset.source)));
-  linkInput.addEventListener('input', ()=>{
-    const v=linkInput.value.trim();
-    pendingLink=v;
-    pendingName = v ? ('Web order link — '+todayISO()) : '';
-    saveBtn.disabled = !v;
-    statusEl.textContent = v ? 'Link captured — pick the supplier and add item lines after saving.' : 'Paste the order link, then pick the supplier and add item lines after saving.';
-  });
-
-  fileInput.addEventListener('change', async e=>{
-    const f=e.target.files[0]; if(!f) return;
-    pendingName=f.name; pendingDataUrl='';
-    saveBtn.disabled=true;
-    statusEl.textContent='Attaching '+f.name+'\u2026';
-    pendingDataUrl=await readFileAsDataURL(f);
-    statusEl.textContent='File attached — fill in the number, date, and line items below after saving.';
-    saveBtn.disabled=false;
-  });
-  document.getElementById('add-doc-cancel').addEventListener('click', closeModal);
-  saveBtn.addEventListener('click',()=>{
-    if(!pendingName) return;
-    const type=typeSelect.value;
-    const supplierSel=supplierWrap.querySelector('.supplier-select');
-    const chosenSupplierId=(supplierSel?supplierSel.value:'')||(DB.suppliers[0]||{}).id||'';
-    const notes = source==='link'
-      ? 'Added from a web order link — please add item lines and verify the supplier.'
-      : 'Attached from a file — please fill in the fields and item lines.';
-    const docs=pendingDataUrl?[{id:uid(), name:pendingName, dataUrl:pendingDataUrl, uploadedAt:todayISO()}]:[];
-    const lines=[];
-    if(type==='quote'){
-      const q={
-        id:uid(), quoteNumber:'', supplierId:chosenSupplierId,
-        quoteDate:todayISO(), validUntil:addDays(todayISO(),30),
-        status:DB.lists.quoteStatus[0], lines:lines, docs:docs, notes: source==='link'&&pendingLink? (notes+' Link: '+pendingLink) : notes
-      };
-      DB.quotes.unshift(q);
-      save(); closeModal(); currentTab='quotes'; setTab('quotes'); renderCounts();
-    } else if(type==='receipt'){
-      const r={
-        id:uid(), receiptNumber:'', supplierId:chosenSupplierId,
-        receiptDate:todayISO(), poId:'',
-        lines:lines, docs:docs, notes:notes, appliedToStock:false, appliedAt:null
-      };
-      DB.receipts.unshift(r);
-      save(); closeModal(); currentTab='receipts'; setTab('receipts'); renderCounts();
-    } else {
-      const po={
-        id:uid(), poNumber:'', supplierId:chosenSupplierId,
-        orderDate:todayISO(), expectedDate:addDays(todayISO(),14),
-        status:DB.lists.poStatus[0], approvedBy:'',
-        lines:lines, docs:docs, notes: source==='link'&&pendingLink? (notes+' Link: '+pendingLink) : notes
-      };
-      DB.purchaseOrders.unshift(po);
-      save(); closeModal(); currentTab='po'; setTab('po'); renderCounts();
-    }
-  });
 }
 
 /* ---------------- price history ---------------- */
@@ -1779,7 +1778,7 @@ const TAB_LABELS={
   suppliers:['Suppliers','Vendor reference'],
   demand:['Demand Plan','Planned builds and requirements'],
   plan:['Planned Orders','Recommended order quantities and timing'],
-  docs:['Documents','Purchase orders, quotes and receipts'],
+  docs:['Documents','Receipts, quotes and purchase orders'],
   settings:['Settings','Data management and configuration']
 };
 /* Sub-tab labels for the merged Purchase Orders / Quotes / Receipts page. */
@@ -1796,7 +1795,7 @@ const BOM_SUBTAB_LABELS={
 };
 let bomSubTab='recipes';
 /* Each value is an array of supplier IDs to include; an empty array means "all suppliers". */
-let docSupplierFilter={po:[], quotes:[], receipts:[]};
+let docSupplierFilter={po:[], quotes:[], receipts:[], docs:[]};
 let collapsedItemGroups={}; // transient UI state (not saved) — which Items-tab category sections are collapsed
 let itemsToolbar={q:'', cat:'', status:''}; // transient UI state (not saved) — Items-tab search/filter toolbar
 let openItemSections={}; // transient UI state — which collapsible sections are open in the item panel
@@ -1874,22 +1873,12 @@ function setTab(which){
   // previously-viewed page doesn't linger when switching to a page that doesn't use this slot.
   const pageActions=document.getElementById('page-actions');
   if(pageActions) pageActions.innerHTML='';
-  if(which==='docs') setDocSubTab(sub||docSubTab);
+  if(which==='docs'){ if(sub){ docsFilter.type=sub; docsFilter.attention=false; } renderDocs(); }
   else if(which==='bom') setBomSubTab(bomSubTab);
   else renderTab(which);
 }
 
-function setDocSubTab(sub){
-  docSubTab=sub;
-  document.getElementById('pagesub').textContent=DOC_SUBTAB_LABELS[sub];
-  ['po','quotes','receipts'].forEach(t=>{
-    document.getElementById('panel-'+t).classList.toggle('hidden', t!==sub);
-    const btn=document.querySelector('.subtab[data-subtab="'+t+'"]');
-    if(btn) btn.classList.toggle('active', t===sub);
-  });
-  renderTab(sub);
-}
-
+function setDocSubTab(sub){ docSubTab=sub; docsFilter.type=sub; renderDocs(); }
 function setBomSubTab(sub){
   bomSubTab=sub;
   document.getElementById('pagesub').textContent=BOM_SUBTAB_LABELS[sub];
@@ -1929,6 +1918,7 @@ function renderTab(which){
   else if(which==='po') renderPO();
   else if(which==='quotes') renderQuotes();
   else if(which==='receipts') renderReceipts();
+  else if(which==='docs') renderDocs();
   else if(which==='settings') renderSettings();
 }
 
@@ -2179,6 +2169,7 @@ function openAddItemModal(){
     '<p class="note" style="margin-top:10px">Last-ordered date/qty and reorder cadence can be filled in on the row after it\'s created.</p>'+
     '<div class="toolbar" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="new-item-cancel">Cancel</button><button class="btn accent" id="new-item-save">Save</button></div>';
   openModal('New item', bodyHtml);
+  if(itemsToolbar.cat && itemsToolbar.cat!=='__uncategorized__'){ const cs=document.getElementById('new-item-cat'); if(cs) cs.value=itemsToolbar.cat; }
   const nameInp=document.getElementById('new-item-name');
   nameInp.focus();
   const commit=()=>{
@@ -2190,10 +2181,10 @@ function openAddItemModal(){
     const notes=document.getElementById('new-item-notes').value.trim();
     const it=mkItem(uid(), name, uom, {itemGroup:cat, onHand, notes});
     DB.items.unshift(it);
-    collapsedItemGroups[cat||'__uncategorized__']=false;
+    selectedItem=it.id; itemsToolbar.cat=cat||'__uncategorized__';
     save(); closeModal(); renderItems(); renderCounts();
     setTimeout(()=>{
-      const row=document.querySelector('tr[data-id="'+it.id+'"]');
+      const row=document.querySelector('.item-tile[data-id="'+it.id+'"]');
       if(row) row.scrollIntoView({behavior:'smooth', block:'center'});
     }, 30);
   };
@@ -2216,102 +2207,113 @@ function itemGroupSelect(selId){
    already uses — no new status concept, just a filter over the existing one. */
 const ITEMS_STATUS_FILTER_OPTS=[['','All statuses'],['late','Past due'],['soon','Due soon'],['ok','OK'],['none','Not tracked']];
 function itemsSupplierIdsOf(it){ return (it.links||[]).map(l=>l.supplierId).filter(Boolean); }
+function itemCatKey(it){ const known=DB.lists.itemGroups||[]; return (it.itemGroup && known.includes(it.itemGroup)) ? it.itemGroup : '__uncategorized__'; }
+function itemCatLabel(key){ return key==='__uncategorized__' ? 'Uncategorized' : key; }
+/* One item as a small card ("box") — name, stock, price, supplier, reorder badge. */
+function itemTileHtml(it){
+  const s=cadenceStatus(it);
+  const supplier=primarySupplierForItem(it);
+  const price=Number(effectiveStandardCost(it))||0;
+  const badge = s.cls==='none' ? '' : '<span class="badge '+s.cls+'" title="'+escAttr(s.title||'')+'">'+s.text+'</span>';
+  return '<button type="button" class="item-tile'+(selectedItem===it.id?' is-selected':'')+(s.cls==='late'?' is-late':(s.cls==='soon'?' is-soon':''))+'" data-id="'+it.id+'">'+
+    '<span class="it-name">'+escAttr(it.name)+'</span>'+
+    '<span class="it-stock"><b class="it-onhand">'+fmtQty(Number(it.onHand)||0)+'</b> '+escAttr(it.uom||'ea')+' on hand</span>'+
+    '<span class="it-meta"><span class="it-price mono'+(price?'':' is-empty')+'">'+(price?'$'+price.toFixed(2):'No price')+'</span><span class="it-sup">'+(supplier?escAttr(supplier.name):'No supplier')+'</span></span>'+
+    (badge?'<span class="it-badge">'+badge+'</span>':'')+
+  '</button>';
+}
+/* One category as a box on the Items home screen. */
+function catTileHtml(key, items){
+  const late=items.filter(it=>cadenceStatus(it).cls==='late').length;
+  const soon=items.filter(it=>cadenceStatus(it).cls==='soon').length;
+  const value=items.reduce((s,it)=>s+(Number(it.onHand)||0)*(Number(effectiveStandardCost(it))||0),0);
+  const flags = !items.length ? '<span class="note">Empty</span>'
+    : (late||soon) ? ((late?'<span class="badge late">'+late+' past due</span>':'')+(soon?'<span class="badge soon">'+soon+' due soon</span>':''))
+    : '<span class="badge ok">All good</span>';
+  const preview=items.slice(0,4).map(it=>escAttr(it.name)).join(' · ')+(items.length>4?' …':'');
+  return '<button type="button" class="cat-tile" data-key="'+escAttr(key)+'">'+
+    '<span class="ct-head"><span class="ct-name">'+escAttr(itemCatLabel(key))+'</span><span class="ct-count mono">'+items.length+'</span></span>'+
+    '<span class="ct-preview">'+(preview||'No items yet')+'</span>'+
+    '<span class="ct-foot">'+flags+(value>0?'<span class="ct-value mono">$'+Math.round(value).toLocaleString('en-US')+' on hand</span>':'')+'</span>'+
+  '</button>';
+}
 function renderItems(){
   const el=document.getElementById('panel-items');
   const allParts=DB.items.filter(it=>!it.isProduct && it.category!=='equipment');
   const knownGroups=DB.lists.itemGroups||[];
   const q=(itemsToolbar.q||'').trim().toLowerCase();
+  const supFilter=itemsToolbar.supplier||[];
+  const filtering=!!(q || itemsToolbar.status || supFilter.length);
   const parts=allParts.filter(it=>{
     if(q && !((it.name||'').toLowerCase().includes(q) || (it.notes||'').toLowerCase().includes(q))) return false;
-    if(itemsToolbar.cat && it.itemGroup!==itemsToolbar.cat) return false;
     if(itemsToolbar.status && cadenceStatus(it).cls!==itemsToolbar.status) return false;
-    if(itemsToolbar.supplier && itemsToolbar.supplier.length && !itemsSupplierIdsOf(it).some(id=>itemsToolbar.supplier.includes(id))) return false;
+    if(supFilter.length && !itemsSupplierIdsOf(it).some(id=>supFilter.includes(id))) return false;
     return true;
   });
+  if(selectedItem && !itemById(selectedItem)) selectedItem=null;
+  if(itemsToolbar.cat && itemsToolbar.cat!=='__uncategorized__' && !knownGroups.includes(itemsToolbar.cat)) itemsToolbar.cat='';
+  // Arriving with an item already picked (e.g. from the Dashboard) opens its category.
+  if(selectedItem && !itemsToolbar.cat && !filtering){ const sel=itemById(selectedItem); if(sel && !sel.isProduct) itemsToolbar.cat=itemCatKey(sel); }
   document.getElementById('page-actions').innerHTML=
     '<button class="btn" id="add-item-group">+ New category</button>'+
     '<button class="btn" id="export-pdf-items">Export</button>'+
     '<button class="btn accent" id="add-item">+ New item</button>';
-  if(selectedItem && !itemById(selectedItem)) selectedItem=null;
-  const countLabel=parts.length+' item'+(parts.length===1?'':'s');
+  const groupKeys=knownGroups.concat(['__uncategorized__']);
+  let mainHtml='', countLabel='';
+  if(filtering){
+    // Search / filter results: every match across all categories, still grouped so it reads cleanly.
+    const keys=groupKeys.filter(k=>parts.some(it=>itemCatKey(it)===k));
+    countLabel=parts.length+' match'+(parts.length===1?'':'es');
+    mainHtml = keys.length ? keys.map(k=>{
+      const rows=parts.filter(it=>itemCatKey(it)===k);
+      return '<div class="item-group-label">'+escAttr(itemCatLabel(k))+' <span class="mono">'+rows.length+'</span></div><div class="item-grid">'+rows.map(itemTileHtml).join('')+'</div>';
+    }).join('') : '<div class="empty-state card"><div class="empty-title">No items match</div><div class="empty-sub">Try a different search or clear the filters.</div></div>';
+  } else if(itemsToolbar.cat){
+    const rows=allParts.filter(it=>itemCatKey(it)===itemsToolbar.cat);
+    countLabel=rows.length+' item'+(rows.length===1?'':'s');
+    mainHtml='<div class="items-crumb"><button class="btn sm" id="items-back">&larr; All categories</button><h2>'+escAttr(itemCatLabel(itemsToolbar.cat))+'</h2><span class="toolbar-count">'+countLabel+'</span><div class="toolbar-spacer"></div><button class="btn sm accent" id="add-item-here">+ Add item here</button></div>'+
+      (rows.length ? '<div class="item-grid">'+rows.map(itemTileHtml).join('')+'</div>'
+        : '<div class="empty-state card"><div class="empty-title">Nothing in this category yet</div><div class="empty-sub">Use “+ Add item here”, or pick this category on an existing item.</div></div>');
+  } else {
+    const keys=groupKeys.filter(k=>k!=='__uncategorized__' || allParts.some(it=>itemCatKey(it)===k));
+    countLabel=allParts.length+' items in '+keys.length+' categor'+(keys.length===1?'y':'ies');
+    mainHtml='<div class="cat-grid">'+keys.map(k=>catTileHtml(k, allParts.filter(it=>itemCatKey(it)===k))).join('')+
+      '<button type="button" class="cat-tile cat-tile-new" id="cat-tile-new"><span class="ct-plus">+</span><span>New category</span></button></div>';
+  }
   el.innerHTML=
     '<div class="toolbar no-print">'+
-      '<div class="search-input"><input type="text" id="items-search" placeholder="Search items..." value="'+escAttr(itemsToolbar.q||'')+'"></div>'+
-      '<select id="items-cat-filter"><option value="">All categories</option>'+knownGroups.map(g=>'<option value="'+escAttr(g)+'" '+(itemsToolbar.cat===g?'selected':'')+'>'+escAttr(g)+'</option>').join('')+'</select>'+
-      filterDropdownHtml('items-sup-filter', itemsToolbar.supplier||[])+
+      '<div class="search-input"><input type="text" id="items-search" placeholder="Search all items..." value="'+escAttr(itemsToolbar.q||'')+'"></div>'+
+      filterDropdownHtml('items-sup-filter', supFilter)+
       '<select id="items-status-filter">'+ITEMS_STATUS_FILTER_OPTS.map(([v,l])=>'<option value="'+v+'" '+(itemsToolbar.status===v?'selected':'')+'>'+l+'</option>').join('')+'</select>'+
-      '<button class="btn" id="toggle-all-groups"></button>'+
+      (filtering?'<button class="btn sm subtle" id="items-clear">Clear</button>':'')+
       '<div class="toolbar-spacer"></div>'+
       '<span class="toolbar-count">'+countLabel+'</span>'+
     '</div>'+
-    '<div class="items-split">'+
-      '<div class="card"><div class="card-body">'+
-      '<table class="list-table"><colgroup><col style="width:42%"><col style="width:14%"><col style="width:22%"><col style="width:22%"></colgroup>'+
-      '<thead><tr><th>Name</th><th class="num">Stock</th><th class="num">Price</th><th>Supplier</th></tr></thead>'+
-      '<tbody id="items-tbody"></tbody></table>'+
-      '</div></div>'+
-      '<div id="item-detail">'+(selectedItem ? renderItemCard(itemById(selectedItem)) :
-        '<div class="item-panel-empty"><div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:4px">Pick an item</div>Click any item on the left to see and edit it here.</div>')+'</div>'+
-    '</div>';
-  const tb=document.getElementById('items-tbody');
-  if(tb){
-    const groupOrder=knownGroups.concat(['']); // '' = Uncategorized / any stale value not in the list, rendered last
-    const rowHtml=function(it){
-      const supplier=primarySupplierForItem(it);
-      const price=Number(effectiveStandardCost(it))||0;
-      const dash='<span style="color:var(--steel)">—</span>';
-      return '<tr class="list-row'+(selectedItem===it.id?' is-selected':'')+'" data-id="'+it.id+'">'+
-        '<td style="font-weight:500">'+escAttr(it.name)+(it.notes?' <span title="'+escAttr(it.notes)+'" style="color:var(--steel);font-size:11px">&#9998;</span>':'')+'</td>'+
-        '<td class="num mono">'+(Number(it.onHand)||0)+'</td>'+
-        '<td class="num mono">'+(price?'$'+price.toFixed(2):dash)+'</td>'+
-        '<td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(supplier?escAttr(supplier.name):dash)+'</td>'+
-      '</tr>';
-    };
-    const visibleGroups=groupOrder.filter(g=>parts.some(it=> g==='' ? (!it.itemGroup || !knownGroups.includes(it.itemGroup)) : it.itemGroup===g));
-    tb.innerHTML = visibleGroups.map(g=>{
-      const rows=parts.filter(it=> g==='' ? (!it.itemGroup || !knownGroups.includes(it.itemGroup)) : it.itemGroup===g);
-      const label=g||'Uncategorized';
-      const key=g||'__uncategorized__';
-      const collapsed=!!collapsedItemGroups[key];
-      return '<tr class="item-group-row" data-key="'+escAttr(key)+'" style="cursor:pointer"><td colspan="4"><div class="cat-group-head'+(collapsed?' is-collapsed':'')+'" style="margin:-7px -10px"><span class="cat-caret">▾</span> '+escAttr(label)+' <span class="cat-count">('+rows.length+')</span></div></td></tr>'+
-        (collapsed? '' : rows.map(rowHtml).join(''));
-    }).join('') || '<tr><td colspan="4"><div class="empty-state"><div class="empty-title">No items match</div><div class="empty-sub">Try clearing the search or filters above.</div></div></td></tr>';
-    const toggleAllBtn=document.getElementById('toggle-all-groups');
-    const allCollapsed=visibleGroups.length>0 && visibleGroups.every(g=>collapsedItemGroups[g||'__uncategorized__']);
-    toggleAllBtn.textContent=allCollapsed?'Expand all':'Collapse all';
-    toggleAllBtn.addEventListener('click',()=>{
-      visibleGroups.forEach(g=>{ collapsedItemGroups[g||'__uncategorized__']=!allCollapsed; });
-      renderItems();
-    });
-    tb.querySelectorAll('tr.item-group-row').forEach(row=>{
-      row.addEventListener('click',()=>{
-        const key=row.dataset.key;
-        collapsedItemGroups[key]=!collapsedItemGroups[key];
-        renderItems();
-      });
-    });
-    tb.querySelectorAll('tr.list-row').forEach(tr=>{
-      tr.addEventListener('click',()=>{
-        selectedItem=tr.dataset.id;
-        renderItems();
-        if(window.innerWidth<=1000){ const d=document.getElementById('item-detail'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'}); }
-      });
-    });
-  }
+    (selectedItem
+      ? '<div class="items-split"><div class="items-main">'+mainHtml+'</div><div id="item-detail">'+renderItemCard(itemById(selectedItem))+'</div></div>'
+      : '<div class="items-main">'+mainHtml+'</div><div id="item-detail"></div>');
+
+  el.querySelectorAll('.cat-tile[data-key]').forEach(t=>t.addEventListener('click',()=>{ itemsToolbar.cat=t.dataset.key; selectedItem=null; renderItems(); window.scrollTo(0,0); }));
+  const newCatTile=document.getElementById('cat-tile-new'); if(newCatTile) newCatTile.addEventListener('click', openAddItemGroupModal);
+  const backBtn=document.getElementById('items-back'); if(backBtn) backBtn.addEventListener('click',()=>{ itemsToolbar.cat=''; selectedItem=null; renderItems(); });
+  const addHere=document.getElementById('add-item-here'); if(addHere) addHere.addEventListener('click', openAddItemModal);
+  const clearBtn=document.getElementById('items-clear'); if(clearBtn) clearBtn.addEventListener('click',()=>{ itemsToolbar.q=''; itemsToolbar.status=''; itemsToolbar.supplier=[]; renderItems(); });
+  el.querySelectorAll('.item-tile').forEach(t=>t.addEventListener('click',()=>{
+    selectedItem = selectedItem===t.dataset.id ? null : t.dataset.id;
+    renderItems();
+    if(selectedItem && window.innerWidth<=1000){ const d=document.getElementById('item-detail'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'}); }
+  }));
   document.getElementById('add-item').addEventListener('click', openAddItemModal);
   document.getElementById('add-item-group').addEventListener('click', openAddItemGroupModal);
   document.getElementById('export-pdf-items').addEventListener('click',()=>{
-    const head=['Name','Category','UoM','On Hand','Last Ordered','Qty','Reorder Every','Status','Notes'];
+    const head=['Name','Category','UoM','On Hand','Price','Last Ordered','Qty','Reorder Every','Status','Notes'];
     const body=DB.items.filter(it=>!it.isProduct).map(it=>{
-      const lastOrderedCol = it.lastPurchaseDate? fmtDate(it.lastPurchaseDate) : '—';
-      const qtyCol = it.lastPurchaseQty==null? '—' : it.lastPurchaseQty;
-      const reorderCol = it.reorderCadenceDays? it.reorderCadenceDays+' days' : '—';
-      return [it.name, it.itemGroup||'Uncategorized', it.uom, it.onHand, lastOrderedCol, qtyCol, reorderCol, cadenceStatus(it).text, it.notes||''];
+      const price=Number(effectiveStandardCost(it))||0;
+      return [it.name, it.itemGroup||'Uncategorized', it.uom, it.onHand, price?'$'+price.toFixed(2):'—', it.lastPurchaseDate?fmtDate(it.lastPurchaseDate):'—', it.lastPurchaseQty==null?'—':it.lastPurchaseQty, it.reorderCadenceDays?it.reorderCadenceDays+' days':'—', cadenceStatus(it).text, it.notes||''];
     });
     exportTablePDF('Dragon Seats - Items Catalog', head, body);
   });
   const itemsSearchEl=document.getElementById('items-search'); if(itemsSearchEl) itemsSearchEl.addEventListener('input',e=>{ const pos=e.target.selectionStart; itemsToolbar.q=e.target.value; renderItems(); refocusSearch('items-search',pos); });
-  const itemsCatFilterEl=document.getElementById('items-cat-filter'); if(itemsCatFilterEl) itemsCatFilterEl.addEventListener('change',e=>{ itemsToolbar.cat=e.target.value; renderItems(); });
   const itemsStatusFilterEl=document.getElementById('items-status-filter'); if(itemsStatusFilterEl) itemsStatusFilterEl.addEventListener('change',e=>{ itemsToolbar.status=e.target.value; renderItems(); });
   const supDD=document.getElementById('items-sup-filter');
   if(supDD){
@@ -2367,11 +2369,11 @@ function renderItemCard(it){
 /* Update one row of the Items list in place (on hand / price) without re-rendering the
    whole tab, so the cursor isn't pulled out of the next box in the item panel. */
 function refreshItemListRow(it){
-  const tr=document.querySelector('#items-tbody tr.list-row[data-id="'+it.id+'"]');
-  if(!tr || tr.cells.length<3) return;
+  const tile=document.querySelector('.item-tile[data-id="'+it.id+'"]');
+  if(!tile) return;
   const price=Number(effectiveStandardCost(it))||0;
-  tr.cells[1].textContent=String(Number(it.onHand)||0);
-  tr.cells[2].innerHTML=price?'$'+price.toFixed(2):'<span style="color:var(--steel)">—</span>';
+  const oh=tile.querySelector('.it-onhand'); if(oh) oh.textContent=fmtQty(Number(it.onHand)||0);
+  const pr=tile.querySelector('.it-price'); if(pr){ pr.textContent=price?'$'+price.toFixed(2):'No price'; pr.classList.toggle('is-empty', !price); }
 }
 function wireItemCard(){
   const wrap=document.getElementById('item-detail');
@@ -2410,8 +2412,7 @@ function wireItemCard(){
     const fileInp=card.querySelector('.item-file');
     if(fileInp) fileInp.addEventListener('change', async e=>{
       const f=e.target.files[0]; if(!f) return;
-      const dataUrl=await readFileAsDataURL(f);
-      it.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
+      it.docs.push(await attachFileTo('item', it, f));
       save(); renderItems();
     });
     const addLinkBtn=card.querySelector('.add-link-here');
@@ -3211,8 +3212,7 @@ function supplierDocGroups(s){
   return {po,q,r,total:po.length+q.length+r.length};
 }
 function supplierDocLineTotal(doc){
-  const lineSum=(doc.lines||[]).reduce((sum,l)=>sum+Number(l.qty||0)*Number(l.unitPrice||0),0);
-  return (doc.orderTotal!=null && Number(doc.orderTotal)>0) ? Number(doc.orderTotal) : lineSum;
+  return docTotal(doc);
 }
 /* Renders one PO/Quote/Receipt summary row within the supplier documents panel. */
 function supplierDocRowHTML(type, doc){
@@ -3248,9 +3248,7 @@ function renderSupplierDocsPanel(s){
 function jumpToSupplierDoc(type, id){
   // Opening the record's detail drawer (rather than just scrolling to a card in a stacked
   // list) is the equivalent of the old "scroll to card" behavior under the list+drawer layout.
-  if(type==='po') selectedPO=id;
-  else if(type==='quotes') selectedQuote=id;
-  else if(type==='receipts') selectedReceipt=id;
+  openDocRecord(type, id);
   currentTab=type; setTab(type); renderCounts();
   setTimeout(()=>{
     const card=document.querySelector('.detail-drawer[data-id="'+id+'"]');
@@ -3475,70 +3473,7 @@ function poLineTotal(po){ return (po.lines||[]).reduce((s,l)=>s+Number(l.qty||0)
 /* If a whole-order price was entered (supplier billed one lump sum), show that as the
    order's total instead of the summed line items. Purely a display choice -- line item
    prices are untouched and still feed priceHistoryFor()/resolvePartCost()/BOM Costing. */
-function poDisplayTotal(po){ return (po.orderTotal!=null && Number(po.orderTotal)>0) ? Number(po.orderTotal) : poLineTotal(po); }
-function renderPO(){
-  const el=document.getElementById('panel-po');
-  let filteredPOs=filterBySupplier(DB.purchaseOrders, docSupplierFilter.po, po=>po.supplierId);
-  if(docStatusFilter.po) filteredPOs=filteredPOs.filter(po=>po.status===docStatusFilter.po);
-  const q=(docSearch.po||'').trim().toLowerCase();
-  if(q) filteredPOs=filteredPOs.filter(po=>(po.poNumber||'').toLowerCase().includes(q) || ((supplierById(po.supplierId)||{}).name||'').toLowerCase().includes(q) || (po.requestedBy||'').toLowerCase().includes(q));
-  const closed=closedStatusName();
-  if(selectedPO && !poById(selectedPO)) selectedPO=null;
-  el.innerHTML=
-    (selectedPO ? '<div class="toolbar no-print"><button class="btn sm subtle" id="po-back-to-list">← Back to Purchase Orders</button><div class="toolbar-spacer"></div><span class="toolbar-count">'+filteredPOs.length+' PO'+(filteredPOs.length===1?'':'s')+'</span></div>' : (
-    '<div class="toolbar no-print">'+
-      '<button class="btn accent" id="add-po">+ New PO</button>'+
-      '<button class="btn" id="export-pdf-po">Export</button>'+
-      '<div class="search-input"><input type="text" id="po-search" placeholder="Search purchase orders..." value="'+escAttr(docSearch.po||'')+'"></div>'+
-      '<select id="po-status-filter"><option value="">All statuses</option>'+DB.lists.poStatus.map(s=>'<option value="'+escAttr(s)+'" '+(docStatusFilter.po===s?'selected':'')+'>'+escAttr(s)+'</option>').join('')+'</select>'+
-      filterDropdownHtml('filter-po', docSupplierFilter.po)+
-      '<div class="toolbar-spacer"></div><span class="toolbar-count">'+filteredPOs.length+' PO'+(filteredPOs.length===1?'':'s')+'</span>'+
-    '</div>'+
-    '<p class="note">New requests start as <b>Requested</b>. Move to <b>Sent to Finance</b> once you\'ve drafted it and sent it their way; once Finance sends back the actual PO, attach it under Files below and move to <b>PO Issued</b>; once you\'ve sent that PO to the vendor, move to <b>Ordered</b>. Logging a receipt against this PO on the Receipts tab (or using Receive below) moves it to <b>Received</b> automatically. Click a row to open it.</p>'+
-    '<div class="card"><div class="card-body">'+
-    (filteredPOs.length ?
-      '<table class="list-table"><colgroup><col style="width:10%"><col style="width:13%"><col style="width:10%"><col style="width:9%"><col style="width:8%"><col style="width:8%"><col style="width:22%"><col style="width:8%"><col style="width:12%"></colgroup>'+
-      '<thead><tr><th>PO #</th><th>Supplier</th><th>Status</th><th>Order Date</th><th>Expected</th><th>Item(s)</th><th class="num">Total</th><th></th></tr></thead>'+
-      '<tbody>'+filteredPOs.map(po=>{
-        const total=poDisplayTotal(po);
-        return '<tr class="list-row'+(selectedPO===po.id?' is-selected':'')+'" data-id="'+po.id+'">'+
-          '<td>'+escAttr(po.poNumber||'(no number)')+'</td>'+
-          '<td>'+escAttr((supplierById(po.supplierId)||{}).name||'—')+'</td>'+
-          '<td><span class="status-badge '+(po.status===closed?'closed':(po.status===DB.lists.poStatus[0]?'open':''))+'">'+escAttr(po.status)+'</span></td>'+
-          '<td class="mono">'+fmtDate(po.orderDate)+'</td>'+
-          '<td class="mono">'+fmtDate(po.expectedDate)+'</td>'+
-          '<td title="'+escAttr(lineItemsPlain(po.lines))+'">'+lineItemsSummary(po.lines)+'</td>'+
-          '<td class="num mono">'+(total?'$'+total.toFixed(2):'—')+'</td>'+
-          '<td class="col-actions no-print"><button class="btn sm subtle po-row-open">Open →</button></td>'+
-        '</tr>';
-      }).join('')+'</tbody></table>'
-      : '<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">'+(DB.purchaseOrders.length?'No purchase orders match this filter':'No purchase orders yet')+'</div><div class="empty-sub">'+(DB.purchaseOrders.length?'Try clearing the search or filters above.':'Click + New PO to create one.')+'</div></div>')+
-    '</div></div>'))+
-    '<div id="po-detail">'+(selectedPO ? renderPoCard(poById(selectedPO)) : '')+'</div>';
-  wirePO();
-  wireFilterDropdown('filter-po','po',renderPO);
-  const poSearchEl=document.getElementById('po-search'); if(poSearchEl) poSearchEl.addEventListener('input',e=>{ const pos=e.target.selectionStart; docSearch.po=e.target.value; renderPO(); refocusSearch('po-search',pos); });
-  const poStatusFilterEl=document.getElementById('po-status-filter'); if(poStatusFilterEl) poStatusFilterEl.addEventListener('change',e=>{ docStatusFilter.po=e.target.value; renderPO(); });
-  el.querySelectorAll('tr.list-row').forEach(tr=>{
-    const openIt=()=>{ selectedPO=tr.dataset.id; renderPO(); const d=document.getElementById('po-detail'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'}); };
-    tr.addEventListener('click', openIt);
-  });
-  const addPoBtn=document.getElementById('add-po'); if(addPoBtn) addPoBtn.addEventListener('click',()=>{
-    const po={id:uid(), poNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', orderDate:todayISO(), expectedDate:addDays(todayISO(),14), status:DB.lists.poStatus[0], requestedBy:'', approvedBy:'', lines:[], docs:[], notes:''};
-    DB.purchaseOrders.push(po);
-    selectedPO=po.id;
-    save(); renderPO(); renderCounts();
-  });
-  const exportPoBtn=document.getElementById('export-pdf-po'); if(exportPoBtn) exportPoBtn.addEventListener('click',()=>{
-    const head=['PO #','Supplier','Status','Order Date','Expected Date','Approved By','Total $'];
-    const body=filteredPOs.map(po=>{
-      const total=poDisplayTotal(po);
-      return [po.poNumber||'', (supplierById(po.supplierId)||{}).name||'', po.status, fmtDate(po.orderDate), fmtDate(po.expectedDate), po.approvedBy||'', '$'+total.toFixed(2)];
-    });
-    exportTablePDF('Dragon Seats - Purchase Orders', head, body);
-  });
-  const poBackBtn=document.getElementById('po-back-to-list'); if(poBackBtn) poBackBtn.addEventListener('click',()=>{ selectedPO=null; renderPO(); });
-}
+function poDisplayTotal(po){ return docTotal(po); }
 function renderPoCard(po){
   const closed=closedStatusName();
   return '<div class="detail-drawer po-card" data-id="'+po.id+'">'+
@@ -3557,20 +3492,11 @@ function renderPoCard(po){
         '<div><label>Expected date</label><input class="f-edate" type="date" value="'+(po.expectedDate||'')+'"></div>'+
         '<div><label>Status</label><select class="f-status">'+DB.lists.poStatus.map(s=>'<option value="'+escAttr(s)+'" '+(s===po.status?'selected':'')+'>'+escAttr(s)+'</option>').join('')+'</select></div>'+
         '<div><label>Approved by (Finance)</label><input class="f-approvedby" placeholder="Finance sign-off name" value="'+escAttr(po.approvedBy||'')+'"></div>'+
-        '<div><label>Total</label><input class="f-ordertotal num" type="number" step="0.01" min="0" placeholder="'+poLineTotal(po).toFixed(2)+'" value="'+(po.orderTotal!=null?po.orderTotal:'')+'"></div>'+
       '</div>'+
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Line items</div>'+
-      '<table><colgroup><col style="width:50%"><col style="width:15%"><col style="width:22%"><col style="width:13%"></colgroup>'+
-      '<thead><tr><th>Item</th><th class="num">Qty</th><th>In Stock</th><th></th></tr></thead>'+
-      '<tbody class="po-lines-tbody">'+((po.lines||[]).map((l,i)=>
-        '<tr data-i="'+i+'">'+
-          '<td>'+itemSelectSimple(l.itemId)+'</td>'+
-          '<td class="num"><input class="f-qty num" type="number" value="'+l.qty+'"></td>'+
-          '<td class="col-actions no-print">'+(l.received?('<span class="status-badge closed" title="'+(l.receivedAt?('Added '+fmtDate(l.receivedAt)):'')+'">✓ In stock</span> <button class="btn sm subtle line-undo-receive">Undo</button>'):'<button class="btn sm accent line-add-inventory">Add to inventory</button>')+'</td>'+
-          '<td class="col-actions no-print"><button class="btn sm danger po-del-line">Remove</button></td>'+
-        '</tr>').join('') || '<tr><td colspan="4" class="note">No line items yet.</td></tr>')+'</tbody></table>'+
+      docLinesTableHtml(po, true)+
       '<button class="btn sm po-add-line no-print" style="margin-top:8px">+ Add line item</button>'+
     '</div>'+
     '<div class="detail-section">'+
@@ -3588,12 +3514,12 @@ function wirePO(){
     const pdfBtn=card.querySelector('.doc-pdf'); if(pdfBtn) pdfBtn.addEventListener('click',()=>exportDocPDF('po', po));
     if(closeBtn) closeBtn.addEventListener('click',()=>{ selectedPO=null; renderPO(); });
     card.querySelector('.f-ponum').addEventListener('change',e=>{po.poNumber=e.target.value; save(); renderPO();});
-    card.querySelector('.supplier-select').addEventListener('change',e=>{po.supplierId=e.target.value; save();});
+    card.querySelector('.supplier-select').addEventListener('change',e=>{po.supplierId=e.target.value; repriceDocLines(po); save(); renderPO(); });
     card.querySelector('.f-odate').addEventListener('change',e=>{po.orderDate=e.target.value; save();});
     card.querySelector('.f-edate').addEventListener('change',e=>{po.expectedDate=e.target.value; save();});
     card.querySelector('.f-status').addEventListener('change',e=>{po.status=e.target.value; save(); renderPO(); renderCounts();});
     card.querySelector('.f-approvedby').addEventListener('change',e=>{po.approvedBy=e.target.value; save();});
-    card.querySelector('.f-ordertotal').addEventListener('change',e=>{ const v=e.target.value; po.orderTotal=(v===''?null:Number(v)); save(); renderPO(); });
+    card.querySelector('.f-extra').addEventListener('input',e=>{ po.extraCharges=round2(e.target.value); save(); refreshDocTotals(card,po); });
     card.querySelector('.f-ponotes').addEventListener('change',e=>{po.notes=e.target.value; save();});
     const recv=card.querySelector('.receive-po');
     if(recv) recv.addEventListener('click',()=>{
@@ -3608,13 +3534,13 @@ function wirePO(){
       }, {okLabel:'Receive'});
     });
     card.querySelector('.del-po').addEventListener('click',()=>{ confirmModal('Delete this purchase order?', ()=>{ DB.purchaseOrders=DB.purchaseOrders.filter(x=>x.id!==id); save(); renderPO(); renderCounts(); }); });
-    card.querySelector('.po-add-line').addEventListener('click',()=>{ po.lines=po.lines||[]; const _iid=(DB.items[0]||{}).id||''; po.lines.push({id:uid(), itemId:_iid, qty:1, unitPrice:itemPriceSpot(_iid)}); save(); renderPO(); });
+    card.querySelector('.po-add-line').addEventListener('click',()=>{ po.lines=po.lines||[]; po.lines.push(newDocLine(po)); save(); renderPO(); });
     card.querySelectorAll('.po-lines-tbody tr').forEach(tr=>{
       const i=Number(tr.dataset.i);
       const isel=tr.querySelector('.item-select');
-      if(isel) isel.addEventListener('change',e=>{ po.lines[i].itemId=e.target.value; po.lines[i].unitPrice=itemPriceSpot(e.target.value); save(); renderPO(); });
-      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ po.lines[i].qty=Number(e.target.value)||0; save(); const t=card.querySelector('.f-ordertotal'); if(t) t.placeholder=poLineTotal(po).toFixed(2); });
-      const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ po.lines[i].unitPrice=Number(e.target.value)||0; save(); });
+      if(isel) isel.addEventListener('change',e=>{ po.lines[i].itemId=e.target.value; po.lines[i].unitPrice=docLinePrice(e.target.value, po.supplierId); po.lines[i].priceAuto=true; save(); renderPO(); });
+      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('input',e=>{ po.lines[i].qty=Number(e.target.value)||0; save(); refreshDocTotals(card,po); });
+      const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('input',e=>{ po.lines[i].unitPrice=round2(e.target.value); po.lines[i].priceAuto=false; save(); refreshDocTotals(card,po); });
       const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ po.lines.splice(i,1); save(); renderPO(); });
       const addInv=tr.querySelector('.line-add-inventory');
       if(addInv) addInv.addEventListener('click',()=>{
@@ -3634,8 +3560,7 @@ function wirePO(){
     enableFileDrop(card.querySelector('.file-btn'), card.querySelector('.po-file'));
     card.querySelector('.po-file').addEventListener('change', async e=>{
       const f=e.target.files[0]; if(!f) return;
-      const dataUrl=await readFileAsDataURL(f);
-      po.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
+      po.docs.push(await attachFileTo('po', po, f));
       save(); renderPO();
     });
   });
@@ -3645,74 +3570,7 @@ function wirePO(){
 function quoteLineTotal(q){ return (q.lines||[]).reduce((s,l)=>s+Number(l.qty||0)*Number(l.unitPrice||0),0); }
 /* Updates the Line Total cells, Items subtotal and the Quote total placeholder in place,
    so editing qty/price doesn't need a full re-render (which would steal focus mid-typing). */
-function refreshQuoteTotals(card,q){
-  card.querySelectorAll('.po-lines-tbody tr[data-i]').forEach(tr=>{
-    const l=(q.lines||[])[Number(tr.dataset.i)]; const c=tr.querySelector('.q-line-total');
-    if(l && c) c.textContent='$'+(Number(l.qty||0)*Number(l.unitPrice||0)).toFixed(2);
-  });
-  const sub=quoteLineTotal(q);
-  const st=card.querySelector('.q-subtotal'); if(st) st.textContent='$'+sub.toFixed(2);
-  const tot=card.querySelector('.f-ordertotal'); if(tot) tot.placeholder=sub.toFixed(2);
-}
-function quoteDisplayTotal(q){ return (q.orderTotal!=null && Number(q.orderTotal)>0) ? Number(q.orderTotal) : quoteLineTotal(q); }
-function renderQuotes(){
-  const el=document.getElementById('panel-quotes');
-  let filteredQuotes=filterBySupplier(DB.quotes, docSupplierFilter.quotes, q=>q.supplierId);
-  if(docStatusFilter.quotes) filteredQuotes=filteredQuotes.filter(q=>q.status===docStatusFilter.quotes);
-  const qq=(docSearch.quotes||'').trim().toLowerCase();
-  if(qq) filteredQuotes=filteredQuotes.filter(q=>(q.quoteNumber||'').toLowerCase().includes(qq) || ((supplierById(q.supplierId)||{}).name||'').toLowerCase().includes(qq));
-  if(selectedQuote && !quoteById(selectedQuote)) selectedQuote=null;
-  el.innerHTML=
-    (selectedQuote ? '<div class="toolbar no-print"><button class="btn sm subtle" id="quotes-back-to-list">← Back to Quotes</button><div class="toolbar-spacer"></div><span class="toolbar-count">'+filteredQuotes.length+' quote'+(filteredQuotes.length===1?'':'s')+'</span></div>' : (
-    '<div class="toolbar no-print">'+
-      '<button class="btn accent" id="add-quote">+ New blank quote</button>'+
-      '<button class="btn" id="export-pdf-quotes">Export</button>'+
-      '<div class="search-input"><input type="text" id="quotes-search" placeholder="Search quotes..." value="'+escAttr(docSearch.quotes||'')+'"></div>'+
-      '<select id="quotes-status-filter"><option value="">All statuses</option>'+DB.lists.quoteStatus.map(s=>'<option value="'+escAttr(s)+'" '+(docStatusFilter.quotes===s?'selected':'')+'>'+escAttr(s)+'</option>').join('')+'</select>'+
-      filterDropdownHtml('filter-quotes', docSupplierFilter.quotes)+
-      '<div class="toolbar-spacer"></div><span class="toolbar-count">'+filteredQuotes.length+' quote'+(filteredQuotes.length===1?'':'s')+'</span>'+
-    '</div>'+
-    '<p class="note">Quotes capture what a supplier is willing to charge before you commit — useful pricing signal even for items never actually ordered yet. Click a row to open it.</p>'+
-    '<div class="card"><div class="card-body">'+
-    (filteredQuotes.length ?
-      '<table class="list-table"><colgroup><col style="width:12%"><col style="width:15%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:21%"><col style="width:10%"><col style="width:12%"></colgroup>'+
-      '<thead><tr><th>Quote #</th><th>Supplier</th><th>Status</th><th>Quote Date</th><th>Valid Until</th><th>Item(s)</th><th class="num">Total</th><th></th></tr></thead>'+
-      '<tbody>'+filteredQuotes.map(q=>{
-        const converted=q.status==='Converted to PO';
-        return '<tr class="list-row'+(selectedQuote===q.id?' is-selected':'')+'" data-id="'+q.id+'">'+
-          '<td>'+escAttr(q.quoteNumber||'(no number)')+'</td>'+
-          '<td>'+escAttr((supplierById(q.supplierId)||{}).name||'—')+'</td>'+
-          '<td><span class="status-badge '+(converted?'closed':(q.status===DB.lists.quoteStatus[0]?'open':''))+'">'+escAttr(q.status)+'</span></td>'+
-          '<td class="mono">'+fmtDate(q.quoteDate)+'</td>'+
-          '<td class="mono">'+fmtDate(q.validUntil)+'</td>'+
-          '<td title="'+escAttr(lineItemsPlain(q.lines))+'">'+lineItemsSummary(q.lines)+'</td>'+
-          '<td class="num mono">$'+quoteDisplayTotal(q).toFixed(2)+'</td>'+
-          '<td class="col-actions no-print"><button class="btn sm subtle">Open →</button></td>'+
-        '</tr>';
-      }).join('')+'</tbody></table>'
-      : '<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">'+(DB.quotes.length?'No quotes match this filter':'No quotes yet')+'</div><div class="empty-sub">Click + New blank quote to create one.</div></div>')+
-    '</div></div>'))+
-    '<div id="quote-detail">'+(selectedQuote ? renderQuoteCard(quoteById(selectedQuote)) : '')+'</div>';
-  wireQuotes();
-  wireFilterDropdown('filter-quotes','quotes',renderQuotes);
-  const quotesSearchEl=document.getElementById('quotes-search'); if(quotesSearchEl) quotesSearchEl.addEventListener('input',e=>{ const pos=e.target.selectionStart; docSearch.quotes=e.target.value; renderQuotes(); refocusSearch('quotes-search',pos); });
-  const quotesStatusFilterEl=document.getElementById('quotes-status-filter'); if(quotesStatusFilterEl) quotesStatusFilterEl.addEventListener('change',e=>{ docStatusFilter.quotes=e.target.value; renderQuotes(); });
-  el.querySelectorAll('tr.list-row').forEach(tr=>{
-    tr.addEventListener('click',()=>{ selectedQuote=tr.dataset.id; renderQuotes(); const d=document.getElementById('quote-detail'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'}); });
-  });
-  const addQuoteBtn=document.getElementById('add-quote'); if(addQuoteBtn) addQuoteBtn.addEventListener('click',()=>{
-    const q={id:uid(), quoteNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', quoteDate:todayISO(), validUntil:addDays(todayISO(),30), status:DB.lists.quoteStatus[0], lines:[], docs:[], notes:''};
-    DB.quotes.push(q);
-    selectedQuote=q.id;
-    save(); renderQuotes(); renderCounts();
-  });
-  const exportQuotesBtn=document.getElementById('export-pdf-quotes'); if(exportQuotesBtn) exportQuotesBtn.addEventListener('click',()=>{
-    const head=['Quote #','Supplier','Status','Quote Date','Valid Until','Total $'];
-    const body=filteredQuotes.map(q=>[q.quoteNumber||'', (supplierById(q.supplierId)||{}).name||'', q.status, fmtDate(q.quoteDate), fmtDate(q.validUntil), '$'+quoteDisplayTotal(q).toFixed(2)]);
-    exportTablePDF('Dragon Seats - Quotes', head, body);
-  });
-  const quotesBackBtn=document.getElementById('quotes-back-to-list'); if(quotesBackBtn) quotesBackBtn.addEventListener('click',()=>{ selectedQuote=null; renderQuotes(); });
-}
+function quoteDisplayTotal(q){ return docTotal(q); }
 function renderQuoteCard(q){
   const converted=q.status==='Converted to PO';
   return '<div class="detail-drawer po-card" data-id="'+q.id+'">'+
@@ -3734,18 +3592,7 @@ function renderQuoteCard(q){
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Line items</div>'+
-      '<table><colgroup><col style="width:62%"><col style="width:20%"><col style="width:18%"></colgroup>'+
-      '<thead><tr><th>Item</th><th class="num">Qty</th><th></th></tr></thead>'+
-      '<tbody class="po-lines-tbody">'+((q.lines||[]).map((l,i)=>
-        '<tr data-i="'+i+'">'+
-          '<td>'+itemSelectSimple(l.itemId)+'</td>'+
-          '<td class="num"><input class="f-qty num" type="number" value="'+l.qty+'"></td>'+
-          '<td class="col-actions no-print"><button class="btn sm danger po-del-line">Remove</button></td>'+
-        '</tr>').join('') || '<tr><td colspan="3" class="note">No line items yet.</td></tr>')+'</tbody>'+
-      '<tfoot class="q-totals">'+
-        '<tr><td class="num" style="font-weight:600">Total</td>'+
-          '<td class="num"><input class="f-ordertotal num" type="number" step="0.01" min="0" style="font-weight:600" placeholder="'+quoteLineTotal(q).toFixed(2)+'" value="'+(q.orderTotal!=null?q.orderTotal:'')+'"></td><td></td></tr>'+
-      '</tfoot></table>'+
+      docLinesTableHtml(q, false)+
       '<button class="btn sm po-add-line no-print" style="margin-top:8px">+ Add line item</button>'+
     '</div>'+
     '<div class="detail-section">'+
@@ -3763,19 +3610,19 @@ function wireQuotes(){
     const pdfBtn=card.querySelector('.doc-pdf'); if(pdfBtn) pdfBtn.addEventListener('click',()=>exportDocPDF('quote', q));
     if(closeBtn) closeBtn.addEventListener('click',()=>{ selectedQuote=null; renderQuotes(); });
     card.querySelector('.f-qnum').addEventListener('change',e=>{q.quoteNumber=e.target.value; save(); renderQuotes();});
-    card.querySelector('.supplier-select').addEventListener('change',e=>{q.supplierId=e.target.value; save();});
+    card.querySelector('.supplier-select').addEventListener('change',e=>{q.supplierId=e.target.value; repriceDocLines(q); save(); renderQuotes(); });
     card.querySelector('.f-qdate').addEventListener('change',e=>{q.quoteDate=e.target.value; save();});
     card.querySelector('.f-vuntil').addEventListener('change',e=>{q.validUntil=e.target.value; save();});
     card.querySelector('.f-status').addEventListener('change',e=>{q.status=e.target.value; save(); renderQuotes(); renderCounts();});
-    card.querySelector('.f-ordertotal').addEventListener('change',e=>{ const v=e.target.value; q.orderTotal=(v===''?null:Number(v)); save(); renderQuotes(); });
+    card.querySelector('.f-extra').addEventListener('input',e=>{ q.extraCharges=round2(e.target.value); save(); refreshDocTotals(card,q); });
     card.querySelector('.f-ponotes').addEventListener('change',e=>{q.notes=e.target.value; save();});
     const conv=card.querySelector('.convert-quote');
     if(conv) conv.addEventListener('click',()=>{
       confirmModal('Create a new Purchase Order pre-filled from this quote? The quote will be kept as history and marked Converted to PO.', ()=>{
         const po={
           id:uid(), poNumber:'', supplierId:q.supplierId, orderDate:todayISO(), expectedDate:addDays(todayISO(),14),
-          status:DB.lists.poStatus[0], lines:(q.lines||[]).map(l=>({id:uid(), itemId:l.itemId, qty:l.qty, unitPrice:l.unitPrice})),
-          docs:[], notes:'Converted from quote '+(q.quoteNumber||q.id), orderTotal:(q.orderTotal!=null?q.orderTotal:null)
+          status:DB.lists.poStatus[0], lines:(q.lines||[]).map(l=>({id:uid(), itemId:l.itemId, qty:l.qty, unitPrice:l.unitPrice, priceAuto:false, received:false, receivedAt:null})),
+          docs:(q.docs||[]).slice(), notes:'Converted from quote '+(q.quoteNumber||q.id), extraCharges:Number(q.extraCharges)||0
         };
         DB.purchaseOrders.unshift(po);
         q.status='Converted to PO';
@@ -3783,20 +3630,19 @@ function wireQuotes(){
       }, {okLabel:'Convert'});
     });
     card.querySelector('.del-quote').addEventListener('click',()=>{ confirmModal('Delete this quote?', ()=>{ DB.quotes=DB.quotes.filter(x=>x.id!==id); save(); renderQuotes(); renderCounts(); }); });
-    card.querySelector('.po-add-line').addEventListener('click',()=>{ q.lines=q.lines||[]; const _iid=(DB.items[0]||{}).id||''; q.lines.push({id:uid(), itemId:_iid, qty:1, unitPrice:itemPriceSpot(_iid)}); save(); renderQuotes(); });
+    card.querySelector('.po-add-line').addEventListener('click',()=>{ q.lines=q.lines||[]; q.lines.push(newDocLine(q)); save(); renderQuotes(); });
     card.querySelectorAll('.po-lines-tbody tr').forEach(tr=>{
       const i=Number(tr.dataset.i);
       const isel=tr.querySelector('.item-select');
-      if(isel) isel.addEventListener('change',e=>{ q.lines[i].itemId=e.target.value; q.lines[i].unitPrice=itemPriceSpot(e.target.value); save(); refreshQuoteTotals(card,q); });
-      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ q.lines[i].qty=Number(e.target.value)||0; save(); refreshQuoteTotals(card,q); });
-      const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ q.lines[i].unitPrice=Number(e.target.value)||0; save(); refreshQuoteTotals(card,q); });
+      if(isel) isel.addEventListener('change',e=>{ q.lines[i].itemId=e.target.value; q.lines[i].unitPrice=docLinePrice(e.target.value, q.supplierId); q.lines[i].priceAuto=true; save(); renderQuotes(); });
+      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('input',e=>{ q.lines[i].qty=Number(e.target.value)||0; save(); refreshDocTotals(card,q); });
+      const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('input',e=>{ q.lines[i].unitPrice=round2(e.target.value); q.lines[i].priceAuto=false; save(); refreshDocTotals(card,q); });
       const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ q.lines.splice(i,1); save(); renderQuotes(); });
     });
     enableFileDrop(card.querySelector('.file-btn'), card.querySelector('.po-file'));
     card.querySelector('.po-file').addEventListener('change', async e=>{
       const f=e.target.files[0]; if(!f) return;
-      const dataUrl=await readFileAsDataURL(f);
-      q.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
+      q.docs.push(await attachFileTo('quotes', q, f));
       save(); renderQuotes();
     });
   });
@@ -3806,76 +3652,7 @@ function wireQuotes(){
 function receiptLineTotal(r){ return (r.lines||[]).reduce((s,l)=>s+Number(l.qty||0)*Number(l.unitPrice||0),0); }
 /* Same as quotes: a typed-in receipt total (freight, tax, lump sum) wins over the summed lines.
    Display only -- line prices still feed price history / BOM costing untouched. */
-function receiptDisplayTotal(r){ return (r.orderTotal!=null && Number(r.orderTotal)>0) ? Number(r.orderTotal) : receiptLineTotal(r); }
-function refreshReceiptTotals(card,r){
-  card.querySelectorAll('.po-lines-tbody tr[data-i]').forEach(tr=>{
-    const l=(r.lines||[])[Number(tr.dataset.i)]; const c=tr.querySelector('.q-line-total');
-    if(l && c) c.textContent='$'+(Number(l.qty||0)*Number(l.unitPrice||0)).toFixed(2);
-  });
-  const sub=receiptLineTotal(r);
-  const st=card.querySelector('.q-subtotal'); if(st) st.textContent='$'+sub.toFixed(2);
-  const tot=card.querySelector('.f-ordertotal'); if(tot) tot.placeholder=sub.toFixed(2);
-}
-function renderReceipts(){
-  const el=document.getElementById('panel-receipts');
-  let filteredReceipts=filterBySupplier(DB.receipts, docSupplierFilter.receipts, r=>r.supplierId)
-    .slice().sort((a,b)=>{
-      if(a.appliedToStock!==b.appliedToStock) return a.appliedToStock?1:-1; // pending (not yet in stock) first
-      return (b.receiptDate||'')<(a.receiptDate||'')?-1:1;
-    });
-  const rq=(docSearch.receipts||'').trim().toLowerCase();
-  if(rq) filteredReceipts=filteredReceipts.filter(r=>(r.receiptNumber||'').toLowerCase().includes(rq) || ((supplierById(r.supplierId)||{}).name||'').toLowerCase().includes(rq) || (r.requestedBy||'').toLowerCase().includes(rq));
-  const pendingCount=DB.receipts.filter(r=>!r.appliedToStock).length;
-  if(selectedReceipt && !receiptById(selectedReceipt)) selectedReceipt=null;
-  el.innerHTML=
-    (selectedReceipt ? '<div class="toolbar no-print"><button class="btn sm subtle" id="receipts-back-to-list">← Back to Receipts</button><div class="toolbar-spacer"></div><span class="toolbar-count">'+filteredReceipts.length+' receipt'+(filteredReceipts.length===1?'':'s')+'</span></div>' : (
-    '<div class="toolbar no-print">'+
-      '<button class="btn accent" id="add-receipt">+ New blank receipt</button>'+
-      '<button class="btn" id="export-pdf-receipts">Export</button>'+
-      '<div class="search-input"><input type="text" id="receipts-search" placeholder="Search receipts..." value="'+escAttr(docSearch.receipts||'')+'"></div>'+
-      filterDropdownHtml('filter-receipts', docSupplierFilter.receipts)+
-      '<div class="toolbar-spacer"></div><span class="toolbar-count">'+filteredReceipts.length+' receipt'+(filteredReceipts.length===1?'':'s')+'</span>'+
-    '</div>'+
-    '<p class="note">This is the intake point for everything the team buys — a physical receipt or a packing slip — whether or not it was ever tied to a formal PO. When the service team or front office hands you a receipt, log it here with the items and quantities (the paper receipt has the rest). Then use <b>Add to inventory</b> once the items are actually in hand. Click a row to open it.</p>'+
-    (pendingCount? '<div class="callout">'+pendingCount+' receipt'+(pendingCount===1?'':'s')+' not yet added to inventory — items may already be on the shelf but not reflected in stock counts until you click <b>Add to inventory</b>.</div>' : '')+
-    '<div class="card"><div class="card-body">'+
-    (filteredReceipts.length ?
-      '<table class="list-table"><colgroup><col style="width:13%"><col style="width:17%"><col style="width:11%"><col style="width:12%"><col style="width:27%"><col style="width:10%"><col style="width:10%"></colgroup>'+
-      '<thead><tr><th>Receipt</th><th>Supplier</th><th>Date</th><th>Status</th><th>Item(s)</th><th class="num">Total</th><th></th></tr></thead>'+
-      '<tbody>'+filteredReceipts.map(r=>{
-        const applied=!!r.appliedToStock;
-        return '<tr class="list-row'+(selectedReceipt===r.id?' is-selected':'')+'" data-id="'+r.id+'">'+
-          '<td>'+escAttr(r.receiptNumber||'(no number)')+'</td>'+
-          '<td>'+escAttr((supplierById(r.supplierId)||{}).name||'—')+'</td>'+
-          '<td class="mono">'+fmtDate(r.receiptDate)+'</td>'+
-          '<td><span class="status-badge '+(applied?'closed':'open')+'">'+(applied?'In inventory':'Pending')+'</span></td>'+
-          '<td title="'+escAttr(lineItemsPlain(r.lines))+'">'+lineItemsSummary(r.lines)+'</td>'+
-          '<td class="num mono">$'+receiptDisplayTotal(r).toFixed(2)+'</td>'+
-          '<td class="col-actions no-print"><button class="btn sm subtle">Open →</button></td>'+
-        '</tr>';
-      }).join('')+'</tbody></table>'
-      : '<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">'+(DB.receipts.length?'No receipts match this filter':'No receipts yet')+'</div><div class="empty-sub">Click + New blank receipt to log one.</div></div>')+
-    '</div></div>'))+
-    '<div id="receipt-detail">'+(selectedReceipt ? renderReceiptCard(receiptById(selectedReceipt)) : '')+'</div>';
-  wireReceipts();
-  wireFilterDropdown('filter-receipts','receipts',renderReceipts);
-  const receiptsSearchEl=document.getElementById('receipts-search'); if(receiptsSearchEl) receiptsSearchEl.addEventListener('input',e=>{ const pos=e.target.selectionStart; docSearch.receipts=e.target.value; renderReceipts(); refocusSearch('receipts-search',pos); });
-  el.querySelectorAll('tr.list-row').forEach(tr=>{
-    tr.addEventListener('click',()=>{ selectedReceipt=tr.dataset.id; renderReceipts(); const d=document.getElementById('receipt-detail'); if(d) d.scrollIntoView({behavior:'smooth', block:'start'}); });
-  });
-  const addReceiptBtn=document.getElementById('add-receipt'); if(addReceiptBtn) addReceiptBtn.addEventListener('click',()=>{
-    const r={id:uid(), receiptNumber:'', supplierId:(DB.suppliers[0]||{}).id||'', receiptDate:todayISO(), poId:'', orderLink:'', requestedBy:'', lines:[], docs:[], notes:'', appliedToStock:false, appliedAt:null};
-    DB.receipts.unshift(r);
-    selectedReceipt=r.id;
-    save(); renderReceipts(); renderCounts();
-  });
-  const exportReceiptsBtn=document.getElementById('export-pdf-receipts'); if(exportReceiptsBtn) exportReceiptsBtn.addEventListener('click',()=>{
-    const head=['Receipt #','Supplier','Receipt Date','Linked PO','In Stock?','Total $'];
-    const body=filteredReceipts.map(r=>[r.receiptNumber||'', (supplierById(r.supplierId)||{}).name||'', fmtDate(r.receiptDate), (poById(r.poId)||{}).poNumber||'', r.appliedToStock?'Yes':'Pending', '$'+receiptDisplayTotal(r).toFixed(2)]);
-    exportTablePDF('Dragon Seats - Receipts', head, body);
-  });
-  const receiptsBackBtn=document.getElementById('receipts-back-to-list'); if(receiptsBackBtn) receiptsBackBtn.addEventListener('click',()=>{ selectedReceipt=null; renderReceipts(); });
-}
+function receiptDisplayTotal(r){ return docTotal(r); }
 function renderReceiptCard(r){
   const applied=!!r.appliedToStock;
   return '<div class="detail-drawer po-card" data-id="'+r.id+'">'+
@@ -3901,19 +3678,7 @@ function renderReceiptCard(r){
     '</div>'+
     '<div class="detail-section">'+
       '<div class="detail-section-title">Line items</div>'+
-      '<table><colgroup><col style="width:50%"><col style="width:15%"><col style="width:22%"><col style="width:13%"></colgroup>'+
-      '<thead><tr><th>Item</th><th class="num">Qty</th><th>In Stock</th><th></th></tr></thead>'+
-      '<tbody class="po-lines-tbody">'+((r.lines||[]).map((l,i)=>
-        '<tr data-i="'+i+'">'+
-          '<td>'+itemSelectSimple(l.itemId)+'</td>'+
-          '<td class="num"><input class="f-qty num" type="number" value="'+l.qty+'"></td>'+
-          '<td class="col-actions no-print">'+(l.received?('<span class="status-badge closed" title="'+(l.receivedAt?('Added '+fmtDate(l.receivedAt)):'')+'">✓ In stock</span> <button class="btn sm subtle line-undo-receive">Undo</button>'):'<button class="btn sm accent line-add-inventory">Add to inventory</button>')+'</td>'+
-          '<td class="col-actions no-print"><button class="btn sm danger po-del-line">Remove</button></td>'+
-        '</tr>').join('') || '<tr><td colspan="4" class="note">No line items yet.</td></tr>')+'</tbody>'+
-      '<tfoot class="q-totals">'+
-        '<tr><td class="num" style="font-weight:600">Total</td>'+
-          '<td class="num"><input class="f-ordertotal num" type="number" step="0.01" min="0" style="font-weight:600" placeholder="'+receiptLineTotal(r).toFixed(2)+'" value="'+(r.orderTotal!=null?r.orderTotal:'')+'"></td><td colspan="2"></td></tr>'+
-      '</tfoot></table>'+
+      docLinesTableHtml(r, true)+
       '<button class="btn sm po-add-line no-print" style="margin-top:8px">+ Add line item</button>'+
     '</div>'+
     '<div class="detail-section">'+
@@ -3931,11 +3696,11 @@ function wireReceipts(){
     const pdfBtn=card.querySelector('.doc-pdf'); if(pdfBtn) pdfBtn.addEventListener('click',()=>exportDocPDF('receipt', r));
     if(closeBtn) closeBtn.addEventListener('click',()=>{ selectedReceipt=null; renderReceipts(); });
     card.querySelector('.f-rnum').addEventListener('change',e=>{r.receiptNumber=e.target.value; save(); renderReceipts();});
-    card.querySelector('.supplier-select').addEventListener('change',e=>{r.supplierId=e.target.value; save();});
+    card.querySelector('.supplier-select').addEventListener('change',e=>{r.supplierId=e.target.value; repriceDocLines(r); save(); renderReceipts(); });
     card.querySelector('.f-rdate').addEventListener('change',e=>{r.receiptDate=e.target.value; save(); renderReceipts();});
     card.querySelector('.f-poid').addEventListener('change',e=>{r.poId=e.target.value; save();});
     card.querySelector('.f-ponotes').addEventListener('change',e=>{r.notes=e.target.value; save();});
-    card.querySelector('.f-ordertotal').addEventListener('change',e=>{ const v=e.target.value; r.orderTotal=(v===''?null:Number(v)); save(); renderReceipts(); });
+    card.querySelector('.f-extra').addEventListener('input',e=>{ r.extraCharges=round2(e.target.value); save(); refreshDocTotals(card,r); });
     card.querySelector('.del-receipt').addEventListener('click',()=>{ confirmModal('Delete this receipt?', ()=>{ DB.receipts=DB.receipts.filter(x=>x.id!==id); save(); renderReceipts(); renderCounts(); }); });
     const applyBtn=card.querySelector('.apply-receipt');
     if(applyBtn) applyBtn.addEventListener('click',()=>{
@@ -3966,13 +3731,13 @@ function wireReceipts(){
         save(); renderReceipts(); renderCounts(); runMRP();
       }, {okLabel:'Undo'});
     });
-    card.querySelector('.po-add-line').addEventListener('click',()=>{ r.lines=r.lines||[]; const _iid=(DB.items[0]||{}).id||''; r.lines.push({id:uid(), itemId:_iid, qty:1, unitPrice:itemPriceSpot(_iid)}); save(); renderReceipts(); });
+    card.querySelector('.po-add-line').addEventListener('click',()=>{ r.lines=r.lines||[]; r.lines.push(newDocLine(r)); save(); renderReceipts(); });
     card.querySelectorAll('.po-lines-tbody tr').forEach(tr=>{
       const i=Number(tr.dataset.i);
       const isel=tr.querySelector('.item-select');
-      if(isel) isel.addEventListener('change',e=>{ r.lines[i].itemId=e.target.value; r.lines[i].unitPrice=itemPriceSpot(e.target.value); save(); refreshReceiptTotals(card,r); });
-      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('change',e=>{ r.lines[i].qty=Number(e.target.value)||0; save(); refreshReceiptTotals(card,r); });
-      const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('change',e=>{ r.lines[i].unitPrice=Number(e.target.value)||0; save(); refreshReceiptTotals(card,r); });
+      if(isel) isel.addEventListener('change',e=>{ r.lines[i].itemId=e.target.value; r.lines[i].unitPrice=docLinePrice(e.target.value, r.supplierId); r.lines[i].priceAuto=true; save(); renderReceipts(); });
+      const qf=tr.querySelector('.f-qty'); if(qf) qf.addEventListener('input',e=>{ r.lines[i].qty=Number(e.target.value)||0; save(); refreshDocTotals(card,r); });
+      const pf=tr.querySelector('.f-price'); if(pf) pf.addEventListener('input',e=>{ r.lines[i].unitPrice=round2(e.target.value); r.lines[i].priceAuto=false; save(); refreshDocTotals(card,r); });
       const df=tr.querySelector('.po-del-line'); if(df) df.addEventListener('click',()=>{ r.lines.splice(i,1); save(); renderReceipts(); });
       const addInv=tr.querySelector('.line-add-inventory');
       if(addInv) addInv.addEventListener('click',()=>{
@@ -3992,8 +3757,7 @@ function wireReceipts(){
     enableFileDrop(card.querySelector('.file-btn'), card.querySelector('.po-file'));
     card.querySelector('.po-file').addEventListener('change', async e=>{
       const f=e.target.files[0]; if(!f) return;
-      const dataUrl=await readFileAsDataURL(f);
-      r.docs.push({id:uid(), name:f.name, dataUrl, uploadedAt:todayISO()});
+      r.docs.push(await attachFileTo('receipts', r, f));
       save(); renderReceipts();
     });
   });
@@ -4099,25 +3863,27 @@ function exportDocPDF(type, rec){
     if(type==='po' && rec.status===closedStatusName()) return 'Received';
     return 'Not yet';
   };
-  const head=['Item','Qty'];
+  const head=['Item','Qty','Unit price','Amount'];
   if(showStock){ head.push('Purchased','Put Into Stock'); }
   const body=lines.map(l=>{
     const it=itemById(l.itemId);
     const qty=Number(l.qty||0), price=Number(l.unitPrice||0);
-    const row=[pdfSafe(it?it.name:'(item removed)'), pdfSafe(fmtQty(qty)+' '+((it&&it.uom)||'ea'))];
+    const row=[pdfSafe(it?it.name:'(item removed)'), pdfSafe(fmtQty(qty)+' '+((it&&it.uom)||'ea')), pdfMoney(price), pdfMoney(qty*price)];
     if(showStock){ row.push(purchasedISO?fmtDate(purchasedISO):'-', stockCell(l)); }
     return row;
   });
   if(!body.length) body.push([{content:'No line items on this document.', colSpan:head.length, styles:{textColor:STEEL, fontStyle:'italic'}}]);
 
   const foot=[];
-  const span=head.length-1;
-  const entered=rec.orderTotal!=null && Number(rec.orderTotal)>0;
-  if(total>0) foot.push([{content:'Total', colSpan:span, styles:{halign:'right'}}, {content:pdfMoney(total), styles:{halign:'right'}}]);
+  const extra=Number(rec.extraCharges)||0;
+  const tail=showStock?[{content:'', colSpan:2}]:[];
+  const footRow=(label,val)=>[{content:label, colSpan:3, styles:{halign:'right'}}, {content:pdfMoney(val), styles:{halign:'right'}}].concat(tail);
+  if(extra){ foot.push(footRow('Subtotal', subtotal)); foot.push(footRow('Tax, shipping & other', extra)); }
+  foot.push(footRow('Total', total));
 
   const colStyles= showStock
-    ? {0:{cellWidth:'auto'},1:{halign:'right',cellWidth:28},2:{cellWidth:30},3:{cellWidth:32}}
-    : {0:{cellWidth:'auto'},1:{halign:'right',cellWidth:36}};
+    ? {0:{cellWidth:'auto'},1:{halign:'right',cellWidth:22},2:{halign:'right',cellWidth:24},3:{halign:'right',cellWidth:26},4:{cellWidth:24},5:{cellWidth:26}}
+    : {0:{cellWidth:'auto'},1:{halign:'right',cellWidth:28},2:{halign:'right',cellWidth:30},3:{halign:'right',cellWidth:32}};
   doc.autoTable({
     head:[head], body, foot, startY:y,
     margin:{left:M, right:M, bottom:18},
@@ -4125,7 +3891,7 @@ function exportDocPDF(type, rec){
     headStyles:{fillColor:RED, textColor:255, fontStyle:'bold'},
     footStyles:{fillColor:[247,246,244], textColor:[23,24,26], fontStyle:'bold'},
     columnStyles:colStyles,
-    didParseCell:d=>{ if(d.section==='head' && d.column.index===1) d.cell.styles.halign='right'; },
+    didParseCell:d=>{ if(d.section==='head' && d.column.index>=1 && d.column.index<=3) d.cell.styles.halign='right'; },
     showFoot:'lastPage'
   });
   y=doc.lastAutoTable.finalY+8;
@@ -4159,6 +3925,740 @@ function exportDocPDF(type, rec){
   const slug={po:'PO',quote:'Quote',receipt:'Receipt'}[type];
   const safeNum=String(number||'no-number').replace(new RegExp('^'+slug+'[\\s#:-]*','i'),'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'');
   doc.save('Dragon-Seats-'+slug+'-'+safeNum+'-'+todayISO()+'.pdf');
+}
+
+/* ================= Document pricing & totals =================
+   Every PO / Quote / Receipt line carries a unit price. Totals are always calculated:
+   Subtotal (qty × price) + Tax/shipping/other = Total. Nothing to type in by hand. */
+function round2(n){ return Math.round((Number(n)||0)*100)/100; }
+function money(n){ const v=Number(n)||0; return (v<0?'-':'')+'$'+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function docLinesSubtotal(doc){ return round2((doc&&doc.lines||[]).reduce((s,l)=>s+Number(l.qty||0)*Number(l.unitPrice||0),0)); }
+function docTotal(doc){ return round2(docLinesSubtotal(doc)+(Number(doc&&doc.extraCharges)||0)); }
+/* Price for an item on a document: that supplier's price on the item if there is one,
+   otherwise the item's own price. */
+function docLinePrice(itemId, supplierId){
+  const it=itemById(itemId); if(!it) return 0;
+  const link=(it.links||[]).find(l=>l.supplierId===supplierId && Number(l.cost)>0);
+  if(link) return round2(link.cost);
+  return round2(Number(effectiveStandardCost(it))||0);
+}
+/* When a document's supplier changes, re-price the lines that were filled in automatically. */
+function repriceDocLines(doc){
+  (doc.lines||[]).forEach(l=>{ if(l.priceAuto || !Number(l.unitPrice)) { l.unitPrice=docLinePrice(l.itemId, doc.supplierId); l.priceAuto=true; } });
+}
+function newDocLine(doc){
+  const first=(DB.items.find(i=>!i.isProduct)||DB.items[0]||{}).id||'';
+  return {id:uid(), itemId:first, qty:1, unitPrice:docLinePrice(first, doc.supplierId), priceAuto:true, received:false, receivedAt:null};
+}
+function docLinesTableHtml(doc, withStock){
+  const ncols=withStock?6:5;
+  const rows=(doc.lines||[]).map((l,i)=>{
+    const lt=Number(l.qty||0)*Number(l.unitPrice||0);
+    const stock = l.received
+      ? '<span class="status-badge closed" style="margin-left:0" title="'+(l.receivedAt?('Added '+fmtDate(l.receivedAt)):'')+'">✓ In stock</span> <button class="btn sm subtle line-undo-receive">Undo</button>'
+      : '<button class="btn sm line-add-inventory">Add to stock</button>';
+    return '<tr data-i="'+i+'">'+
+      '<td>'+itemSelectSimple(l.itemId)+(l.docText?'<div class="line-doc-text" title="As written on the document">“'+escAttr(l.docText)+'”</div>':'')+'</td>'+
+      '<td class="num"><input class="f-qty num" type="number" min="0" step="any" value="'+(l.qty==null?'':l.qty)+'"></td>'+
+      '<td class="num"><div class="money-field"><span class="money-prefix">$</span><input class="f-price num money-input" type="number" min="0" step="0.01" value="'+(Number(l.unitPrice)||0).toFixed(2)+'"></div></td>'+
+      '<td class="num mono q-line-total">'+money(lt)+'</td>'+
+      (withStock?'<td class="col-actions no-print">'+stock+'</td>':'')+
+      '<td class="col-actions no-print"><button class="btn sm subtle danger po-del-line" title="Remove this line">✕</button></td>'+
+    '</tr>';
+  }).join('');
+  const cols = withStock
+    ? '<col style="width:34%"><col style="width:10%"><col style="width:15%"><col style="width:14%"><col style="width:20%"><col style="width:7%">'
+    : '<col style="width:46%"><col style="width:12%"><col style="width:18%"><col style="width:16%"><col style="width:8%">';
+  const pad='<td colspan="'+(ncols-4)+'"></td>';
+  return '<table class="doc-lines"><colgroup>'+cols+'</colgroup>'+
+    '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit price</th><th class="num">Line total</th>'+(withStock?'<th>Stock</th>':'')+'<th></th></tr></thead>'+
+    '<tbody class="po-lines-tbody">'+(rows||'<tr><td colspan="'+ncols+'" class="note">No line items yet — add one below.</td></tr>')+'</tbody>'+
+    '<tfoot class="q-totals">'+
+      '<tr><td colspan="3" class="num tot-label">Subtotal</td><td class="num mono q-subtotal">'+money(docLinesSubtotal(doc))+'</td>'+pad+'</tr>'+
+      '<tr><td colspan="3" class="num tot-label">Tax, shipping &amp; other <span class="note">(minus for discounts)</span></td><td class="num"><div class="money-field"><span class="money-prefix">$</span><input class="f-extra num money-input" type="number" step="0.01" value="'+(Number(doc.extraCharges)||0).toFixed(2)+'"></div></td>'+pad+'</tr>'+
+      '<tr class="tot-grand"><td colspan="3" class="num tot-label">Total</td><td class="num mono q-total">'+money(docTotal(doc))+'</td>'+pad+'</tr>'+
+    '</tfoot></table>';
+}
+/* Updates line totals / subtotal / total in place (no re-render, so typing isn't interrupted). */
+function refreshDocTotals(card, doc){
+  card.querySelectorAll('.po-lines-tbody tr[data-i]').forEach(tr=>{
+    const l=(doc.lines||[])[Number(tr.dataset.i)]; const c=tr.querySelector('.q-line-total');
+    if(l && c) c.textContent=money(Number(l.qty||0)*Number(l.unitPrice||0));
+  });
+  const st=card.querySelector('.q-subtotal'); if(st) st.textContent=money(docLinesSubtotal(doc));
+  const tt=card.querySelector('.q-total'); if(tt) tt.textContent=money(docTotal(doc));
+}
+
+/* ================= Google Drive folder storage =================
+   You pick your Drive "Documents" folder once (Settings, or the Documents page). Every
+   document is then written straight into it — Google Drive for desktop syncs it up:
+     Documents / Receipts|Quotes|Purchase Orders / 2026 / Supplier / 2026-10-27_Supplier_1042.pdf
+   The app only keeps the file's path, so the app stays small and fast. */
+const DOC_FOLDER_NAMES={receipts:'Receipts', quotes:'Quotes', po:'Purchase Orders'};
+const DOCS_ROOT_KEY='docs-root-handle';
+let docsRootInfo={name:'', supported:(typeof window!=='undefined' && 'showDirectoryPicker' in window)};
+function safeName(s){ return String(s||'').replace(/[\\/:*?"<>|#%\u0000-\u001f]+/g,' ').replace(/\s+/g,' ').trim().slice(0,60); }
+async function loadDocsRootInfo(){
+  try{ const h=await idbGet(DOCS_ROOT_KEY); docsRootInfo.name=h&&h.name?h.name:''; }catch(e){ docsRootInfo.name=''; }
+  return docsRootInfo;
+}
+async function chooseDocsRoot(){
+  if(!docsRootInfo.supported){ alertModal('Saving into a Google Drive folder needs Chrome or Microsoft Edge. Open the app in one of those to turn this on.'); return null; }
+  let h;
+  try{ h=await window.showDirectoryPicker({id:'ds-mrp-docs', mode:'readwrite'}); }
+  catch(e){ return null; } // cancelled
+  await idbSet(DOCS_ROOT_KEY, h);
+  docsRootInfo.name=h.name;
+  return h;
+}
+/* Returns the Drive folder handle with write access, or null. `ask` lets the browser show its
+   one-click "allow" prompt (only works right after a click). */
+async function getDocsRoot(ask){
+  if(!docsRootInfo.supported) return null;
+  let h=null;
+  try{ h=await idbGet(DOCS_ROOT_KEY); }catch(e){ return null; }
+  if(!h) return null;
+  try{
+    let p=await h.queryPermission({mode:'readwrite'});
+    if(p!=='granted' && ask) p=await h.requestPermission({mode:'readwrite'});
+    return p==='granted'?h:null;
+  }catch(e){ return null; }
+}
+async function driveFileExists(dir, name){ try{ await dir.getFileHandle(name); return true; }catch(e){ return false; } }
+/* Writes one file into the Drive folder. Returns the doc entry to keep on the record.
+   Falls back to keeping the file inside the app if no Drive folder is connected. */
+async function storeDocFile(blob, meta){
+  const fallback=async()=>({id:uid(), name:meta.name, dataUrl:await readFileAsDataURL(blob), uploadedAt:todayISO()});
+  const root=await getDocsRoot(true);
+  if(!root) return fallback();
+  try{
+    const ext=((meta.name||'').match(/\.[a-z0-9]{1,5}$/i)||[blob.type==='application/pdf'?'.pdf':''])[0].toLowerCase();
+    let parts, base;
+    if(meta.folderType==='item'){
+      parts=['Item Files', safeName(meta.category||'Uncategorized'), safeName(meta.itemName||'Item')];
+      base=safeName((meta.name||'file').replace(/\.[a-z0-9]{1,5}$/i,''))||'file';
+    } else {
+      const date=meta.date||todayISO();
+      parts=[DOC_FOLDER_NAMES[meta.folderType]||'Other', date.slice(0,4), safeName(meta.supplierName)||'No supplier'];
+      base=[date, safeName(meta.supplierName), safeName(meta.number)].filter(Boolean).join('_');
+    }
+    let dir=root;
+    for(const p of parts) dir=await dir.getDirectoryHandle(p,{create:true});
+    let fname=base+ext, n=2;
+    while(await driveFileExists(dir,fname)){ fname=base+'-'+n+ext; n++; }
+    const fh=await dir.getFileHandle(fname,{create:true});
+    const w=await fh.createWritable(); await w.write(blob); await w.close();
+    return {id:uid(), name:fname, drivePath:parts.concat([fname]).join('/'), uploadedAt:todayISO()};
+  }catch(e){
+    console.warn('[dragon-seats] Drive save failed, keeping file in the app', e);
+    return fallback();
+  }
+}
+function docRecordMeta(kind, rec){
+  const s=supplierById(rec.supplierId);
+  if(kind==='po') return {folderType:'po', supplierName:s?s.name:'', date:rec.orderDate, number:rec.poNumber};
+  if(kind==='quotes') return {folderType:'quotes', supplierName:s?s.name:'', date:rec.quoteDate, number:rec.quoteNumber};
+  if(kind==='receipts') return {folderType:'receipts', supplierName:s?s.name:'', date:rec.receiptDate, number:rec.receiptNumber};
+  return {folderType:'item', category:rec.itemGroup||'Uncategorized', itemName:rec.name};
+}
+/* Used by every "+ Add file" button (POs, quotes, receipts, items). */
+async function attachFileTo(kind, rec, file){
+  return storeDocFile(file, Object.assign(docRecordMeta(kind, rec), {name:file.name}));
+}
+async function openDriveDoc(path){
+  const root=await getDocsRoot(true);
+  if(!root){ alertModal('This file is saved in your Google Drive documents folder ('+path+'). Connect that folder in Settings → Documents to open it from here.'); return; }
+  try{
+    const parts=path.split('/'); let dir=root;
+    for(const p of parts.slice(0,-1)) dir=await dir.getDirectoryHandle(p);
+    const file=await (await dir.getFileHandle(parts[parts.length-1])).getFile();
+    const url=URL.createObjectURL(file);
+    const w=window.open(url,'_blank');
+    if(!w){ const a=document.createElement('a'); a.href=url; a.download=file.name; a.click(); }
+  }catch(e){ alertModal('Could not find '+path+' in your Drive documents folder. It may have been moved or renamed.'); }
+}
+function dataUrlToBlob(dataUrl){
+  const [head,b64]=String(dataUrl).split(',');
+  const mime=(head.match(/data:([^;]+)/)||[])[1]||'application/octet-stream';
+  const bin=atob(b64||''); const arr=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  return new Blob([arr],{type:mime});
+}
+/* Moves every attachment still stored inside the app into the Drive folder. */
+function attachmentsInApp(){
+  const out=[];
+  DB.purchaseOrders.forEach(r=>(r.docs||[]).forEach(d=>{ if(d.dataUrl && !d.drivePath) out.push(['po',r,d]); }));
+  DB.quotes.forEach(r=>(r.docs||[]).forEach(d=>{ if(d.dataUrl && !d.drivePath) out.push(['quotes',r,d]); }));
+  DB.receipts.forEach(r=>(r.docs||[]).forEach(d=>{ if(d.dataUrl && !d.drivePath) out.push(['receipts',r,d]); }));
+  DB.items.forEach(r=>(r.docs||[]).forEach(d=>{ if(d.dataUrl && !d.drivePath) out.push(['item',r,d]); }));
+  return out;
+}
+async function moveAttachmentsToDrive(){
+  const root=await getDocsRoot(true);
+  if(!root){ alertModal('Choose your Google Drive documents folder first.'); return; }
+  const list=attachmentsInApp(); let moved=0, failed=0;
+  for(const [kind,rec,d] of list){
+    const entry=await storeDocFile(dataUrlToBlob(d.dataUrl), Object.assign(docRecordMeta(kind,rec), {name:d.name}));
+    if(entry.drivePath){ d.drivePath=entry.drivePath; d.name=entry.name; delete d.dataUrl; moved++; } else failed++;
+  }
+  await save();
+  renderSettings();
+  alertModal('Moved '+moved+' file'+(moved===1?'':'s')+' into your Drive folder.'+(failed?' '+failed+' could not be moved and are still stored in the app.':''), {title:'Done'});
+}
+
+/* ================= Auto-read documents (Claude) =================
+   Drop a PDF or photo → it is sent to Claude with your own Anthropic API key → supplier,
+   number, date, every line item (qty + price) and the totals come back, already matched to
+   your catalog. You check it on one screen and save. */
+const API_KEY_STORE='ds-mrp-anthropic-key';
+const MODEL_STORE='ds-mrp-doc-model';
+const DEFAULT_DOC_MODEL='claude-sonnet-4-5';
+function getApiKey(){ try{ return localStorage.getItem(API_KEY_STORE)||''; }catch(e){ return ''; } }
+function setApiKey(v){ try{ if(v) localStorage.setItem(API_KEY_STORE, v); else localStorage.removeItem(API_KEY_STORE); }catch(e){} }
+function getDocModel(){ try{ return localStorage.getItem(MODEL_STORE)||DEFAULT_DOC_MODEL; }catch(e){ return DEFAULT_DOC_MODEL; } }
+async function anthropicFetch(path, body){
+  const res=await fetch('https://api.anthropic.com'+path, {
+    method: body?'POST':'GET',
+    headers:{'content-type':'application/json','x-api-key':getApiKey(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body: body?JSON.stringify(body):undefined
+  });
+  let data=null; try{ data=await res.json(); }catch(e){}
+  if(!res.ok){
+    const err=new Error((data&&data.error&&data.error.message)||('Request failed ('+res.status+')'));
+    err.status=res.status; throw err;
+  }
+  return data;
+}
+async function pickNewestModel(){
+  const d=await anthropicFetch('/v1/models?limit=100');
+  const ids=(d&&d.data||[]).map(m=>m.id);
+  return ids.find(id=>/sonnet/i.test(id)) || ids.find(id=>/opus/i.test(id)) || ids[0] || '';
+}
+function blobToBase64(blob){ return readFileAsDataURL(blob).then(u=>String(u).split(',')[1]||''); }
+async function downscaleImage(file, maxEdge){
+  let bmp;
+  try{ bmp=await createImageBitmap(file); }
+  catch(e){
+    if(/^image\/(jpeg|png|gif|webp)$/.test(file.type) && file.size<4.5e6) return {mediaType:file.type, base64:await blobToBase64(file)};
+    throw new Error('This photo format can’t be opened by the browser (often iPhone HEIC). Export it as JPG, or set the iPhone camera to “Most Compatible”.');
+  }
+  const scale=Math.min(1, maxEdge/Math.max(bmp.width,bmp.height));
+  const c=document.createElement('canvas'); c.width=Math.round(bmp.width*scale); c.height=Math.round(bmp.height*scale);
+  const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(bmp,0,0,c.width,c.height);
+  const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.9));
+  return {mediaType:'image/jpeg', base64:await blobToBase64(blob)};
+}
+async function prepareDocFile(file){
+  const name=file.name||'document'; const lower=name.toLowerCase(); const type=file.type||'';
+  if(type==='application/pdf' || lower.endsWith('.pdf')) return {kind:'pdf', mediaType:'application/pdf', base64:await blobToBase64(file), blob:file, name};
+  if(/^text\//.test(type) || /\.(txt|csv)$/.test(lower)) return {kind:'text', text:(await file.text()).slice(0,120000), blob:file, name};
+  if(/^image\//.test(type) || /\.(jpe?g|png|gif|webp|heic|heif|bmp)$/.test(lower)){
+    const img=await downscaleImage(file, 2200);
+    return {kind:'image', mediaType:img.mediaType, base64:img.base64, blob:file, name};
+  }
+  return {kind:'other', blob:file, name};
+}
+const DOC_READ_TOOL={
+  name:'record_document',
+  description:'Record everything read from the purchasing document.',
+  input_schema:{
+    type:'object',
+    properties:{
+      doc_type:{type:'string', enum:['receipt','quote','po'], description:'receipt = paid receipt, invoice, packing slip or order confirmation; quote = quote/estimate/proposal; po = purchase order issued by Dragon Seats'},
+      supplier_name:{type:['string','null'], description:'The company that sold / quoted / shipped. Never Dragon Seats.'},
+      supplier_id:{type:['string','null'], description:'id from the known supplier list if it is clearly the same company, else null'},
+      doc_number:{type:['string','null'], description:'Receipt / invoice / order / quote / PO number as printed'},
+      doc_date:{type:['string','null'], description:'YYYY-MM-DD'},
+      valid_until:{type:['string','null'], description:'Quotes only: expiry date YYYY-MM-DD'},
+      lines:{type:'array', items:{type:'object', properties:{
+        description:{type:'string', description:'Item text exactly as on the document'},
+        sku:{type:['string','null']},
+        qty:{type:['number','null']},
+        uom:{type:['string','null'], description:'ea, box of 100, ft, etc.'},
+        unit_price:{type:['number','null'], description:'Price per unit before tax'},
+        line_total:{type:['number','null'], description:'Extended amount for the line as printed'},
+        catalog_item_id:{type:['string','null'], description:'id from the catalog list only if clearly the same part, else null'},
+        is_inventory_part:{type:'boolean', description:'true if this is a part or material used to build benches; false for tools, consumables, food, fees, etc.'},
+        suggested_category:{type:['string','null'], description:'Best matching catalog category name for a new item, or null'}
+      }, required:['description','qty','unit_price','line_total','catalog_item_id','is_inventory_part']}},
+      tax:{type:['number','null']},
+      shipping:{type:['number','null']},
+      other_charges:{type:['number','null'], description:'Fees and surcharges; discounts as a negative number'},
+      total:{type:['number','null'], description:'Grand total printed on the document'},
+      notes:{type:['string','null'], description:'Anything unclear or unreadable, in one short sentence'}
+    },
+    required:['doc_type','supplier_name','doc_number','doc_date','lines','total']
+  }
+};
+function docReadPrompt(fileName){
+  const sup=DB.suppliers.map(s=>s.id+' | '+s.name).join('\n')||'(none yet)';
+  const items=DB.items.filter(i=>!i.isProduct).map(i=>{
+    const prices=(i.links||[]).filter(l=>Number(l.cost)>0).map(l=>((supplierById(l.supplierId)||{}).name||'?')+' $'+Number(l.cost).toFixed(2)).join(', ');
+    return i.id+' | '+i.name+' | '+(i.itemGroup||'Uncategorized')+' | '+(i.uom||'ea')+(prices?' | '+prices:'');
+  }).join('\n');
+  return 'Read this purchasing document ("'+fileName+'") for Dragon Seats, a bench manufacturer. Dragon Seats is always the BUYER, never the supplier. Record it with the record_document tool.\n\n'+
+    'Rules:\n'+
+    '- Supplier = the business that sold, quoted or shipped (letterhead, store name, "Sold by", "Remit to"). Match it to a known supplier id only if it is clearly the same company.\n'+
+    '- Read EVERY line item on every page. Do not merge, summarize or skip lines. Subtotal, tax, shipping, fees and discount rows are NOT line items — put them in tax / shipping / other_charges.\n'+
+    '- qty = quantity ordered or shipped. unit_price = price per unit before tax. If only the extended amount is shown, unit_price = line_total ÷ qty. qty × unit_price must equal line_total. Numbers only.\n'+
+    '- catalog_item_id: only when the line is clearly the same part as a catalog item below (wording, SKU or vendor name may differ). Otherwise null — never guess.\n'+
+    '- Dates as YYYY-MM-DD. Read handwriting carefully. If something is unreadable, use null instead of guessing and mention it in notes.\n'+
+    '- total = the grand total printed on the document.\n\n'+
+    'Known suppliers (id | name):\n'+sup+'\n\n'+
+    'Catalog categories: '+((DB.lists.itemGroups||[]).join(', ')||'(none)')+'\n\n'+
+    'Catalog items (id | name | category | unit | known prices):\n'+items;
+}
+function normName(s){ return String(s||'').toLowerCase().replace(/&/g,' and ').replace(/\b(inc|llc|ltd|co|corp|corporation|company|the)\b/g,' ').replace(/[^a-z0-9]+/g,''); }
+function matchSupplierByName(name){
+  const n=normName(name); if(!n) return '';
+  const exact=DB.suppliers.find(s=>normName(s.name)===n); if(exact) return exact.id;
+  const part=DB.suppliers.find(s=>{ const m=normName(s.name); return m.length>=3 && (n.includes(m) || m.includes(n)); });
+  return part?part.id:'';
+}
+function numOrNull(v){ if(v===null||v===undefined||v==='') return null; const n=Number(String(v).replace(/[$,\s]/g,'')); return isFinite(n)?n:null; }
+function normalizeExtraction(x){
+  x=x||{};
+  const lines=(Array.isArray(x.lines)?x.lines:[]).map(l=>{
+    let qty=numOrNull(l.qty), unit=numOrNull(l.unit_price), lt=numOrNull(l.line_total);
+    if(qty===null || qty===0) qty = (unit && lt) ? round2(lt/unit) : 1;
+    if(unit===null && lt!==null) unit=round2(lt/(qty||1));
+    let id=l.catalog_item_id && itemById(l.catalog_item_id) ? l.catalog_item_id : '';
+    if(!id){ const n=normName(l.description); const hit=DB.items.find(i=>!i.isProduct && normName(i.name)===n); if(hit) id=hit.id; }
+    return {docText:String(l.description||'').trim()+(l.sku?' ('+l.sku+')':''), name:String(l.description||'').trim(), uom:l.uom||'', qty, unitPrice:round2(unit||0), lineTotal:lt, itemId:id, isPart:l.is_inventory_part!==false, category:l.suggested_category||''};
+  }).filter(l=>l.name || l.unitPrice);
+  let supplierId = x.supplier_id && supplierById(x.supplier_id) ? x.supplier_id : matchSupplierByName(x.supplier_name);
+  const map={receipt:'receipts', quote:'quotes', po:'po'};
+  return {
+    type: map[x.doc_type]||'receipts', supplierId, supplierName:(x.supplier_name||'').trim(),
+    number:(x.doc_number||'').toString().trim(), date:/^\d{4}-\d{2}-\d{2}$/.test(x.doc_date||'')?x.doc_date:'',
+    validUntil:/^\d{4}-\d{2}-\d{2}$/.test(x.valid_until||'')?x.valid_until:'',
+    lines, tax:numOrNull(x.tax), shipping:numOrNull(x.shipping), other:numOrNull(x.other_charges), total:numOrNull(x.total), notes:x.notes||''
+  };
+}
+async function readDocWithClaude(prep){
+  const content=[];
+  if(prep.kind==='pdf') content.push({type:'document', source:{type:'base64', media_type:'application/pdf', data:prep.base64}});
+  else if(prep.kind==='image') content.push({type:'image', source:{type:'base64', media_type:prep.mediaType, data:prep.base64}});
+  else if(prep.kind==='text') content.push({type:'text', text:'DOCUMENT TEXT ('+prep.name+'):\n'+prep.text});
+  else throw new Error('This file type can’t be read automatically. Save it as a PDF or a photo and drop that in instead.');
+  content.push({type:'text', text:docReadPrompt(prep.name)});
+  const body=m=>({model:m, max_tokens:8000, tools:[DOC_READ_TOOL], tool_choice:{type:'tool', name:'record_document'}, messages:[{role:'user', content}]});
+  const model=getDocModel(); let data;
+  try{ data=await anthropicFetch('/v1/messages', body(model)); }
+  catch(e){
+    if(e.status===404 || (e.status===400 && /model/i.test(e.message||''))){
+      const m2=await pickNewestModel();
+      if(!m2 || m2===model) throw e;
+      try{ localStorage.setItem(MODEL_STORE, m2); }catch(_){}
+      data=await anthropicFetch('/v1/messages', body(m2));
+    } else throw e;
+  }
+  const tu=(data&&data.content||[]).find(b=>b.type==='tool_use');
+  if(!tu) throw new Error('The document came back unreadable. Try a clearer photo or the PDF.');
+  return normalizeExtraction(tu.input);
+}
+function friendlyReadError(e){
+  const m=(e&&e.message)||String(e);
+  if(e&&e.status===401) return 'Your API key was not accepted. Check it in Settings → Documents.';
+  if(e&&e.status===429) return 'Too many requests right now — wait a few seconds and try again.';
+  if(e&&(e.status===529||e.status>=500)) return 'The reading service is busy. Try again in a minute.';
+  if(/Failed to fetch|NetworkError/i.test(m)) return 'Could not reach the reading service — check your internet connection.';
+  return m;
+}
+
+/* ---------- Intake: drop → read → review → save ---------- */
+let intakeSeq=0;
+const INTAKE_ACCEPT='.pdf,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.txt,.csv,application/pdf,image/*';
+function openAddDocumentModal(){
+  const hasKey=!!getApiKey();
+  openModal('Add a document',
+    '<div class="doc-drop doc-drop-modal" id="intake-drop">'+
+      '<div class="dd-ico">⇪</div>'+
+      '<div class="dd-title">Drop a receipt, invoice, quote or PO here</div>'+
+      '<div class="note">PDF or photo. '+(hasKey?'The supplier, items, quantities and prices are filled in for you.':'Add your API key in Settings → Documents and it will be read for you.')+'</div>'+
+      '<label class="btn accent" style="margin-top:12px">Choose file<input type="file" id="intake-file" accept="'+INTAKE_ACCEPT+'" style="position:absolute;opacity:0;width:1px;height:1px"></label>'+
+    '</div>'+
+    '<div class="intake-blank">No file? Start a blank one: '+
+      '<button class="btn sm" data-blank="receipts">Receipt</button><button class="btn sm" data-blank="quotes">Quote</button><button class="btn sm" data-blank="po">Purchase order</button></div>');
+  const inp=document.getElementById('intake-file');
+  enableFileDrop(document.getElementById('intake-drop'), inp);
+  inp.addEventListener('change', e=>{ const f=e.target.files[0]; if(f) startDocIntake(f); });
+  document.querySelectorAll('.intake-blank [data-blank]').forEach(b=>b.addEventListener('click',()=>{ closeModal(); createBlankDoc(b.dataset.blank); }));
+}
+function createBlankDoc(type){
+  const sid=(DB.suppliers[0]||{}).id||'';
+  let rec;
+  if(type==='quotes'){ rec={id:uid(), quoteNumber:'', supplierId:sid, quoteDate:todayISO(), validUntil:addDays(todayISO(),30), status:DB.lists.quoteStatus[0], lines:[], docs:[], notes:'', extraCharges:0}; DB.quotes.unshift(rec); }
+  else if(type==='po'){ rec={id:uid(), poNumber:'', supplierId:sid, orderDate:todayISO(), expectedDate:addDays(todayISO(),14), status:DB.lists.poStatus[0], requestedBy:'', approvedBy:'', lines:[], docs:[], notes:'', extraCharges:0}; DB.purchaseOrders.unshift(rec); }
+  else { type='receipts'; rec={id:uid(), receiptNumber:'', supplierId:sid, receiptDate:todayISO(), poId:'', orderLink:'', requestedBy:'', lines:[], docs:[], notes:'', appliedToStock:false, appliedAt:null, extraCharges:0}; DB.receipts.unshift(rec); }
+  save(); openDocRecord(type, rec.id); currentTab='docs'; setTab('docs'); renderCounts();
+}
+async function startDocIntake(file){
+  const seq=++intakeSeq;
+  const hasKey=!!getApiKey();
+  openModal('Reading document','<div class="intake-reading" id="intake-reading"><div class="spinner"></div><div><b>'+(hasKey?'Reading ':'Opening ')+escAttr(file.name)+'…</b><div class="note">'+(hasKey?'Pulling out the supplier, items, quantities and prices. Usually 10–30 seconds.':'')+'</div></div></div>');
+  let prep=null, ex=null, err=null;
+  try{ prep=await prepareDocFile(file); }catch(e){ err=e; prep={kind:'other', blob:file, name:file.name}; }
+  if(!err && hasKey){ try{ ex=await readDocWithClaude(prep); }catch(e){ err=e; } }
+  if(seq!==intakeSeq || !document.getElementById('intake-reading')) return; // closed while reading
+  openIntakeReview(prep, ex, err);
+}
+function itemPickerOptions(sel){
+  const groups=(DB.lists.itemGroups||[]).concat(['']);
+  const parts=DB.items.filter(i=>!i.isProduct);
+  return '<option value="__new__" '+(sel==='__new__'?'selected':'')+'>+ Add as a new item</option>'+
+    '<option value="__skip__" '+(sel==='__skip__'?'selected':'')+'>Don’t track this line</option>'+
+    groups.map(g=>{
+      const its=parts.filter(i=> g ? i.itemGroup===g : !(DB.lists.itemGroups||[]).includes(i.itemGroup));
+      if(!its.length) return '';
+      return '<optgroup label="'+escAttr(g||'Uncategorized')+'">'+its.map(i=>'<option value="'+i.id+'" '+(i.id===sel?'selected':'')+'>'+escAttr(i.name)+'</option>').join('')+'</optgroup>';
+    }).join('');
+}
+function openIntakeReview(prep, ex, err){
+  const known=DB.lists.itemGroups||[];
+  const rv={
+    type:(ex&&ex.type)||'receipts',
+    supplierId:(ex&&ex.supplierId)||'',
+    newSupplierName:(ex&&ex.supplierName)||'',
+    number:(ex&&ex.number)||'', date:(ex&&ex.date)||todayISO(), validUntil:(ex&&ex.validUntil)||'',
+    lines:((ex&&ex.lines)||[]).map(l=>({docText:l.docText, newName:l.name, newCat:known.includes(l.category)?l.category:'', uom:l.uom, qty:l.qty, unitPrice:l.unitPrice,
+      itemSel: l.itemId || (l.isPart?'__new__':'__skip__')})),
+    extra:0, docTotal:ex?ex.total:null, updatePrices:true, addToStock:false
+  };
+  if(!rv.supplierId) rv.supplierId = rv.newSupplierName ? '__new__' : ((DB.suppliers[0]||{}).id||'');
+  if(ex){
+    const charges=[ex.tax,ex.shipping,ex.other].filter(v=>v!==null);
+    const sub=round2(rv.lines.reduce((s,l)=>s+(Number(l.qty)||0)*(Number(l.unitPrice)||0),0));
+    rv.extra = charges.length ? round2(charges.reduce((a,b)=>a+b,0)) : (ex.total!==null ? round2(ex.total-sub) : 0);
+  }
+  if(!rv.lines.length) rv.lines.push({docText:'', newName:'', newCat:'', qty:1, unitPrice:0, itemSel:(DB.items.find(i=>!i.isProduct)||{}).id||'__new__'});
+  const previewUrl=URL.createObjectURL(prep.blob);
+  let banner;
+  if(err) banner='<div class="callout red"><b>Couldn’t read it automatically:</b> '+escAttr(friendlyReadError(err))+' You can still fill it in here — the file will be saved with it.</div>';
+  else if(!ex) banner='<div class="callout">Fill in the details below. <b>Tip:</b> add your Anthropic API key in Settings → Documents and this screen fills itself in.</div>';
+  else banner='<div class="callout green-callout"><b>Read automatically.</b> Check the items and prices against the document, then save.'+(ex.notes?' <span class="note">Note: '+escAttr(ex.notes)+'</span>':'')+'</div>';
+  let preview;
+  if(prep.kind==='image' || /^image\//.test(prep.blob.type||'')) preview='<img src="'+previewUrl+'" alt="document">';
+  else if(prep.kind==='pdf') preview='<iframe src="'+previewUrl+'" title="document"></iframe>';
+  else if(prep.kind==='text') preview='<pre>'+escAttr((prep.text||'').slice(0,20000))+'</pre>';
+  else preview='<div class="note" style="padding:20px">No preview for this file type.</div>';
+
+  openModal('Check & save', '<div class="intake-review"><div class="ir-preview">'+preview+'</div><div class="ir-form" id="ir-form"></div></div>', {wide:true});
+
+  function supplierName(){ return rv.supplierId==='__new__' ? rv.newSupplierName : ((supplierById(rv.supplierId)||{}).name||''); }
+  function subtotal(){ return round2(rv.lines.reduce((s,l)=> l.itemSel==='__skip__'?s:s+(Number(l.qty)||0)*(Number(l.unitPrice)||0),0)); }
+  function skippedTotal(){ return round2(rv.lines.reduce((s,l)=> l.itemSel!=='__skip__'?s:s+(Number(l.qty)||0)*(Number(l.unitPrice)||0),0)); }
+  function total(){ return round2(subtotal()+skippedTotal()+(Number(rv.extra)||0)); }
+  function matchHtml(){
+    if(rv.docTotal===null || rv.docTotal===undefined) return '';
+    const diff=round2(total()-rv.docTotal);
+    return Math.abs(diff)<0.01
+      ? '<span class="ir-match ok">✓ Matches the document total ('+money(rv.docTotal)+')</span>'
+      : '<span class="ir-match bad">Document says '+money(rv.docTotal)+' — off by '+money(diff)+'</span>';
+  }
+  function pathPreview(){
+    const date=rv.date||todayISO();
+    return (DOC_FOLDER_NAMES[rv.type]||'')+' / '+date.slice(0,4)+' / '+(safeName(supplierName())||'No supplier')+' / '+[date,safeName(supplierName()),safeName(rv.number)].filter(Boolean).join('_')+(((prep.name||'').match(/\.[a-z0-9]{1,5}$/i)||[''])[0].toLowerCase());
+  }
+  function refreshTotals(){
+    const f=document.getElementById('ir-form'); if(!f) return;
+    f.querySelectorAll('tr[data-li]').forEach(tr=>{ const l=rv.lines[Number(tr.dataset.li)]; const c=tr.querySelector('.ir-lt'); if(l&&c) c.textContent=money((Number(l.qty)||0)*(Number(l.unitPrice)||0)); });
+    const s=f.querySelector('#ir-sub'); if(s) s.textContent=money(subtotal());
+    const sk=f.querySelector('#ir-skip'); if(sk) sk.textContent=money(skippedTotal());
+    const t=f.querySelector('#ir-total'); if(t) t.textContent=money(total());
+    const m=f.querySelector('#ir-matchwrap'); if(m) m.innerHTML=matchHtml();
+    const p=f.querySelector('#ir-path'); if(p) p.textContent=pathPreview();
+  }
+  function draw(){
+    const f=document.getElementById('ir-form'); if(!f) return;
+    const typeOpts=[['receipts','Receipt / invoice'],['quotes','Quote'],['po','Purchase order']].map(([v,l])=>'<option value="'+v+'" '+(rv.type===v?'selected':'')+'>'+l+'</option>').join('');
+    const supOpts=DB.suppliers.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(s=>'<option value="'+s.id+'" '+(s.id===rv.supplierId?'selected':'')+'>'+escAttr(s.name)+'</option>').join('')+
+      '<option value="__new__" '+(rv.supplierId==='__new__'?'selected':'')+'>+ New supplier…</option>';
+    const dateLabel={receipts:'Purchase date', quotes:'Quote date', po:'Order date'}[rv.type];
+    const numLabel={receipts:'Receipt / invoice #', quotes:'Quote #', po:'PO #'}[rv.type];
+    const skipAmt=skippedTotal();
+    f.innerHTML=banner+
+      '<div class="ir-grid">'+
+        '<label>Type<select id="ir-type">'+typeOpts+'</select></label>'+
+        '<label>Supplier<select id="ir-sup">'+supOpts+'</select>'+(rv.supplierId==='__new__'?'<input id="ir-newsup" placeholder="Supplier name" value="'+escAttr(rv.newSupplierName)+'">':'')+'</label>'+
+        '<label>'+numLabel+'<input id="ir-num" value="'+escAttr(rv.number)+'"></label>'+
+        '<label>'+dateLabel+'<input id="ir-date" type="date" value="'+escAttr(rv.date)+'"></label>'+
+        (rv.type==='quotes'?'<label>Valid until<input id="ir-valid" type="date" value="'+escAttr(rv.validUntil||addDays(rv.date||todayISO(),30))+'"></label>':'')+
+      '</div>'+
+      '<table class="ir-lines"><colgroup><col style="width:47%"><col style="width:12%"><col style="width:17%"><col style="width:17%"><col style="width:7%"></colgroup>'+
+      '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Unit price</th><th class="num">Line total</th><th></th></tr></thead><tbody>'+
+      rv.lines.map((l,i)=>
+        '<tr data-li="'+i+'" class="'+(l.itemSel==='__skip__'?'is-skip':'')+(l.itemSel==='__new__'?' is-new':'')+'">'+
+          '<td>'+(l.docText?'<div class="line-doc-text">“'+escAttr(l.docText)+'”</div>':'')+
+            '<select class="ir-item">'+itemPickerOptions(l.itemSel)+'</select>'+
+            (l.itemSel==='__new__'?'<div class="ir-newitem"><input class="ir-newname" placeholder="New item name" value="'+escAttr(l.newName||'')+'"><select class="ir-newcat"><option value="">Uncategorized</option>'+known.map(g=>'<option value="'+escAttr(g)+'" '+(g===l.newCat?'selected':'')+'>'+escAttr(g)+'</option>').join('')+'</select></div>':'')+
+          '</td>'+
+          '<td class="num"><input class="ir-qty num" type="number" min="0" step="any" value="'+(l.qty==null?'':l.qty)+'"></td>'+
+          '<td class="num"><div class="money-field"><span class="money-prefix">$</span><input class="ir-price num money-input" type="number" step="0.01" value="'+(Number(l.unitPrice)||0).toFixed(2)+'"></div></td>'+
+          '<td class="num mono ir-lt">'+money((Number(l.qty)||0)*(Number(l.unitPrice)||0))+'</td>'+
+          '<td class="col-actions"><button class="btn sm subtle danger ir-del" title="Remove line">✕</button></td>'+
+        '</tr>').join('')+
+      '</tbody></table>'+
+      '<button class="btn sm" id="ir-addline">+ Add line</button>'+
+      '<div class="ir-totals">'+
+        '<div><span>Items</span><b class="mono" id="ir-sub">'+money(subtotal())+'</b></div>'+
+        (skipAmt?'<div><span>Not tracked</span><b class="mono" id="ir-skip">'+money(skipAmt)+'</b></div>':'')+
+        '<div><span>Tax, shipping &amp; other</span><div class="money-field" style="width:120px"><span class="money-prefix">$</span><input id="ir-extra" class="num money-input" type="number" step="0.01" value="'+(Number(rv.extra)||0).toFixed(2)+'"></div></div>'+
+        '<div class="ir-grand"><span>Total</span><b class="mono" id="ir-total">'+money(total())+'</b></div>'+
+        '<div id="ir-matchwrap">'+matchHtml()+'</div>'+
+      '</div>'+
+      '<div class="ir-options">'+
+        '<label><input type="checkbox" id="ir-upd" '+(rv.updatePrices?'checked':'')+'> Save these prices to each item for this supplier</label>'+
+        (rv.type==='receipts'?'<label><input type="checkbox" id="ir-stock" '+(rv.addToStock?'checked':'')+'> Add these quantities to inventory now</label>':'')+
+      '</div>'+
+      '<div class="ir-drive note">'+(docsRootInfo.name
+        ? 'File will be saved to Google Drive: <b>'+escAttr(docsRootInfo.name)+' / </b><span id="ir-path">'+escAttr(pathPreview())+'</span>'
+        : 'No Google Drive folder connected yet — the file will be kept in the app for now. <button class="btn sm subtle" id="ir-pickdrive">Connect Drive folder</button>')+'</div>'+
+      '<div class="toolbar" style="justify-content:flex-end;margin:16px 0 0"><button class="btn" id="ir-cancel">Cancel</button><button class="btn accent" id="ir-save">Save document</button></div>';
+
+    const on=(id,ev,fn)=>{ const el=f.querySelector('#'+id); if(el) el.addEventListener(ev,fn); };
+    on('ir-type','change',e=>{ rv.type=e.target.value; draw(); });
+    on('ir-sup','change',e=>{ rv.supplierId=e.target.value; draw(); });
+    on('ir-newsup','input',e=>{ rv.newSupplierName=e.target.value; refreshTotals(); });
+    on('ir-num','input',e=>{ rv.number=e.target.value; refreshTotals(); });
+    on('ir-date','change',e=>{ rv.date=e.target.value; refreshTotals(); });
+    on('ir-valid','change',e=>{ rv.validUntil=e.target.value; });
+    on('ir-extra','input',e=>{ rv.extra=Number(e.target.value)||0; refreshTotals(); });
+    on('ir-upd','change',e=>{ rv.updatePrices=e.target.checked; });
+    on('ir-stock','change',e=>{ rv.addToStock=e.target.checked; });
+    on('ir-cancel','click',()=>{ URL.revokeObjectURL(previewUrl); closeModal(); });
+    on('ir-pickdrive','click',async()=>{ const h=await chooseDocsRoot(); if(h) draw(); });
+    on('ir-addline','click',()=>{ const first=(DB.items.find(i=>!i.isProduct)||{}).id||'__new__'; rv.lines.push({docText:'', newName:'', newCat:'', qty:1, unitPrice:first==='__new__'?0:docLinePrice(first, rv.supplierId), itemSel:first}); draw(); });
+    on('ir-save','click',()=>commitIntake(rv, prep, previewUrl));
+    f.querySelectorAll('tr[data-li]').forEach(tr=>{
+      const l=rv.lines[Number(tr.dataset.li)];
+      tr.querySelector('.ir-item').addEventListener('change',e=>{
+        l.itemSel=e.target.value;
+        // Picked an existing item with no price read from the document → use the catalog price.
+        if(itemById(l.itemSel) && !Number(l.unitPrice)) l.unitPrice=docLinePrice(l.itemSel, rv.supplierId);
+        draw();
+      });
+      tr.querySelector('.ir-qty').addEventListener('input',e=>{ l.qty=Number(e.target.value)||0; refreshTotals(); });
+      tr.querySelector('.ir-price').addEventListener('input',e=>{ l.unitPrice=Number(e.target.value)||0; refreshTotals(); });
+      const nn=tr.querySelector('.ir-newname'); if(nn) nn.addEventListener('input',e=>{ l.newName=e.target.value; });
+      const nc=tr.querySelector('.ir-newcat'); if(nc) nc.addEventListener('change',e=>{ l.newCat=e.target.value; });
+      tr.querySelector('.ir-del').addEventListener('click',()=>{ rv.lines.splice(Number(tr.dataset.li),1); draw(); });
+    });
+  }
+  draw();
+}
+function setSupplierPrice(itemId, supplierId, price, source){
+  const it=itemById(itemId); if(!it || !supplierId || !(price>0)) return;
+  it.links=it.links||[];
+  const link=it.links.find(l=>l.supplierId===supplierId);
+  if(link){ link.cost=round2(price); }
+  else it.links.push({id:uid(), supplierId, cost:round2(price), url:'', phone:'', contactType:'link', notes:'Price from '+source});
+  if(!Number(it.standardCost)) it.standardCost=round2(price);
+}
+async function commitIntake(rv, prep, previewUrl){
+  const btn=document.getElementById('ir-save'); if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
+  const rootPromise=getDocsRoot(true); // ask for Drive access right away, while the click still counts
+  // supplier
+  let supplierId=rv.supplierId;
+  if(supplierId==='__new__'){
+    const name=(rv.newSupplierName||'').trim()||'New supplier';
+    const existing=DB.suppliers.find(s=>normName(s.name)===normName(name));
+    if(existing) supplierId=existing.id;
+    else { const s={id:uid(), name, contact:'', email:'', phone:'', specialty:'', notes:'Added from '+prep.name}; DB.suppliers.push(s); supplierId=s.id; }
+  }
+  const supplier=supplierById(supplierId);
+  const label={receipts:'receipt',quotes:'quote',po:'PO'}[rv.type]+' '+(rv.number||prep.name);
+  // lines
+  const lines=[]; let skipped=0; const skippedNames=[];
+  rv.lines.forEach(l=>{
+    const qty=Number(l.qty)||0, price=round2(l.unitPrice);
+    if(l.itemSel==='__skip__'){ skipped+=qty*price; if(l.docText) skippedNames.push(l.docText); return; }
+    let itemId=l.itemSel;
+    if(itemId==='__new__'){
+      const name=(l.newName||l.docText||'New item').trim();
+      const it=mkItem(uid(), name, (l.uom&&l.uom.length<=12?l.uom:'ea'), {itemGroup:l.newCat||'', standardCost:price, notes:'Added from '+label});
+      DB.items.push(it); itemId=it.id;
+    }
+    if(!itemById(itemId)) return;
+    lines.push({id:uid(), itemId, qty, unitPrice:price, priceAuto:false, docText:l.docText||'', received:false, receivedAt:null});
+    if(rv.updatePrices && price>0) setSupplierPrice(itemId, supplierId, price, label);
+  });
+  const extra=round2((Number(rv.extra)||0)+skipped);
+  const notes='Read from '+prep.name+(skippedNames.length?' · Not tracked: '+skippedNames.join('; '):'');
+  const date=rv.date||todayISO();
+  await rootPromise;
+  const entry=await storeDocFile(prep.blob, {folderType:rv.type, supplierName:supplier?supplier.name:'', date, number:rv.number, name:prep.name});
+  let rec;
+  if(rv.type==='quotes'){
+    rec={id:uid(), quoteNumber:rv.number, supplierId, quoteDate:date, validUntil:rv.validUntil||addDays(date,30), status:DB.lists.quoteStatus[0], lines, docs:[entry], notes, extraCharges:extra};
+    DB.quotes.unshift(rec);
+  } else if(rv.type==='po'){
+    rec={id:uid(), poNumber:rv.number, supplierId, orderDate:date, expectedDate:addDays(date,14), status:DB.lists.poStatus[0], requestedBy:'', approvedBy:'', lines, docs:[entry], notes, extraCharges:extra};
+    DB.purchaseOrders.unshift(rec);
+  } else {
+    rec={id:uid(), receiptNumber:rv.number, supplierId, receiptDate:date, poId:'', orderLink:'', requestedBy:'', lines, docs:[entry], notes, appliedToStock:false, appliedAt:null, extraCharges:extra};
+    if(rv.addToStock){
+      rec.lines.forEach(l=>{ const it=itemById(l.itemId); if(it){ it.onHand=(Number(it.onHand)||0)+Number(l.qty||0); recordPurchase(it, l.qty, date); } l.received=true; l.receivedAt=date; });
+      rec.appliedToStock=true; rec.appliedAt=todayISO();
+    }
+    DB.receipts.unshift(rec);
+  }
+  if(previewUrl) URL.revokeObjectURL(previewUrl);
+  await save();
+  closeModal();
+  openDocRecord(rv.type, rec.id); currentTab='docs'; setTab('docs'); renderCounts();
+}
+
+/* ================= Documents page ================= */
+let docsFilter={type:'', q:'', attention:false};
+let docsShowCount=40;
+function openDocRecord(type, id){
+  selectedPO = type==='po'?id:null;
+  selectedQuote = type==='quotes'?id:null;
+  selectedReceipt = type==='receipts'?id:null;
+}
+function docRows(){
+  const closed=closedStatusName();
+  const rows=[];
+  DB.receipts.forEach(d=>rows.push({type:'receipts', label:'Receipt', d, num:d.receiptNumber, date:d.receiptDate, status:d.appliedToStock?'In inventory':'Not in stock yet', cls:d.appliedToStock?'closed':'open', needs:!d.appliedToStock}));
+  DB.quotes.forEach(d=>rows.push({type:'quotes', label:'Quote', d, num:d.quoteNumber, date:d.quoteDate, status:d.status, cls:d.status==='Converted to PO'?'closed':(d.status==='Open'?'open':''), needs:d.status==='Open'}));
+  DB.purchaseOrders.forEach(d=>rows.push({type:'po', label:'PO', d, num:d.poNumber, date:d.orderDate, status:d.status, cls:d.status===closed?'closed':'open', needs:d.status!==closed}));
+  return rows;
+}
+function renderDocs(){
+  const el=document.getElementById('docs-home'); if(!el) return;
+  // ----- detail view -----
+  const openType = selectedReceipt&&receiptById(selectedReceipt) ? 'receipts' : selectedQuote&&quoteById(selectedQuote) ? 'quotes' : selectedPO&&poById(selectedPO) ? 'po' : null;
+  if(!openType){ selectedPO=selectedQuote=selectedReceipt=null; }
+  if(openType){
+    const back='<div class="toolbar no-print"><button class="btn sm" id="docs-back">&larr; All documents</button></div>';
+    if(openType==='po'){ el.innerHTML=back+'<div id="po-detail">'+renderPoCard(poById(selectedPO))+'</div>'; wirePO(); }
+    else if(openType==='quotes'){ el.innerHTML=back+'<div id="quote-detail">'+renderQuoteCard(quoteById(selectedQuote))+'</div>'; wireQuotes(); }
+    else { el.innerHTML=back+'<div id="receipt-detail">'+renderReceiptCard(receiptById(selectedReceipt))+'</div>'; wireReceipts(); }
+    document.getElementById('docs-back').addEventListener('click',()=>{ openDocRecord(null,null); renderDocs(); });
+    return;
+  }
+  // ----- list view -----
+  const all=docRows();
+  const sup=docSupplierFilter.docs||[];
+  const q=(docsFilter.q||'').trim().toLowerCase();
+  let rows=all.filter(r=>{
+    if(docsFilter.attention && !r.needs) return false;
+    if(docsFilter.type && r.type!==docsFilter.type) return false;
+    if(sup.length && !sup.includes(r.d.supplierId)) return false;
+    if(q){
+      const hay=[r.num, (supplierById(r.d.supplierId)||{}).name, r.d.notes, lineItemsPlain(r.d.lines), r.label].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const cnt=t=>all.filter(r=>r.type===t).length;
+  const needs=all.filter(r=>r.needs).length;
+  const pill=(key,label,n,active)=>'<button class="doc-pill'+(active?' active':'')+'" data-pill="'+key+'">'+label+' <span class="mono">'+n+'</span></button>';
+  const setupNeeded = (!docsRootInfo.name && docsRootInfo.supported) || !getApiKey();
+  const shown=rows.slice(0,docsShowCount);
+  el.innerHTML=
+    (setupNeeded?'<div class="setup-strip"><b>Finish setup:</b>'+
+      (docsRootInfo.supported? (docsRootInfo.name?'<span class="setup-done">✓ Drive folder: '+escAttr(docsRootInfo.name)+'</span>':'<button class="btn sm" id="setup-drive">1. Connect Google Drive folder</button>') : '')+
+      (getApiKey()?'<span class="setup-done">✓ Auto-read on</span>':'<button class="btn sm" id="setup-key">'+(docsRootInfo.supported?'2. ':'')+'Turn on auto-read</button>')+
+    '</div>':'')+
+    '<div class="doc-drop" id="docs-drop">'+
+      '<div class="dd-ico">⇪</div>'+
+      '<div class="dd-text"><div class="dd-title">Drop a receipt, invoice, quote or PO</div><div class="note">PDF or photo — '+(getApiKey()?'the supplier, items, quantities and prices are read for you.':'you’ll fill in the details on one screen.')+'</div></div>'+
+      '<label class="btn accent">Choose file<input type="file" id="docs-file" accept="'+INTAKE_ACCEPT+'" style="position:absolute;opacity:0;width:1px;height:1px"></label>'+
+      '<details class="filter-dropdown blank-dd"><summary>New blank</summary><div class="filter-options"><button class="btn sm subtle" data-blank="receipts">Receipt</button><button class="btn sm subtle" data-blank="quotes">Quote</button><button class="btn sm subtle" data-blank="po">Purchase order</button></div></details>'+
+    '</div>'+
+    '<div class="toolbar no-print doc-toolbar">'+
+      '<div class="doc-pills">'+
+        pill('',  'All', all.length, !docsFilter.type && !docsFilter.attention)+
+        pill('attention','Needs action', needs, docsFilter.attention)+
+        pill('receipts','Receipts', cnt('receipts'), docsFilter.type==='receipts' && !docsFilter.attention)+
+        pill('quotes','Quotes', cnt('quotes'), docsFilter.type==='quotes' && !docsFilter.attention)+
+        pill('po','Purchase orders', cnt('po'), docsFilter.type==='po' && !docsFilter.attention)+
+      '</div>'+
+      '<div class="toolbar-spacer"></div>'+
+      '<div class="search-input"><input type="text" id="docs-search" placeholder="Search number, supplier, item..." value="'+escAttr(docsFilter.q||'')+'"></div>'+
+      filterDropdownHtml('filter-docs', sup)+
+      '<button class="btn" id="docs-export">Export</button>'+
+    '</div>'+
+    '<div class="card"><div class="card-body" style="padding:0">'+
+    (shown.length
+      ? '<table class="list-table doc-list"><colgroup><col style="width:10%"><col style="width:13%"><col style="width:17%"><col style="width:11%"><col style="width:25%"><col style="width:11%"><col style="width:13%"></colgroup>'+
+        '<thead><tr><th>Type</th><th>Number</th><th>Supplier</th><th>Date</th><th>Items</th><th class="num">Total</th><th>Status</th></tr></thead><tbody>'+
+        shown.map(r=>'<tr class="list-row" data-type="'+r.type+'" data-id="'+r.d.id+'">'+
+          '<td><span class="doc-type-tag t-'+r.type+'">'+r.label+'</span></td>'+
+          '<td>'+escAttr(r.num||'(no number)')+((r.d.docs||[]).length?' <span class="note" title="Has an attached file">📎</span>':'')+'</td>'+
+          '<td>'+escAttr((supplierById(r.d.supplierId)||{}).name||'—')+'</td>'+
+          '<td class="mono">'+fmtDate(r.date)+'</td>'+
+          '<td title="'+escAttr(lineItemsPlain(r.d.lines))+'">'+lineItemsSummary(r.d.lines)+'</td>'+
+          '<td class="num mono">'+money(docTotal(r.d))+'</td>'+
+          '<td><span class="status-badge '+r.cls+'" style="margin-left:0">'+escAttr(r.status||'')+'</span></td>'+
+        '</tr>').join('')+'</tbody></table>'+
+        (rows.length>shown.length?'<div style="padding:10px;text-align:center"><button class="btn sm" id="docs-more">Show '+Math.min(40,rows.length-shown.length)+' more of '+(rows.length-shown.length)+'</button></div>':'')
+      : '<div class="empty-state"><div class="empty-icon">&#128203;</div><div class="empty-title">'+(all.length?'Nothing matches':'No documents yet')+'</div><div class="empty-sub">'+(all.length?'Try another filter or clear the search.':'Drop your first receipt or quote above.')+'</div></div>')+
+    '</div></div>';
+
+  const inp=document.getElementById('docs-file');
+  enableFileDrop(document.getElementById('docs-drop'), inp);
+  inp.addEventListener('change',e=>{ const f=e.target.files[0]; if(f) startDocIntake(f); });
+  el.querySelectorAll('[data-blank]').forEach(b=>b.addEventListener('click',()=>createBlankDoc(b.dataset.blank)));
+  el.querySelectorAll('.doc-pill').forEach(p=>p.addEventListener('click',()=>{
+    const k=p.dataset.pill;
+    docsFilter.attention = k==='attention';
+    docsFilter.type = (k==='attention'||k==='') ? '' : k;
+    docsShowCount=40; renderDocs();
+  }));
+  el.querySelectorAll('tr.list-row').forEach(tr=>tr.addEventListener('click',()=>{ openDocRecord(tr.dataset.type, tr.dataset.id); renderDocs(); window.scrollTo(0,0); }));
+  const s=document.getElementById('docs-search'); if(s) s.addEventListener('input',e=>{ const pos=e.target.selectionStart; docsFilter.q=e.target.value; docsShowCount=40; renderDocs(); refocusSearch('docs-search',pos); });
+  wireFilterDropdown('filter-docs','docs',renderDocs);
+  const more=document.getElementById('docs-more'); if(more) more.addEventListener('click',()=>{ docsShowCount+=40; renderDocs(); });
+  const sd=document.getElementById('setup-drive'); if(sd) sd.addEventListener('click', async()=>{ const h=await chooseDocsRoot(); if(h) renderDocs(); });
+  const sk=document.getElementById('setup-key'); if(sk) sk.addEventListener('click', openApiKeyModal);
+  document.getElementById('docs-export').addEventListener('click',()=>{
+    const head=['Type','Number','Supplier','Date','Status','Items','Total $'];
+    const body=rows.map(r=>[r.label, r.num||'', (supplierById(r.d.supplierId)||{}).name||'', fmtDate(r.date), r.status||'', lineItemsPlain(r.d.lines), money(docTotal(r.d))]);
+    exportTablePDF('Dragon Seats - Documents', head, body);
+  });
+}
+function renderPO(){ renderDocs(); }
+function renderQuotes(){ renderDocs(); }
+function renderReceipts(){ renderDocs(); }
+
+function openApiKeyModal(){
+  openModal('Turn on auto-read',
+    '<p class="note" style="font-size:13px;color:var(--ink)">Documents are read by Claude using your own Anthropic API key. Each document costs about 1–3 cents. The key stays in this browser on this computer only — it is not in data exports.</p>'+
+    '<ol class="note" style="font-size:12.5px;padding-left:18px"><li>Go to <b>console.anthropic.com</b> → API Keys → Create Key.</li><li>Paste it below and click Save.</li></ol>'+
+    '<input id="api-key-inp" type="password" style="width:100%" placeholder="sk-ant-..." value="'+escAttr(getApiKey())+'">'+
+    '<div class="note" id="api-key-status" style="margin-top:8px"></div>'+
+    '<div class="toolbar" style="justify-content:flex-end;margin-top:14px">'+(getApiKey()?'<button class="btn danger" id="api-key-remove">Remove key</button>':'')+'<button class="btn" id="api-key-test">Test</button><button class="btn accent" id="api-key-save">Save</button></div>');
+  const inp=document.getElementById('api-key-inp'); inp.focus();
+  const status=document.getElementById('api-key-status');
+  document.getElementById('api-key-save').addEventListener('click',()=>{ setApiKey(inp.value.trim()); closeModal(); renderTab(currentTab); });
+  const rm=document.getElementById('api-key-remove'); if(rm) rm.addEventListener('click',()=>{ setApiKey(''); closeModal(); renderTab(currentTab); });
+  document.getElementById('api-key-test').addEventListener('click', async()=>{
+    const prev=getApiKey(); setApiKey(inp.value.trim()); status.textContent='Checking…';
+    try{ await anthropicFetch('/v1/models?limit=1'); status.innerHTML='<span style="color:var(--green);font-weight:600">✓ Key works.</span> Click Save.'; }
+    catch(e){ status.innerHTML='<span style="color:var(--red)">'+escAttr(friendlyReadError(e))+'</span>'; }
+    setApiKey(prev);
+  });
+}
+function docsSettingsCardHtml(){
+  const inApp=attachmentsInApp();
+  const mb=(inApp.reduce((s,[,,d])=>s+String(d.dataUrl||'').length,0)*0.75/1e6);
+  return '<div class="card"><div class="card-head"><h3>Documents</h3></div><div class="card-body">'+
+    '<div class="settings-row"><div><b>Google Drive folder</b><div class="note">'+
+      (!docsRootInfo.supported ? 'Needs Chrome or Microsoft Edge. Files are kept in the app until then.'
+        : docsRootInfo.name ? 'Saving to <b>'+escAttr(docsRootInfo.name)+'</b> → Receipts / Quotes / Purchase Orders → year → supplier.'
+        : 'Not connected. Pick a folder inside your Google Drive (for example My Drive › Ai Projects › DS MRP System › Documents).')+
+    '</div></div>'+(docsRootInfo.supported?'<button class="btn" id="set-drive">'+(docsRootInfo.name?'Change folder':'Choose folder')+'</button>':'')+'</div>'+
+    (inApp.length?'<div class="settings-row"><div><b>'+inApp.length+' older file'+(inApp.length===1?'':'s')+' still stored in the app</b><div class="note">About '+mb.toFixed(1)+' MB. Moving them into the Drive folder keeps the app fast.</div></div><button class="btn" id="move-to-drive" '+(docsRootInfo.name?'':'disabled')+'>Move to Drive</button></div>':'')+
+    '<div class="settings-row"><div><b>Auto-read documents</b><div class="note">'+(getApiKey()?'On — dropped documents are read automatically.':'Off — add an Anthropic API key to have receipts and quotes filled in for you.')+'</div></div><button class="btn" id="set-key">'+(getApiKey()?'Change key':'Add API key')+'</button></div>'+
+  '</div></div>';
+}
+function wireDocsSettingsCard(){
+  const d=document.getElementById('set-drive'); if(d) d.addEventListener('click', async()=>{ const h=await chooseDocsRoot(); if(h) renderSettings(); });
+  const m=document.getElementById('move-to-drive'); if(m) m.addEventListener('click', ()=>{ m.disabled=true; m.textContent='Moving…'; moveAttachmentsToDrive(); });
+  const k=document.getElementById('set-key'); if(k) k.addEventListener('click', openApiKeyModal);
 }
 
 /* ---------------- Settings tab ---------------- */
@@ -4246,6 +4746,7 @@ function renderSettings(){
   const bigSize = JSON.stringify(DB).length >= SIZE_WARN_THRESHOLD;
   const auditHtml=renderDataAudit();
   el.innerHTML=
+    docsSettingsCardHtml()+
     '<div class="callout '+(bigSize?'':'hidden')+'" id="size-warn">This file has gotten large (attachments included). Saving may start to feel a little slower. Consider removing large attachments you no longer need if things feel sluggish.</div>'+
     (auditHtml? '<div class="card"><div class="card-head"><h3>Data audit</h3></div><div class="card-body">'+auditHtml+'</div></div>' : '')+
     '<div class="card"><div class="card-head"><h3>Data management</h3></div><div class="card-body">'+
@@ -4283,6 +4784,7 @@ function renderSettings(){
       DB=sample(); ensureShape(); save(); runMRP(); renderTab(currentTab); renderCounts();
     }, {okLabel:'Reset'});
   });
+  wireDocsSettingsCard();
   renderStatusList();
   document.getElementById('add-status-btn').addEventListener('click',()=>{
     const inp=document.getElementById('new-status-input');
@@ -4327,7 +4829,7 @@ async function init(){
   await load();
   runMRP();
   document.querySelectorAll('.tab[data-tab]').forEach(btn=>{
-    btn.addEventListener('click',()=>{ currentTab=btn.dataset.tab; setTab(currentTab); renderCounts(); });
+    btn.addEventListener('click',()=>{ currentTab=btn.dataset.tab; if(currentTab==='docs') openDocRecord(null,null); if(currentTab==='items'){ itemsToolbar.cat=''; selectedItem=null; } setTab(currentTab); renderCounts(); });
   });
   document.querySelectorAll('.sb-group-toggle[data-group]').forEach(btn=>{
     btn.addEventListener('click',()=>{ toggleNavGroup(btn.dataset.group); });
@@ -4341,6 +4843,8 @@ async function init(){
     });
   });
   document.getElementById('add-doc-btn').addEventListener('click', openAddDocumentModal);
+  document.addEventListener('click', e=>{ const b=e.target.closest && e.target.closest('.drive-doc'); if(b){ e.preventDefault(); e.stopPropagation(); openDriveDoc(b.dataset.path); } });
+  await loadDocsRootInfo();
   document.addEventListener('click', e=>{
     document.querySelectorAll('.filter-dropdown[open]').forEach(dd=>{
       if(!dd.contains(e.target)) dd.open=false;
