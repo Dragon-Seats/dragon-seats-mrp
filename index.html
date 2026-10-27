@@ -524,6 +524,15 @@ button.doc-chip:hover{border-color:var(--graphite)}
 .settings-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--line)}
 .settings-row:last-child{border-bottom:0}
 @media (max-width:900px){.intake-review{grid-template-columns:1fr}.ir-preview{position:static;height:300px}}
+.exp-section{margin-bottom:16px}
+.exp-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--graphite);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.exp-label .note{text-transform:none;letter-spacing:0;font-weight:400}
+.exp-quick{margin-left:auto;display:flex;gap:2px}
+.exp-quick .btn{text-transform:none;letter-spacing:0;font-weight:500}
+.exp-cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px 14px}
+.exp-cols label,.exp-radios label{display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer}
+.exp-cols input,.exp-radios input{min-height:0}
+.exp-radios{display:flex;flex-wrap:wrap;gap:8px 20px}
 </style>
 </head>
 <body>
@@ -2306,12 +2315,10 @@ function renderItems(){
   document.getElementById('add-item').addEventListener('click', openAddItemModal);
   document.getElementById('add-item-group').addEventListener('click', openAddItemGroupModal);
   document.getElementById('export-pdf-items').addEventListener('click',()=>{
-    const head=['Name','Category','UoM','On Hand','Price','Last Ordered','Qty','Reorder Every','Status','Notes'];
-    const body=DB.items.filter(it=>!it.isProduct).map(it=>{
-      const price=Number(effectiveStandardCost(it))||0;
-      return [it.name, it.itemGroup||'Uncategorized', it.uom, it.onHand, price?'$'+price.toFixed(2):'—', it.lastPurchaseDate?fmtDate(it.lastPurchaseDate):'—', it.lastPurchaseQty==null?'—':it.lastPurchaseQty, it.reorderCadenceDays?it.reorderCadenceDays+' days':'—', cadenceStatus(it).text, it.notes||''];
+    openItemsExportModal({
+      catKey: (!filtering && itemsToolbar.cat) ? itemsToolbar.cat : '',
+      filtered: filtering ? parts.slice() : null
     });
-    exportTablePDF('Dragon Seats - Items Catalog', head, body);
   });
   const itemsSearchEl=document.getElementById('items-search'); if(itemsSearchEl) itemsSearchEl.addEventListener('input',e=>{ const pos=e.target.selectionStart; itemsToolbar.q=e.target.value; renderItems(); refocusSearch('items-search',pos); });
   const itemsStatusFilterEl=document.getElementById('items-status-filter'); if(itemsStatusFilterEl) itemsStatusFilterEl.addEventListener('change',e=>{ itemsToolbar.status=e.target.value; renderItems(); });
@@ -2327,6 +2334,75 @@ function renderItems(){
     }));
   }
   wireItemCard();
+}
+/* ---------------- Items export: pick the columns ----------------
+   Name is always included; everything else is a checkbox. Choices are remembered in this
+   browser so the next export starts the same way. */
+const ITEM_EXPORT_COLS=[
+  {key:'category', label:'Category', def:true, get:it=>it.itemGroup||'Uncategorized'},
+  {key:'uom', label:'Unit', def:true, get:it=>it.uom||'ea'},
+  {key:'onHand', label:'On hand', def:true, num:true, get:it=>fmtQty(Number(it.onHand)||0)},
+  {key:'price', label:'Price (each)', def:true, num:true, get:it=>{ const p=Number(effectiveStandardCost(it))||0; return p?'$'+p.toFixed(2):'-'; }},
+  {key:'supplier', label:'Supplier', def:true, get:it=>{ const s=primarySupplierForItem(it); return s?s.name:'-'; }},
+  {key:'allPrices', label:'All supplier prices', def:false, get:it=>(it.links||[]).filter(l=>l.supplierId).map(l=>((supplierById(l.supplierId)||{}).name||'?')+(Number(l.cost)?' $'+Number(l.cost).toFixed(2):'')).join(', ')||'-'},
+  {key:'lastPaid', label:'Last price paid', def:false, num:true, get:it=>{ const r=orderHistoryFor(it.id).find(x=>Number(x.unitPrice)>0); return r?'$'+Number(r.unitPrice).toFixed(2):'-'; }},
+  {key:'lastOrdered', label:'Last order date', def:true, get:it=>it.lastPurchaseDate?fmtDate(it.lastPurchaseDate):'-'},
+  {key:'lastQty', label:'Last qty ordered', def:true, num:true, get:it=>it.lastPurchaseQty==null?'-':fmtQty(it.lastPurchaseQty)},
+  {key:'cadence', label:'Reorder every', def:false, get:it=>it.reorderCadenceDays?it.reorderCadenceDays+' days':'-'},
+  {key:'nextDue', label:'Next order due', def:false, get:it=>{ const d=cadenceDueDate(it); return d?fmtDate(d):'-'; }},
+  {key:'status', label:'Reorder status', def:false, get:it=>cadenceStatus(it).text},
+  {key:'value', label:'Stock value', def:false, num:true, get:it=>{ const v=(Number(it.onHand)||0)*(Number(effectiveStandardCost(it))||0); return v?'$'+v.toFixed(2):'-'; }},
+  {key:'orderLink', label:'Order link / phone', def:false, get:it=>(it.links||[]).map(l=>l.contactType==='phone'?l.phone:l.url).filter(Boolean).join(', ')||'-'},
+  {key:'notes', label:'Notes', def:false, get:it=>it.notes||''}
+];
+const ITEM_EXPORT_PREF='ds-mrp-items-export-v1';
+function loadItemExportPrefs(){ try{ return JSON.parse(localStorage.getItem(ITEM_EXPORT_PREF))||null; }catch(e){ return null; } }
+function saveItemExportPrefs(p){ try{ localStorage.setItem(ITEM_EXPORT_PREF, JSON.stringify(p)); }catch(e){} }
+function openItemsExportModal(ctx){
+  const prefs=loadItemExportPrefs()||{};
+  const chosen=new Set(prefs.cols || ITEM_EXPORT_COLS.filter(c=>c.def).map(c=>c.key));
+  const allParts=DB.items.filter(it=>!it.isProduct);
+  const scopes=[['all','All items ('+allParts.length+')']];
+  if(ctx.catKey){ const n=allParts.filter(it=>itemCatKey(it)===ctx.catKey).length; scopes.unshift(['cat','Just '+itemCatLabel(ctx.catKey)+' ('+n+')']); }
+  if(ctx.filtered){ scopes.unshift(['filtered','Current search results ('+ctx.filtered.length+')']); }
+  const scopeDefault=scopes[0][0];
+  openModal('Export items',
+    '<div class="exp-section"><div class="exp-label">Which items</div><div class="exp-radios">'+
+      scopes.map(([v,l])=>'<label><input type="radio" name="exp-scope" value="'+v+'" '+(v===scopeDefault?'checked':'')+'> '+escAttr(l)+'</label>').join('')+
+    '</div></div>'+
+    '<div class="exp-section"><div class="exp-label">Columns <span class="note">— Item name is always included</span>'+
+      '<span class="exp-quick"><button type="button" class="btn sm subtle" id="exp-all">Select all</button><button type="button" class="btn sm subtle" id="exp-none">Clear</button></span></div>'+
+      '<div class="exp-cols">'+ITEM_EXPORT_COLS.map(c=>'<label><input type="checkbox" class="exp-col" value="'+c.key+'" '+(chosen.has(c.key)?'checked':'')+'> '+escAttr(c.label)+'</label>').join('')+'</div></div>'+
+    '<div class="exp-section"><div class="exp-label">Format</div><div class="exp-radios">'+
+      '<label><input type="radio" name="exp-fmt" value="pdf" '+(prefs.fmt!=='csv'?'checked':'')+'> PDF</label>'+
+      '<label><input type="radio" name="exp-fmt" value="csv" '+(prefs.fmt==='csv'?'checked':'')+'> Excel (CSV)</label>'+
+    '</div></div>'+
+    '<div class="toolbar" style="justify-content:flex-end;margin:16px 0 0"><button class="btn" id="exp-cancel">Cancel</button><button class="btn accent" id="exp-go">Export</button></div>');
+  document.getElementById('exp-all').addEventListener('click',()=>document.querySelectorAll('.exp-col').forEach(c=>c.checked=true));
+  document.getElementById('exp-none').addEventListener('click',()=>document.querySelectorAll('.exp-col').forEach(c=>c.checked=false));
+  document.getElementById('exp-cancel').addEventListener('click', closeModal);
+  document.getElementById('exp-go').addEventListener('click',()=>{
+    const scope=(document.querySelector('input[name="exp-scope"]:checked')||{}).value||'all';
+    const fmt=(document.querySelector('input[name="exp-fmt"]:checked')||{}).value||'pdf';
+    const keys=[...document.querySelectorAll('.exp-col:checked')].map(c=>c.value);
+    saveItemExportPrefs({cols:keys, fmt});
+    const cols=ITEM_EXPORT_COLS.filter(c=>keys.includes(c.key));
+    let list = scope==='filtered' ? ctx.filtered : scope==='cat' ? allParts.filter(it=>itemCatKey(it)===ctx.catKey) : allParts;
+    const order=(DB.lists.itemGroups||[]).concat(['__uncategorized__']);
+    list=list.slice().sort((a,b)=>(order.indexOf(itemCatKey(a))-order.indexOf(itemCatKey(b))) || (a.name||'').localeCompare(b.name||''));
+    const head=['Item'].concat(cols.map(c=>c.label));
+    const body=list.map(it=>[it.name].concat(cols.map(c=>String(c.get(it)))));
+    const title='Dragon Seats - Items'+(scope==='cat'?' - '+itemCatLabel(ctx.catKey):'');
+    closeModal();
+    if(fmt==='csv'){
+      const esc=v=>{ const s=String(v==null?'':v); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+      const csv='﻿'+[head].concat(body).map(r=>r.map(esc).join(',')).join('\r\n');
+      const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+      a.download=title.replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'-'+todayISO()+'.csv'; a.click();
+    } else {
+      exportTablePDF(title, head.map(pdfSafe), body.map(r=>r.map(pdfSafe)), {rightCols:[0].concat(cols.map((c,i)=>c.num?i+1:-1)).filter(i=>i>0)});
+    }
+  });
 }
 function renderItemCard(it){
   const s=cadenceStatus(it);
@@ -3765,13 +3841,15 @@ function wireReceipts(){
 
 /* ---------------- PDF export helper (jsPDF, bundled offline) ---------------- */
 function pdfAvailable(){ return !!(window.jspdf && window.jspdf.jsPDF); }
-function exportTablePDF(title, head, body){
+function exportTablePDF(title, head, body, opts){
   if(!pdfAvailable()){ alertModal("PDF library didn't load — try Print instead."); return; }
   const jsPDFCtor = window.jspdf.jsPDF;
   const doc = new jsPDFCtor({orientation:'landscape'});
   doc.setFontSize(14); doc.text(title, 14, 16);
   doc.setFontSize(9); doc.text('Dragon Seats MRP — generated '+new Date().toLocaleString(), 14, 22);
-  doc.autoTable({ head:[head], body, startY:28, styles:{fontSize:8}, headStyles:{fillColor:[170,2,1]} });
+  const colStyles={}; ((opts&&opts.rightCols)||[]).forEach(i=>{ colStyles[i]={halign:'right'}; });
+  doc.autoTable({ head:[head], body, startY:28, styles:{fontSize:8}, headStyles:{fillColor:[170,2,1]}, columnStyles:colStyles,
+    didParseCell:d=>{ if(d.section==='head' && colStyles[d.column.index]) d.cell.styles.halign='right'; } });
   doc.save(title.replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.pdf');
 }
 
