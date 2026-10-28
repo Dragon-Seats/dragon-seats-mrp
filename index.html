@@ -648,6 +648,29 @@ table.ship-table{table-layout:auto;min-width:100%}
 .status-badge.ship-cond-bad{background:var(--red-tint);color:var(--red-dark)}
 .client-avatar{background:var(--ink)!important;color:#fff!important}
 .client-card-actions{display:flex}
+/* Uniform card size: every supplier/client card shows the same fixed rows; extras live behind the expand arrow */
+.sup-card .sup-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+.sup-card .sup-title .sup-specs{flex-wrap:nowrap;overflow:hidden;height:18px;margin-top:4px}
+.sup-card .sup-spec{white-space:nowrap}
+.sup-card .sup-contact .sup-val{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+.sup-card-head .sup-head-btns{display:flex;gap:4px;flex:0 0 auto}
+.sup-more{display:flex;flex-direction:column;gap:10px;padding:2px 14px 10px}
+.sup-more .sup-line .sup-val{white-space:normal;overflow-wrap:anywhere}
+.sup-more-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--steel);margin-bottom:4px}
+.sup-more .sup-doc-list{padding:0;margin:0 -6px}
+/* Dashboard: shipments out */
+.dash-ship-table td{vertical-align:middle}
+.dash-ship-table tr.dash-ship-row{cursor:pointer}
+.dash-ship-table tr.dash-ship-row:hover td{background:var(--steel-soft)}
+.dash-ship-table .doc-type-tag{font-size:10px;padding:2px 6px}
+.dash-ship-late{color:var(--red-dark);font-weight:600}
+.dash-ship-table a.dash-ship-track{color:var(--ink);text-decoration:none;border-bottom:1px dotted var(--steel)}
+.sup-card .sup-stats span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-ship-contents{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Shipment form: pick-from-list helper */
+.ship-pick-row{display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap}
+.ship-pick-row input[list]{flex:1 1 220px;min-width:0}
+.ship-pick-row input[type=number]{width:70px}
 .sup-doc-line.view-client-ship{grid-template-columns:38px 1fr 46px 62px 66px}
 .view-client-ship .doc-type-tag{justify-self:start;padding:2px 6px}
 .doc-type-tag.t-ship-out{background:var(--red-tint);color:var(--red-dark)}
@@ -669,7 +692,7 @@ table.ship-table{table-layout:auto;min-width:100%}
       <div class="sb-subgroup" data-group="catalog">
       <button class="tab" data-tab="items"><span class="tab-ico">&#9633;</span><span class="tab-label">Items</span> <span class="count" id="cnt-items">0</span></button>
       <button class="tab" data-tab="bom"><span class="tab-ico">&#8862;</span><span class="tab-label">BOM / Products</span> <span class="count" id="cnt-products">0</span></button>
-      <button class="tab" data-tab="suppliers"><span class="tab-ico">&#9737;</span><span class="tab-label">Suppliers</span> <span class="count" id="cnt-suppliers">0</span></button>
+      <button class="tab" data-tab="suppliers"><span class="tab-ico">&#9737;</span><span class="tab-label">Suppliers &amp; Clients</span> <span class="count" id="cnt-suppliers">0</span></button>
       </div>
       <button class="sb-group-toggle" type="button" data-group="planning" aria-expanded="true"><span>Planning</span><span class="sb-group-chevron">&#9656;</span></button>
       <div class="sb-subgroup" data-group="planning">
@@ -2037,7 +2060,7 @@ function renderCounts(){
   const liveResults=runMRP();
   document.getElementById('cnt-items').textContent=DB.items.length;
   document.getElementById('cnt-products').textContent=DB.items.filter(i=>i.isProduct).length;
-  document.getElementById('cnt-suppliers').textContent=DB.suppliers.length;
+  document.getElementById('cnt-suppliers').textContent=DB.suppliers.length+(DB.clients||[]).length;
   document.getElementById('cnt-demand').textContent=DB.demandPlan.length;
   document.getElementById('cnt-plan').textContent=liveResults.filter(r=>r.plannedOrders.length).length;
   const closed=closedStatusName();
@@ -2130,6 +2153,9 @@ function renderDash(){
   const pendingReceipts=DB.receipts.filter(r=>!r.appliedToStock && !r.cancelled).slice().sort((a,b)=>(b.receiptDate||'')<(a.receiptDate||'')?-1:1);
   const today=todayISO();
   const upcoming=DB.demandPlan.filter(d=>d.needDate>=today).slice().sort((a,b)=>a.needDate<b.needDate?-1:1).slice(0,5);
+  const shipsOut=(DB.shipments||[]).filter(sh=>sh.status!=='Delivered' && sh.status!=='Cancelled' && !sh.deliveredDate)
+    .slice().sort((a,b)=>(shipIsLate(b)-shipIsLate(a)) || (a.expectedDate||a.shipDate||'9999').localeCompare(b.expectedDate||b.shipDate||'9999'));
+  const shipsLate=shipsOut.filter(shipIsLate).length;
   const el=document.getElementById('panel-dash');
   const hour=new Date().getHours();
   const greeting = hour<12?'Good morning':(hour<18?'Good afternoon':'Good evening');
@@ -2164,10 +2190,30 @@ function renderDash(){
       statCard(missingLinks,'Missing supplier', missingLinks?'amber':'good')+
       statCard(noPoReceipts,'Purchases with no PO', noPoReceipts?'amber':'good')+
       statCard(openQuotes,'Open quotes','')+
+      statCard(shipsOut.length,'Shipments out', shipsLate?'warn':(shipsOut.length?'amber':''))+
     '</div>'+
     (needsReview? '<div class="callout">Some items have no lead time set, so order-by dates default to their due date. Set a lead time on the <b>Items</b> tab (plain text is fine, e.g. "2 weeks" or "10 days") for accurate planning.</div>':'')+
     '<div class="section-title-row"><div class="dash-section-title">Action required</div></div>'+
     '<div class="card"><div class="action-list">'+actionHtml+'</div></div>'+
+    '<div class="section-title-row"><div class="dash-section-title">Shipments out ('+shipsOut.length+')'+(shipsLate?' <span class="dash-ship-late">· '+shipsLate+' late</span>':'')+'</div><button class="btn sm" id="dash-ships-all">All shipments</button></div>'+
+    '<div class="card"><div class="card-body">'+
+      (shipsOut.length
+        ? '<table class="dash-ship-table"><thead><tr><th></th><th>Company</th><th>What’s shipping</th><th>Method</th><th>Shipped</th><th>Expected</th><th>Tracking</th><th>Status</th></tr></thead><tbody>'+
+          shipsOut.map(sh=>{
+            const late=shipIsLate(sh); const tu=shipTrackingUrl(sh);
+            return '<tr class="dash-ship-row" data-id="'+escAttr(sh.id)+'">'+
+              '<td><span class="doc-type-tag t-ship-'+(sh.direction==='outbound'?'out':'in')+'">'+(sh.direction==='outbound'?'Out':'In')+'</span></td>'+
+              '<td>'+escAttr(shipCompanyName(sh)||'—')+'</td>'+
+              '<td class="dash-ship-contents" title="'+escAttr(sh.contents||'')+'">'+escAttr(sh.contents||'—')+'</td>'+
+              '<td>'+escAttr(sh.method||'')+'</td>'+
+              '<td class="mono">'+(sh.shipDate?fmtShortDate(sh.shipDate):'—')+'</td>'+
+              '<td class="mono'+(late?' dash-ship-late':'')+'">'+(sh.expectedDate?fmtShortDate(sh.expectedDate):'—')+'</td>'+
+              '<td class="mono">'+(sh.tracking?(tu?'<a href="'+escAttr(tu)+'" target="_blank" rel="noopener noreferrer" class="dash-ship-track">'+escAttr(sh.tracking)+'</a>':escAttr(sh.tracking)):'—')+'</td>'+
+              '<td'+(late?' class="dash-ship-late"':'')+'>'+(late?'Late':escAttr(sh.status))+'</td>'+
+            '</tr>';
+          }).join('')+'</tbody></table>'
+        : '<div class="empty-state"><div class="empty-title">Nothing out right now</div><div class="empty-sub">Scheduled and in-transit shipments will show up here until they’re delivered.</div></div>')+
+    '</div></div>'+
     '<div class="section-title-row"><div class="dash-section-title">Purchasing overview &amp; planned orders</div></div>'+
     plannedOrdersWeekChart(res)+
     '<div class="dash-section-title">Recent activity</div>'+
@@ -2185,6 +2231,12 @@ function renderDash(){
       '<thead><tr><th>Product</th><th class="num">Qty</th><th>Need By</th><th>Label</th></tr></thead>'+
       '<tbody>'+(upcoming.map(d=>{ const p=itemById(d.productId); return '<tr><td>'+(p?p.name:'?')+'</td><td class="num mono">'+d.qty+'</td><td class="mono">'+fmtDate(d.needDate)+'</td><td class="demand-src">'+(d.label||'')+'</td></tr>'; }).join('') || '<tr><td colspan="4" class="note">Nothing scheduled.</td></tr>')+'</tbody></table>'+
     '</div></div>';
+  el.querySelectorAll('.dash-ship-row').forEach(tr=>tr.addEventListener('click',e=>{
+    if(e.target.closest('a')) return;
+    const sh=shipmentById(tr.dataset.id); if(sh) openShipmentModal(sh);
+  }));
+  const shipsAllBtn=document.getElementById('dash-ships-all');
+  if(shipsAllBtn) shipsAllBtn.addEventListener('click',()=>{ currentTab='shipments'; setTab('shipments'); renderCounts(); });
   el.querySelectorAll('.receipt-jump').forEach(btn=>{
     btn.addEventListener('click',()=>{
       currentTab='receipts'; setTab('receipts'); renderCounts();
@@ -3600,12 +3652,12 @@ function supplierCardHtml(s){
     row('👤', s.contact?escAttr(s.contact):empty('No contact name'),'Contact')+
     row('✉', s.email?'<a href="mailto:'+escAttr(s.email)+'">'+escAttr(s.email)+'</a>':empty('No email'),'Email')+
     row('☎', s.phone?'<a href="'+escAttr(telHref(s.phone))+'">'+escAttr(s.phone)+'</a>':empty('No phone'),'Phone')+
-    (s.website?row('🌐','<a href="'+escAttr(web)+'" target="_blank" rel="noopener noreferrer">'+escAttr(String(s.website).replace(/^https?:\/\//,'').replace(/\/$/,''))+'</a>','Website'):'')+
-    (s.address?row('📍',escAttr(s.address),'Address'):'');
+    row('🌐', s.website?'<a href="'+escAttr(web)+'" target="_blank" rel="noopener noreferrer">'+escAttr(String(s.website).replace(/^https?:\/\//,'').replace(/\/$/,''))+'</a>':empty('No website'),'Website');
+  const addressLine = s.address?row('📍',escAttr(s.address),'Address'):'';
   const meta=[];
   if(s.accountNumber) meta.push('<span><b>Acct #</b> '+escAttr(s.accountNumber)+'</span>');
   if(s.paymentTerms) meta.push('<span><b>Terms</b> '+escAttr(s.paymentTerms)+'</span>');
-  const maxItems=6;
+  const maxItems=40;
   const itemChips = supplied.length
     ? supplied.slice(0,maxItems).map(x=>'<span class="sup-item">'+escAttr(x.item.name)+(x.cost?' <span class="mono">$'+x.cost.toFixed(2)+'</span>':'')+'</span>').join('')+
       (supplied.length>maxItems?'<span class="sup-item more" title="'+escAttr(supplied.slice(maxItems).map(x=>x.item.name).join(', '))+'">+'+(supplied.length-maxItems)+' more</span>':'')
@@ -3626,22 +3678,24 @@ function supplierCardHtml(s){
     '<div class="sup-card-head">'+
       '<div class="sup-avatar">'+escAttr(supplierInitials(s.name))+'</div>'+
       '<div class="sup-title"><div class="sup-name">'+escAttr(s.name||'(unnamed)')+'</div>'+
-        (specs.length?'<div class="sup-specs">'+specs.map(x=>'<span class="sup-spec">'+escAttr(x)+'</span>').join('')+'</div>':'')+
+        '<div class="sup-specs">'+specs.map(x=>'<span class="sup-spec">'+escAttr(x)+'</span>').join('')+'</div>'+
       '</div>'+
       '<button type="button" class="btn sm subtle sup-edit no-print" title="Edit supplier">Edit</button>'+
     '</div>'+
     '<div class="sup-contact">'+contactLines+'</div>'+
-    (meta.length?'<div class="sup-meta">'+meta.join('')+'</div>':'')+
     '<div class="sup-stats">'+
       '<div><b class="mono">'+supplied.length+'</b><span>items</span></div>'+
       '<div><b class="mono">'+openPos+'</b><span>open POs</span></div>'+
       '<div><b class="mono">'+(lastOrder?fmtShortDateSafe(lastOrder):'—')+'</b><span>last order</span></div>'+
       '<div><b class="mono">'+(spend?money(spend):'—')+'</b><span>receipts</span></div>'+
     '</div>'+
-    '<div class="sup-items">'+itemChips+'</div>'+
-    (s.notes?'<div class="sup-notes">'+escAttr(s.notes)+'</div>':'')+
-    '<details class="sup-docs-details"><summary><span class="sup-doc-caret">▸</span>Documents on file ('+groups.total+')</summary>'+
-      '<div class="sup-doc-list">'+(docRowsHtml||'<p class="note" style="margin:4px 0">No POs, quotes or receipts yet.</p>')+'</div>'+
+    '<details class="sup-docs-details"><summary><span class="sup-doc-caret">▸</span>Details, items &amp; documents ('+groups.total+' doc'+(groups.total===1?'':'s')+')</summary>'+
+      '<div class="sup-more">'+
+        ((addressLine||meta.length)?'<div>'+addressLine+(meta.length?'<div class="sup-meta" style="margin-top:4px">'+meta.join('')+'</div>':'')+'</div>':'')+
+        '<div><div class="sup-more-label">Items supplied</div><div class="sup-items">'+itemChips+'</div></div>'+
+        (s.notes?'<div class="sup-notes">'+escAttr(s.notes)+'</div>':'')+
+        '<div><div class="sup-more-label">Documents on file</div><div class="sup-doc-list">'+(docRowsHtml||'<p class="note" style="margin:4px 0">No POs, quotes or receipts yet.</p>')+'</div></div>'+
+      '</div>'+
     '</details>'+
   '</div>';
 }
@@ -3772,21 +3826,23 @@ function clientCardHtml(c){
     '<div class="sup-card-head">'+
       '<div class="sup-avatar client-avatar">'+escAttr(supplierInitials(c.name))+'</div>'+
       '<div class="sup-title"><div class="sup-name">'+escAttr(c.name||'(unnamed)')+'</div>'+
-        (tags.length?'<div class="sup-specs">'+tags.map(x=>'<span class="sup-spec">'+escAttr(x)+'</span>').join('')+'</div>':'')+
+        '<div class="sup-specs">'+tags.map(x=>'<span class="sup-spec">'+escAttr(x)+'</span>').join('')+'</div>'+
       '</div>'+
-      '<button type="button" class="btn sm subtle client-edit no-print" title="Edit client">Edit</button>'+
+      '<div class="sup-head-btns no-print"><button type="button" class="btn sm subtle client-new-ship" title="New shipment to '+escAttr(c.name||'this client')+'">+ Ship</button>'+
+      '<button type="button" class="btn sm subtle client-edit" title="Edit client">Edit</button></div>'+
     '</div>'+
     '<div class="sup-contact">'+contactLines+'</div>'+
     '<div class="sup-stats">'+
       '<div><b class="mono">'+ships.length+'</b><span>shipments</span></div>'+
       '<div><b class="mono">'+active+'</b><span>in progress</span></div>'+
       '<div><b class="mono">'+(lastShip?fmtShortDateSafe(lastShip.shipDate||lastShip.deliveredDate):'—')+'</b><span>last shipped</span></div>'+
-      '<div><b class="mono">'+(spent?money(spent):'—')+'</b><span>shipping cost</span></div>'+
+      '<div><b class="mono">'+(spent?money(spent):'—')+'</b><span>ship cost</span></div>'+
     '</div>'+
-    (c.notes?'<div class="sup-notes">'+escAttr(c.notes)+'</div>':'')+
-    '<div class="client-card-actions no-print"><button type="button" class="btn sm client-new-ship">+ New shipment to '+escAttr(c.name||'client')+'</button></div>'+
-    '<details class="sup-docs-details"'+(ships.length&&ships.length<=3?' open':'')+'><summary><span class="sup-doc-caret">▸</span>Shipment history ('+ships.length+')</summary>'+
-      '<div class="sup-doc-list">'+(shipRows||'<p class="note" style="margin:4px 0">No shipments to this client yet.</p>')+'</div>'+
+    '<details class="sup-docs-details"><summary><span class="sup-doc-caret">▸</span>Notes &amp; shipment history ('+ships.length+')</summary>'+
+      '<div class="sup-more">'+
+        (c.notes?'<div class="sup-notes">'+escAttr(c.notes)+'</div>':'')+
+        '<div><div class="sup-more-label">Shipment history</div><div class="sup-doc-list">'+(shipRows||'<p class="note" style="margin:4px 0">No shipments to this client yet.</p>')+'</div></div>'+
+      '</div>'+
     '</details>'+
   '</div>';
 }
@@ -5863,6 +5919,11 @@ function renderShipments(){
   });
 }
 
+function rerenderAfterShipmentChange(){
+  if(currentTab==='suppliers') renderSuppliers();
+  else if(currentTab==='dash') renderDash();
+  else renderShipments();
+}
 function openShipmentModal(existing, preset){
   const sh=existing ? Object.assign({},existing) : Object.assign({direction:'inbound', method:'FedEx', status:'Scheduled', shipDate:todayISO(), price:null}, preset||{});
   if(!existing && sh.clientId){ const pc=clientById(sh.clientId); if(pc){ sh.direction='outbound'; ['contact','phone','email','address'].forEach(k=>{ if(!sh[k]) sh[k]=pc[k]||''; }); } }
@@ -5895,7 +5956,11 @@ function openShipmentModal(existing, preset){
       f('ship-m-phone','Phone',txt('ship-m-phone',sh.phone,'(555) 555-5555'))+
       f('ship-m-email','Email',txt('ship-m-email',sh.email,'name@company.com'), true)+
       f('ship-m-address','Address',txt('ship-m-address',sh.address,'Street, City, State ZIP'), true)+
-      f('ship-m-contents','What’s shipping',txt('ship-m-contents',sh.contents,'e.g. 40 LH wheelbase assemblies'), true)+
+      f('ship-m-contents','What’s shipping',txt('ship-m-contents',sh.contents,'Type anything, or add items from your list below')+
+        '<div class="ship-pick-row no-print"><input type="text" list="ship-m-itemlist" id="ship-m-pick" placeholder="Pick an item from your list (or type one)…">'+
+        '<input type="number" id="ship-m-pick-qty" min="0" step="any" placeholder="Qty">'+
+        '<button type="button" class="btn sm" id="ship-m-pick-add">+ Add</button></div>'+
+        '<datalist id="ship-m-itemlist">'+DB.items.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(i=>'<option value="'+escAttr(i.name||'')+'">'+(i.isProduct?'Product':escAttr(i.category||'Item'))+'</option>').join('')+'</datalist>', true)+
       f('ship-m-shipDate','Ship / drop-off date',txt('ship-m-shipDate',sh.shipDate,'','date'))+
       f('ship-m-price','Price ($)',txt('ship-m-price',sh.price==null?'':sh.price,'0.00','number'))+
       f('ship-m-expectedDate','Expected delivery',txt('ship-m-expectedDate',sh.expectedDate,'','date'))+
@@ -5981,6 +6046,17 @@ function openShipmentModal(existing, preset){
     }
     fillPoOptions(); renderPoDocs();
   });
+  // Add a listed (or typed) item to "What's shipping" — the text box stays free-form
+  const addPicked=()=>{
+    const name=$('ship-m-pick').value.trim(); if(!name){ $('ship-m-pick').focus(); return; }
+    const q=$('ship-m-pick-qty').value.trim();
+    const piece=(q?q+' × ':'')+name;
+    const cur=$('ship-m-contents').value.trim();
+    $('ship-m-contents').value = cur ? cur+', '+piece : piece;
+    $('ship-m-pick').value=''; $('ship-m-pick-qty').value=''; $('ship-m-pick').focus();
+  };
+  $('ship-m-pick-add').addEventListener('click',addPicked);
+  ['ship-m-pick','ship-m-pick-qty'].forEach(id=>$(id).addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addPicked(); } }));
   // Entering a delivered date marks it delivered
   $('ship-m-deliveredDate').addEventListener('change',e=>{ if(e.target.value) $('ship-m-status').value='Delivered'; });
 
@@ -6035,14 +6111,14 @@ function openShipmentModal(existing, preset){
     });
     normalizeShipment(target);
     if(!existing) DB.shipments.unshift(target);
-    save(); closeModal(); if(currentTab==='suppliers') renderSuppliers(); else renderShipments(); renderCounts();
+    save(); closeModal(); rerenderAfterShipmentChange(); renderCounts();
   };
   $('ship-m-save').addEventListener('click',commit);
   $('ship-m-cancel').addEventListener('click',closeModal);
   const del=$('ship-m-delete');
   if(del) del.addEventListener('click',()=>{
     confirmModal('Delete this shipment'+(shipCompanyName(existing)?' ('+shipCompanyName(existing)+')':'')+'? This cannot be undone.',()=>{
-      DB.shipments=DB.shipments.filter(x=>x.id!==existing.id); save(); if(currentTab==='suppliers') renderSuppliers(); else renderShipments(); renderCounts();
+      DB.shipments=DB.shipments.filter(x=>x.id!==existing.id); save(); rerenderAfterShipmentChange(); renderCounts();
     });
   });
   if(!existing) $('ship-m-supplier').focus();
