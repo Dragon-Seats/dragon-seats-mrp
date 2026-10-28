@@ -638,6 +638,20 @@ table.ship-table{table-layout:auto;min-width:100%}
 .ship-dir-toggle label.on{border-color:var(--ink);background:var(--steel-soft)}
 .ship-dir-toggle small{display:block;color:var(--steel);font-size:11.5px}
 .ship-sub{font-size:11px;color:var(--steel);display:block}
+.ship-clip{font-size:11px;color:var(--steel);margin-left:6px;white-space:nowrap}
+.ship-docs-box{display:flex;flex-direction:column;gap:8px}
+.ship-doc-wrap{display:inline-flex;align-items:center;margin:0 4px 4px 0}
+.ship-doc-wrap .doc-chip{margin:0}
+.ship-doc-x{all:unset;cursor:pointer;font-size:13px;line-height:1;color:var(--steel);padding:0 5px}
+.ship-doc-x:hover{color:var(--red)}
+.ship-po-docs{font-size:12px;color:var(--steel)}
+.status-badge.ship-cond-bad{background:var(--red-tint);color:var(--red-dark)}
+.client-avatar{background:var(--ink)!important;color:#fff!important}
+.client-card-actions{display:flex}
+.sup-doc-line.view-client-ship{grid-template-columns:38px 1fr 46px 62px 66px}
+.view-client-ship .doc-type-tag{justify-self:start;padding:2px 6px}
+.doc-type-tag.t-ship-out{background:var(--red-tint);color:var(--red-dark)}
+.doc-type-tag.t-ship-in{background:var(--green-tint);color:var(--green)}
 .ship-total-line{font-size:12.5px;color:var(--steel);padding:9px 14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
 </style>
 </head>
@@ -1481,6 +1495,7 @@ function ensureShape(){
   if(!Array.isArray(DB.deliveries)) DB.deliveries=[];
   if(!Array.isArray(DB.bookings)) DB.bookings=[];
   if(!Array.isArray(DB.shipments)) DB.shipments=[];
+  if(!Array.isArray(DB.clients)) DB.clients=[];
   DB.shipments.forEach(normalizeShipment);
   purgeRetiredEquipment();
   if(!DB.lists || typeof DB.lists!=='object') DB.lists={};
@@ -1901,11 +1916,11 @@ const TAB_LABELS={
   dash:['Dashboard','MRP overview'],
   items:['Items','Inventory, lead time & safety stock'],
   bom:['BOM / Products','Product structure and components'],
-  suppliers:['Suppliers','Vendor reference'],
+  suppliers:['Suppliers & Clients','Vendors you buy from and teams you ship to'],
   demand:['Demand Plan','Planned builds and requirements'],
   plan:['Planned Orders','Recommended order quantities and timing'],
   docs:['Documents','Receipts, quotes and purchase orders'],
-  shipments:['Shipments','Inbound deliveries and drop-offs to manufacturers'],
+  shipments:['Shipments','Inbound deliveries, drop-offs to manufacturers and shipments to clients'],
   settings:['Settings','Data management and configuration']
 };
 /* Sub-tab labels for the merged Purchase Orders / Quotes / Receipts page. */
@@ -3502,6 +3517,9 @@ function renderLinkRow(item, link){
 
 /* ---------------- Suppliers tab ---------------- */
 let supplierSearch=''; // transient UI state (not saved) — Suppliers-tab search box
+let clientSearch='';
+let supplierSubtab=(()=>{ try{ return localStorage.getItem('dragon-seats-mrp-suppliers-subtab')==='clients'?'clients':'suppliers'; }catch(e){ return 'suppliers'; } })();
+function setSupplierSubtab(v){ supplierSubtab=v; try{ localStorage.setItem('dragon-seats-mrp-suppliers-subtab', v); }catch(e){} renderSuppliers(); }
 const SUPPLIER_FIELDS=[
   ['name','Company name','e.g. Acme Fasteners'],
   ['contact','Contact person','e.g. Jane Smith'],
@@ -3628,14 +3646,24 @@ function supplierCardHtml(s){
   '</div>';
 }
 function fmtShortDateSafe(iso){ return iso?fmtShortDate(iso):'—'; }
+function supplierSubnavHtml(){
+  return '<div class="doc-subnav no-print">'+
+    '<button type="button" class="subtab'+(supplierSubtab==='suppliers'?' active':'')+'" data-supsub="suppliers">Suppliers <span class="count">'+DB.suppliers.length+'</span></button>'+
+    '<button type="button" class="subtab'+(supplierSubtab==='clients'?' active':'')+'" data-supsub="clients">Clients <span class="count">'+(DB.clients||[]).length+'</span></button>'+
+  '</div>';
+}
+function wireSupplierSubnav(el){
+  el.querySelectorAll('[data-supsub]').forEach(b=>b.addEventListener('click',()=>{ if(b.dataset.supsub!==supplierSubtab) setSupplierSubtab(b.dataset.supsub); }));
+}
 function renderSuppliers(){
   const el=document.getElementById('panel-suppliers');
+  if(supplierSubtab==='clients'){ renderClients(); return; }
   const sq=(supplierSearch||'').trim().toLowerCase();
   const hay=s=>[s.name,s.contact,s.email,s.phone,s.specialty,s.notes,s.address,s.accountNumber].concat(itemsSuppliedBy(s).map(x=>x.item.name)).join(' ').toLowerCase();
   const visibleSuppliers=(sq? DB.suppliers.filter(s=>hay(s).includes(sq)) : DB.suppliers).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   document.getElementById('page-actions').innerHTML=
     '<button class="btn accent" id="add-supplier">+ New supplier</button>';
-  el.innerHTML=
+  el.innerHTML=supplierSubnavHtml()+
     '<div class="toolbar no-print">'+
       '<div class="search-input"><input type="text" id="sup-search" placeholder="Search name, contact, item..." value="'+escAttr(supplierSearch)+'"></div>'+
       '<div class="toolbar-spacer"></div><span class="toolbar-count">'+visibleSuppliers.length+' supplier'+(visibleSuppliers.length===1?'':'s')+'</span>'+
@@ -3652,6 +3680,142 @@ function renderSuppliers(){
     btn.addEventListener('click',()=>{ jumpToSupplierDoc(btn.dataset.type, btn.dataset.id); });
   });
   document.getElementById('add-supplier').addEventListener('click', openAddSupplierModal);
+  wireSupplierSubnav(el);
+}
+
+/* ---------------- Clients (teams / customers we ship to) ----------------
+   Lives in DB.clients and shares the Suppliers page as its own sub-tab. Each card shows the
+   client's contact info and their full shipment history from DB.shipments. */
+const CLIENT_FIELDS=[
+  ['name','Client / team name','e.g. Smith Racing'],
+  ['contact','Contact','Contact person'],
+  ['phone','Phone','(555) 555-5555'],
+  ['email','Email','name@team.com'],
+  ['address','Ship-to address','Street, City, State ZIP'],
+  ['tags','Type / series','e.g. Late model, Sprint car'],
+  ['notes','Notes','—']
+];
+function clientShipments(c){
+  return (DB.shipments||[]).filter(sh=>sh.clientId===c.id)
+    .slice().sort((a,b)=>((b.shipDate||b.expectedDate||b.createdAt||'')).localeCompare(a.shipDate||a.expectedDate||a.createdAt||''));
+}
+function openClientModal(existing){
+  const c=existing||{};
+  const field=([k,label,ph])=>{
+    const wide=(k==='address'||k==='notes'||k==='name');
+    const input = k==='notes'
+      ? '<textarea id="cl-f-'+k+'" rows="2" placeholder="'+escAttr(ph)+'" style="width:100%;font:inherit;box-sizing:border-box">'+escAttr(c[k]||'')+'</textarea>'
+      : '<input type="text" id="cl-f-'+k+'" style="width:100%;font:inherit;box-sizing:border-box" placeholder="'+escAttr(ph)+'" value="'+escAttr(c[k]||'')+'">';
+    return '<div class="sup-form-field'+(wide?' wide':'')+'"><label>'+label+'</label>'+input+'</div>';
+  };
+  openModal(existing?'Edit client':'New client',
+    '<div class="sup-form">'+CLIENT_FIELDS.map(field).join('')+'</div>'+
+    '<div class="toolbar" style="margin-top:16px">'+
+      (existing?'<button class="btn subtle danger" id="cl-f-delete">Delete client</button>':'')+
+      '<div class="toolbar-spacer"></div><button class="btn" id="cl-f-cancel">Cancel</button><button class="btn accent" id="cl-f-save">Save</button></div>');
+  const nameInp=document.getElementById('cl-f-name');
+  nameInp.focus();
+  const commit=()=>{
+    const name=nameInp.value.trim();
+    if(!name){ nameInp.focus(); nameInp.style.borderColor='var(--red)'; return; }
+    const dup=(DB.clients||[]).find(x=>x!==existing && (x.name||'').trim().toLowerCase()===name.toLowerCase());
+    if(dup){ alertModal('There is already a client named '+dup.name+'.'); return; }
+    const target = existing || {id:uid(), createdAt:new Date().toISOString()};
+    CLIENT_FIELDS.forEach(([k])=>{ target[k]=document.getElementById('cl-f-'+k).value.trim(); });
+    if(!existing) DB.clients.push(target);
+    save(); closeModal(); renderSuppliers(); renderCounts();
+    setTimeout(()=>{
+      const card=document.querySelector('.client-card[data-id="'+target.id+'"]');
+      if(card){ card.scrollIntoView({behavior:'smooth', block:'center'}); card.classList.add('doc-highlight'); setTimeout(()=>card.classList.remove('doc-highlight'),1600); }
+    }, 30);
+  };
+  document.getElementById('cl-f-save').addEventListener('click', commit);
+  document.getElementById('cl-f-cancel').addEventListener('click', closeModal);
+  const del=document.getElementById('cl-f-delete');
+  if(del) del.addEventListener('click',()=>{
+    const n=clientShipments(existing).length;
+    confirmModal('Delete '+existing.name+'?'+(n?' Their '+n+' shipment'+(n===1?'':'s')+' stay on file under the name “'+existing.name+'”.':''), ()=>{
+      (DB.shipments||[]).forEach(sh=>{ if(sh.clientId===existing.id){ sh.clientId=''; sh.companyName=existing.name||''; } });
+      DB.clients=DB.clients.filter(x=>x.id!==existing.id); save(); renderSuppliers(); renderCounts();
+    });
+  });
+  CLIENT_FIELDS.forEach(([k])=>{
+    if(k==='notes') return;
+    document.getElementById('cl-f-'+k).addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
+  });
+}
+function clientCardHtml(c){
+  const ships=clientShipments(c);
+  const active=ships.filter(sh=>sh.status!=='Delivered' && sh.status!=='Cancelled').length;
+  const lastShip=ships.find(sh=>sh.status!=='Cancelled' && (sh.shipDate||sh.deliveredDate));
+  const spent=round2(ships.reduce((t,sh)=>t+(sh.status==='Cancelled'||sh.price==null?0:Number(sh.price)),0));
+  const tags=String(c.tags||'').split(/[,;/]+/).map(x=>x.trim()).filter(Boolean);
+  const row=(ico,html,title)=>'<div class="sup-line" title="'+escAttr(title||'')+'"><span class="sup-ico">'+ico+'</span><span class="sup-val">'+html+'</span></div>';
+  const empty=t=>'<span class="sup-empty">'+t+'</span>';
+  const contactLines=
+    row('👤', c.contact?escAttr(c.contact):empty('No contact name'),'Contact')+
+    row('✉', c.email?'<a href="mailto:'+escAttr(c.email)+'">'+escAttr(c.email)+'</a>':empty('No email'),'Email')+
+    row('☎', c.phone?'<a href="'+escAttr(telHref(c.phone))+'">'+escAttr(c.phone)+'</a>':empty('No phone'),'Phone')+
+    row('📍', c.address?escAttr(c.address):empty('No ship-to address'),'Ship-to address');
+  const shipRows=ships.map(sh=>{
+    const nFiles=(sh.docs||[]).length;
+    const st=shipIsLate(sh)?'Late':sh.status;
+    return '<button type="button" class="sup-doc-line view-client-ship'+(sh.status==='Cancelled'?' is-cancelled':'')+'" data-id="'+escAttr(sh.id)+'" title="'+escAttr(sh.contents||'')+'">'+
+      '<span class="doc-type-tag t-ship-'+(sh.direction==='outbound'?'out':'in')+'">'+(sh.direction==='outbound'?'Out':'In')+'</span>'+
+      '<span class="sup-doc-num">'+escAttr(sh.contents||sh.method||'Shipment')+(nFiles?' <span class="ship-clip">📎'+(nFiles>1?nFiles:'')+'</span>':'')+'</span>'+
+      '<span class="mono sup-doc-date">'+fmtShortDateSafe(sh.shipDate||sh.expectedDate)+'</span>'+
+      '<span class="mono sup-doc-total">'+(sh.price==null?'—':money(sh.price))+'</span>'+
+      '<span class="sup-doc-status">'+escAttr(st)+'</span>'+
+    '</button>';
+  }).join('');
+  return '<div class="sup-card client-card" data-id="'+escAttr(c.id)+'">'+
+    '<div class="sup-card-head">'+
+      '<div class="sup-avatar client-avatar">'+escAttr(supplierInitials(c.name))+'</div>'+
+      '<div class="sup-title"><div class="sup-name">'+escAttr(c.name||'(unnamed)')+'</div>'+
+        (tags.length?'<div class="sup-specs">'+tags.map(x=>'<span class="sup-spec">'+escAttr(x)+'</span>').join('')+'</div>':'')+
+      '</div>'+
+      '<button type="button" class="btn sm subtle client-edit no-print" title="Edit client">Edit</button>'+
+    '</div>'+
+    '<div class="sup-contact">'+contactLines+'</div>'+
+    '<div class="sup-stats">'+
+      '<div><b class="mono">'+ships.length+'</b><span>shipments</span></div>'+
+      '<div><b class="mono">'+active+'</b><span>in progress</span></div>'+
+      '<div><b class="mono">'+(lastShip?fmtShortDateSafe(lastShip.shipDate||lastShip.deliveredDate):'—')+'</b><span>last shipped</span></div>'+
+      '<div><b class="mono">'+(spent?money(spent):'—')+'</b><span>shipping cost</span></div>'+
+    '</div>'+
+    (c.notes?'<div class="sup-notes">'+escAttr(c.notes)+'</div>':'')+
+    '<div class="client-card-actions no-print"><button type="button" class="btn sm client-new-ship">+ New shipment to '+escAttr(c.name||'client')+'</button></div>'+
+    '<details class="sup-docs-details"'+(ships.length&&ships.length<=3?' open':'')+'><summary><span class="sup-doc-caret">▸</span>Shipment history ('+ships.length+')</summary>'+
+      '<div class="sup-doc-list">'+(shipRows||'<p class="note" style="margin:4px 0">No shipments to this client yet.</p>')+'</div>'+
+    '</details>'+
+  '</div>';
+}
+function renderClients(){
+  const el=document.getElementById('panel-suppliers');
+  const cq=(clientSearch||'').trim().toLowerCase();
+  const all=DB.clients||[];
+  const hay=c=>[c.name,c.contact,c.email,c.phone,c.address,c.tags,c.notes].concat(clientShipments(c).map(sh=>[sh.contents,sh.tracking].join(' '))).join(' ').toLowerCase();
+  const visible=(cq? all.filter(c=>hay(c).includes(cq)) : all).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  document.getElementById('page-actions').innerHTML='<button class="btn accent" id="add-client">+ New client</button>';
+  el.innerHTML=supplierSubnavHtml()+
+    '<div class="toolbar no-print">'+
+      '<div class="search-input"><input type="text" id="client-search" placeholder="Search client, contact, what was shipped..." value="'+escAttr(clientSearch)+'"></div>'+
+      '<div class="toolbar-spacer"></div><span class="toolbar-count">'+visible.length+' client'+(visible.length===1?'':'s')+'</span>'+
+    '</div>'+
+    (visible.length
+      ? '<div class="sup-grid">'+visible.map(clientCardHtml).join('')+'</div>'
+      : '<div class="card"><div class="empty-state"><div class="empty-icon">☉</div><div class="empty-title">'+(all.length?'No clients match this search':'No clients yet')+'</div><div class="empty-sub">'+(all.length?'Try a different name.':'Add one with + New client, or pick “+ New client” when you log a shipment.')+'</div></div></div>');
+  wireSupplierSubnav(el);
+  document.getElementById('client-search').addEventListener('input',e=>{ const pos=e.target.selectionStart; clientSearch=e.target.value; renderClients(); refocusSearch('client-search',pos); });
+  document.getElementById('add-client').addEventListener('click',()=>openClientModal(null));
+  el.querySelectorAll('.client-card').forEach(card=>{
+    const c=clientById(card.dataset.id);
+    card.querySelector('.client-edit').addEventListener('click',()=>openClientModal(c));
+    card.querySelector('.client-new-ship').addEventListener('click',()=>openShipmentModal(null,{clientId:c.id}));
+  });
+  el.querySelectorAll('.view-client-ship').forEach(b=>b.addEventListener('click',()=>{
+    const sh=shipmentById(b.dataset.id); if(sh) openShipmentModal(sh);
+  }));
 }
 
 /* Gathers every PO/Quote/Receipt on file for a supplier, most-recent-first within each group. */
@@ -4489,7 +4653,7 @@ function refreshDocTotals(card, doc){
    document is then written straight into it — Google Drive for desktop syncs it up:
      Documents / Receipts|Quotes|Purchase Orders / 2026 / Supplier / 2026-10-27_Supplier_1042.pdf
    The app only keeps the file's path, so the app stays small and fast. */
-const DOC_FOLDER_NAMES={receipts:'Receipts', quotes:'Quotes', po:'Purchase Orders'};
+const DOC_FOLDER_NAMES={receipts:'Receipts', quotes:'Quotes', po:'Purchase Orders', shipments:'Shipments'};
 const DOCS_ROOT_KEY='docs-root-handle';
 let docsRootInfo={name:'', supported:(typeof window!=='undefined' && 'showDirectoryPicker' in window)};
 function safeName(s){ return String(s||'').replace(/[\\/:*?"<>|#%\u0000-\u001f]+/g,' ').replace(/\s+/g,' ').trim().slice(0,60); }
@@ -4554,6 +4718,7 @@ function docRecordMeta(kind, rec){
   if(kind==='po') return {folderType:'po', supplierName:s?s.name:'', date:rec.orderDate, number:rec.poNumber};
   if(kind==='quotes') return {folderType:'quotes', supplierName:s?s.name:'', date:rec.quoteDate, number:rec.quoteNumber};
   if(kind==='receipts') return {folderType:'receipts', supplierName:s?s.name:'', date:rec.receiptDate, number:rec.receiptNumber};
+  if(kind==='shipments') return {folderType:'shipments', supplierName:shipCompanyName(rec), date:rec.shipDate||rec.deliveredDate||rec.expectedDate, number:rec.tracking||rec.method};
   return {folderType:'item', category:rec.itemGroup||'Uncategorized', itemName:rec.name};
 }
 /* Used by every "+ Add file" button (POs, quotes, receipts, items). */
@@ -4586,6 +4751,7 @@ function attachmentsInApp(){
   DB.quotes.forEach(r=>(r.docs||[]).forEach(d=>{ if(d.dataUrl && !d.drivePath) out.push(['quotes',r,d]); }));
   DB.receipts.forEach(r=>(r.docs||[]).forEach(d=>{ if(d.dataUrl && !d.drivePath) out.push(['receipts',r,d]); }));
   DB.items.forEach(r=>(r.docs||[]).forEach(d=>{ if(d.dataUrl && !d.drivePath) out.push(['item',r,d]); }));
+  (DB.shipments||[]).forEach(r=>(r.docs||[]).forEach(d=>{ if(d.dataUrl && !d.drivePath) out.push(['shipments',r,d]); }));
   return out;
 }
 async function moveAttachmentsToDrive(){
@@ -5213,7 +5379,7 @@ function docsSettingsCardHtml(){
   return '<div class="card"><div class="card-head"><h3>Documents</h3></div><div class="card-body">'+
     '<div class="settings-row"><div><b>Google Drive folder</b><div class="note">'+
       (!docsRootInfo.supported ? 'Needs Chrome or Microsoft Edge. Files are kept in the app until then.'
-        : docsRootInfo.name ? 'Saving to <b>'+escAttr(docsRootInfo.name)+'</b> → Receipts / Quotes / Purchase Orders → year → supplier.'
+        : docsRootInfo.name ? 'Saving to <b>'+escAttr(docsRootInfo.name)+'</b> → Receipts / Quotes / Purchase Orders / Shipments → year → supplier.'
         : 'Not connected. Pick a folder inside your Google Drive (for example My Drive › Ai Projects › DS MRP System › Documents).')+
     '</div></div>'+(docsRootInfo.supported?'<button class="btn" id="set-drive">'+(docsRootInfo.name?'Change folder':'Choose folder')+'</button>':'')+'</div>'+
     (inApp.length?'<div class="settings-row"><div><b>'+inApp.length+' older file'+(inApp.length===1?'':'s')+' still stored in the app</b><div class="note">About '+mb.toFixed(1)+' MB. Moving them into the Drive folder keeps the app fast.</div></div><button class="btn" id="move-to-drive" '+(docsRootInfo.name?'':'disabled')+'>Move to Drive</button></div>':'')+
@@ -5396,6 +5562,7 @@ function toggleNavGroup(g){
    Row filters and visible columns are per-browser view preferences (localStorage). */
 const SHIP_METHODS=['FedEx','UPS','USPS','Freight / LTL','We dropped off','They dropped off','We picked up','Other'];
 const SHIP_STATUSES=['Scheduled','In transit','Delivered','Cancelled'];
+const SHIP_CONDITIONS=['','OK','Damaged','Short','Damaged & short'];
 const SHIP_DIRECTIONS=[['inbound','Inbound'],['outbound','Outbound']];
 /* [key, header label, default visible] — order here is column order in the table. */
 const SHIP_COLUMNS=[
@@ -5411,6 +5578,10 @@ const SHIP_COLUMNS=[
   ['price','Price',true],
   ['tracking','Tracking #',true],
   ['po','Linked PO',false],
+  ['receivedBy','Received by',false],
+  ['packages','Packages / weight',false],
+  ['condition','Condition',false],
+  ['docs','Files',false],
   ['status','Status',true],
   ['notes','Notes',false]
 ];
@@ -5418,20 +5589,29 @@ const SHIP_PREFS_KEY='dragon-seats-mrp-shipments-view';
 
 function normalizeShipment(sh){
   if(sh.direction!=='outbound') sh.direction='inbound';
-  ['method','supplierId','companyName','contact','phone','email','address','shipDate','expectedDate','deliveredDate','tracking','poId','contents','notes'].forEach(k=>{
+  ['method','supplierId','clientId','companyName','contact','phone','email','address','shipDate','expectedDate','deliveredDate','tracking','poId','contents','notes','receivedBy','packages','weight','condition'].forEach(k=>{
     if(typeof sh[k]!=='string') sh[k]= (sh[k]==null?'':String(sh[k]));
   });
   if(!sh.method) sh.method='FedEx';
   if(!SHIP_STATUSES.includes(sh.status)) sh.status='Scheduled';
   if(sh.price===undefined || sh.price==='' ) sh.price=null;
   if(sh.price!=null) sh.price=Number(sh.price)||0;
+  if(!SHIP_CONDITIONS.includes(sh.condition)) sh.condition='';
+  if(!Array.isArray(sh.docs)) sh.docs=[];
   if(!sh.createdAt) sh.createdAt=new Date().toISOString();
 }
+function shipPackagesText(sh){ return [sh.packages, sh.weight].filter(Boolean).join(' · '); }
 function shipmentById(id){ return (DB.shipments||[]).find(s=>s.id===id); }
+/* Clients (customers we ship to). Kept in DB.clients; created from the shipment form. */
+function clientById(id){ return (DB.clients||[]).find(c=>c.id===id); }
 function shipCompanyName(sh){
   const sup=sh.supplierId?supplierById(sh.supplierId):null;
-  return sup ? (sup.name||'') : (sh.companyName||'');
+  if(sup) return sup.name||'';
+  const cl=sh.clientId?clientById(sh.clientId):null;
+  if(cl) return cl.name||'';
+  return sh.companyName||'';
 }
+function shipCompanyKey(sh){ return sh.supplierId || (sh.clientId?'client:'+sh.clientId:'__other'); }
 function shipDeliveryDate(sh){ return sh.deliveredDate || sh.expectedDate || ''; }
 function shipIsLate(sh){
   return sh.status!=='Delivered' && sh.status!=='Cancelled' && !sh.deliveredDate && sh.expectedDate && sh.expectedDate<todayISO();
@@ -5507,7 +5687,7 @@ function shipFilteredRows(){
       const st = shipIsLate(sh) ? ['Late', sh.status] : [sh.status];
       if(!st.some(x=>v.status.includes(x))) return false;
     }
-    if(v.supplier.length && !v.supplier.includes(sh.supplierId||'__other')) return false;
+    if(v.supplier.length && !v.supplier.includes(shipCompanyKey(sh))) return false;
     if(v.from || v.to){
       const d = v.dateField==='deliveryDate' ? shipDeliveryDate(sh) : sh.shipDate;
       if(!d) return false;
@@ -5516,7 +5696,7 @@ function shipFilteredRows(){
     }
     if(q){
       const po=sh.poId?poById(sh.poId):null;
-      const hay=[shipCompanyName(sh), sh.contact, sh.phone, sh.email, sh.address, sh.tracking, sh.contents, sh.notes, sh.method, sh.status, po?po.poNumber:''].join(' ').toLowerCase();
+      const hay=[shipCompanyName(sh), sh.contact, sh.phone, sh.email, sh.address, sh.tracking, sh.contents, sh.notes, sh.method, sh.status, sh.receivedBy, sh.condition, (sh.docs||[]).map(d=>d.name).join(' '), po?po.poNumber:''].join(' ').toLowerCase();
       if(!hay.includes(q)) return false;
     }
     return true;
@@ -5529,6 +5709,8 @@ function shipSortValue(sh, key){
     case 'price': return sh.price==null ? -Infinity : Number(sh.price);
     case 'po': { const po=sh.poId?poById(sh.poId):null; return po?(po.poNumber||''):''; }
     case 'phone': return (sh.phone||sh.email||'').toLowerCase();
+    case 'docs': return (sh.docs||[]).length;
+    case 'packages': return shipPackagesText(sh).toLowerCase();
     default: return String(sh[key]||'').toLowerCase();
   }
 }
@@ -5537,7 +5719,7 @@ function shipCellHtml(sh, key){
   switch(key){
     case 'direction': return sh.direction==='outbound' ? '<span class="ship-dir out">Outbound</span>' : '<span class="ship-dir in">Inbound</span>';
     case 'method': return escAttr(sh.method);
-    case 'company': return escAttr(shipCompanyName(sh)||'—');
+    case 'company': { const n=(sh.docs||[]).length; return escAttr(shipCompanyName(sh)||'—')+(n?'<span class="ship-clip" title="'+n+' file'+(n===1?'':'s')+' attached">📎'+(n>1?n:'')+'</span>':''); }
     case 'contents': return escAttr(sh.contents||'—');
     case 'contact': return escAttr(sh.contact||'—');
     case 'phone': return escAttr([sh.phone,sh.email].filter(Boolean).join(' · ')||'—');
@@ -5560,6 +5742,10 @@ function shipCellHtml(sh, key){
       return '<span class="status-badge '+cls+'" style="margin-left:0">'+escAttr(sh.status)+'</span>';
     }
     case 'notes': return escAttr(sh.notes||'—');
+    case 'receivedBy': return escAttr(sh.receivedBy||'—');
+    case 'packages': return escAttr(shipPackagesText(sh)||'—');
+    case 'condition': return sh.condition ? '<span class="status-badge '+(sh.condition==='OK'?'closed':'ship-cond-bad')+'" style="margin-left:0">'+escAttr(sh.condition)+'</span>' : '—';
+    case 'docs': { const d=sh.docs||[]; return d.length ? '<span class="ship-docs-cell">'+docChips(d)+'</span>' : '—'; }
   }
   return '';
 }
@@ -5573,6 +5759,8 @@ function shipCellText(sh, key){
     case 'price': return sh.price==null?'':money(sh.price);
     case 'po': { const po=sh.poId?poById(sh.poId):null; return po?(po.poNumber||'PO'):''; }
     case 'status': return shipIsLate(sh)?'Late':sh.status;
+    case 'packages': return shipPackagesText(sh);
+    case 'docs': return (sh.docs||[]).map(d=>d.name).join(', ');
     default: return String(sh[key]||'');
   }
 }
@@ -5591,7 +5779,8 @@ function renderShipments(){
   const cols=SHIP_COLUMNS.filter(c=>v.cols.includes(c[0]));
   const totalPrice=round2(rows.reduce((s,sh)=>s+(sh.price==null?0:Number(sh.price)),0));
   const supplierOpts=DB.suppliers.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(s=>[s.id,s.name||'(unnamed)']);
-  if(all.some(sh=>!sh.supplierId)) supplierOpts.push(['__other','Not in suppliers list']);
+  (DB.clients||[]).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).forEach(c=>supplierOpts.push(['client:'+c.id,(c.name||'(unnamed)')+' (client)']));
+  if(all.some(sh=>!sh.supplierId && !sh.clientId)) supplierOpts.push(['__other','One-off (not in a list)']);
   const usedMethods=SHIP_METHODS.concat(all.map(sh=>sh.method).filter(m=>m && !SHIP_METHODS.includes(m)));
   const uniqMethods=[...new Set(usedMethods)];
 
@@ -5627,7 +5816,7 @@ function renderShipments(){
           cols.map(c=>'<th data-sort="'+c[0]+'"'+(c[0]==='price'?' class="num"':'')+'>'+escAttr(c[1])+(v.sortKey===c[0]?'<span class="sort-ind">'+(v.sortDir==='asc'?'▲':'▼')+'</span>':'')+'</th>').join('')+
         '</tr></thead><tbody>'+
         rows.map(sh=>'<tr class="list-row" data-id="'+escAttr(sh.id)+'">'+
-          cols.map(c=>'<td'+(c[0]==='price'?' class="num mono"':(c[0]==='address'||c[0]==='contents'||c[0]==='notes')?' class="wrap"':(c[0]==='shipDate'||c[0]==='deliveryDate')?' class="mono"':'')+'>'+shipCellHtml(sh,c[0])+'</td>').join('')+
+          cols.map(c=>'<td'+(c[0]==='price'?' class="num mono"':(c[0]==='address'||c[0]==='contents'||c[0]==='notes'||c[0]==='docs')?' class="wrap"':(c[0]==='shipDate'||c[0]==='deliveryDate')?' class="mono"':'')+'>'+shipCellHtml(sh,c[0])+'</td>').join('')+
         '</tr>').join('')+
         '</tbody></table></div>'+
         '<div class="ship-total-line"><span>'+rows.length+' shown</span><span>Total shipping cost shown: <b class="mono">'+money(totalPrice)+'</b></span></div>'
@@ -5663,7 +5852,7 @@ function renderShipments(){
     else { v.sortKey=k; v.sortDir = (k==='shipDate'||k==='deliveryDate'||k==='price')?'desc':'asc'; }
     saveShipPrefs(); renderShipments();
   }));
-  el.querySelectorAll('.ship-track-link').forEach(a=>a.addEventListener('click',e=>e.stopPropagation()));
+  el.querySelectorAll('.ship-track-link, .ship-docs-cell a.doc-chip').forEach(a=>a.addEventListener('click',e=>e.stopPropagation()));
   el.querySelectorAll('.ship-table tr.list-row').forEach(tr=>tr.addEventListener('click',()=>openShipmentModal(shipmentById(tr.dataset.id))));
   document.getElementById('ship-export').addEventListener('click',()=>{
     const head=cols.map(c=>c[1]);
@@ -5674,14 +5863,23 @@ function renderShipments(){
   });
 }
 
-function openShipmentModal(existing){
-  const sh=existing ? Object.assign({},existing) : {direction:'inbound', method:'FedEx', status:'Scheduled', shipDate:todayISO(), price:null};
-  const isOther = existing ? !sh.supplierId : false;
+function openShipmentModal(existing, preset){
+  const sh=existing ? Object.assign({},existing) : Object.assign({direction:'inbound', method:'FedEx', status:'Scheduled', shipDate:todayISO(), price:null}, preset||{});
+  if(!existing && sh.clientId){ const pc=clientById(sh.clientId); if(pc){ sh.direction='outbound'; ['contact','phone','email','address'].forEach(k=>{ if(!sh[k]) sh[k]=pc[k]||''; }); } }
+  const isOther = existing ? (!sh.supplierId && !sh.clientId) : false;
+  let shipDocs=(existing && Array.isArray(existing.docs)) ? existing.docs.slice() : [];
   const f=(id,label,inner,wide)=>'<div class="sup-form-field'+(wide?' wide':'')+'"><label for="'+id+'">'+label+'</label>'+inner+'</div>';
   const txt=(id,val,ph,type)=>'<input type="'+(type||'text')+'" id="'+id+'" style="width:100%;box-sizing:border-box" placeholder="'+escAttr(ph||'')+'" value="'+escAttr(val==null?'':val)+'">';
-  const supOpts='<option value="">— Choose a supplier / manufacturer —</option>'+
-    DB.suppliers.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(s=>'<option value="'+escAttr(s.id)+'"'+(s.id===sh.supplierId?' selected':'')+'>'+escAttr(s.name)+'</option>').join('')+
-    '<option value="__other"'+(isOther?' selected':'')+'>Not in suppliers list (type a name)</option>';
+  const clientsSorted=(DB.clients||[]).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const supOpts='<option value="">— Choose a client or supplier —</option>'+
+    '<optgroup label="Clients">'+
+      clientsSorted.map(c=>'<option value="client:'+escAttr(c.id)+'"'+(c.id===sh.clientId?' selected':'')+'>'+escAttr(c.name)+'</option>').join('')+
+      '<option value="__newclient">+ New client (type a name)</option>'+
+    '</optgroup>'+
+    '<optgroup label="Suppliers / manufacturers">'+
+      DB.suppliers.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(s=>'<option value="'+escAttr(s.id)+'"'+(s.id===sh.supplierId?' selected':'')+'>'+escAttr(s.name)+'</option>').join('')+
+    '</optgroup>'+
+    '<option value="__other"'+(isOther?' selected':'')+'>One-off (not saved to a list — type a name)</option>';
   const methodList=[...new Set(SHIP_METHODS.concat(sh.method&&!SHIP_METHODS.includes(sh.method)?[sh.method]:[]))];
   openModal(existing?'Edit shipment':'New shipment',
     '<div class="sup-form">'+
@@ -5692,7 +5890,7 @@ function openShipmentModal(existing){
       f('ship-m-method','Method','<select id="ship-m-method" style="width:100%">'+methodList.map(m=>'<option'+(m===sh.method?' selected':'')+'>'+escAttr(m)+'</option>').join('')+'</select>')+
       f('ship-m-status','Status','<select id="ship-m-status" style="width:100%">'+SHIP_STATUSES.map(s=>'<option'+(s===sh.status?' selected':'')+'>'+s+'</option>').join('')+'</select>')+
       f('ship-m-supplier','<span id="ship-m-company-label">'+(sh.direction==='outbound'?'Shipping to':'Coming from')+'</span>','<select id="ship-m-supplier" style="width:100%">'+supOpts+'</select>', true)+
-      '<div class="sup-form-field wide'+(isOther?'':' hidden')+'" id="ship-m-company-wrap"><label for="ship-m-company">Company name</label>'+txt('ship-m-company',sh.companyName,'e.g. Local powder coater')+'</div>'+
+      '<div class="sup-form-field wide'+(isOther?'':' hidden')+'" id="ship-m-company-wrap"><label for="ship-m-company" id="ship-m-company-lbl">Company name</label>'+txt('ship-m-company',sh.companyName,'e.g. Local powder coater')+'</div>'+
       f('ship-m-contact','Contact',txt('ship-m-contact',sh.contact,'Contact person'))+
       f('ship-m-phone','Phone',txt('ship-m-phone',sh.phone,'(555) 555-5555'))+
       f('ship-m-email','Email',txt('ship-m-email',sh.email,'name@company.com'), true)+
@@ -5704,7 +5902,15 @@ function openShipmentModal(existing){
       f('ship-m-deliveredDate','Delivered on',txt('ship-m-deliveredDate',sh.deliveredDate,'','date'))+
       f('ship-m-tracking','Tracking #',txt('ship-m-tracking',sh.tracking,'Optional'))+
       f('ship-m-po','Linked PO (optional)','<select id="ship-m-po" style="width:100%"></select>')+
+      f('ship-m-receivedBy','Received / signed by',txt('ship-m-receivedBy',sh.receivedBy,'Who signed for it'))+
+      f('ship-m-condition','Condition on arrival','<select id="ship-m-condition" style="width:100%">'+SHIP_CONDITIONS.map(c=>'<option value="'+escAttr(c)+'"'+(c===(sh.condition||'')?' selected':'')+'>'+(c||'—')+'</option>').join('')+'</select>')+
+      f('ship-m-packages','Packages / pallets',txt('ship-m-packages',sh.packages,'e.g. 3 boxes, 1 pallet'))+
+      f('ship-m-weight','Weight',txt('ship-m-weight',sh.weight,'e.g. 420 lb'))+
       f('ship-m-notes','Notes','<textarea id="ship-m-notes" rows="2" style="width:100%;box-sizing:border-box" placeholder="—">'+escAttr(sh.notes||'')+'</textarea>', true)+
+      '<div class="sup-form-field wide"><label>Receipts &amp; files</label><div class="ship-docs-box">'+
+        '<div class="dropzone-mini file-btn" id="ship-m-drop"><span id="ship-m-docs"></span><label class="btn sm no-print">+ Add file<input type="file" id="ship-m-file" multiple style="position:absolute;opacity:0;width:1px;height:1px"></label><span class="note">Shipping receipt, BOL, packing slip, delivery photos — or drop files here</span></div>'+
+        '<div class="ship-po-docs" id="ship-m-po-docs"></div>'+
+      '</div></div>'+
     '</div>'+
     '<div class="toolbar" style="margin-top:16px">'+
       (existing?'<button class="btn subtle danger" id="ship-m-delete">Delete shipment</button>':'')+
@@ -5720,36 +5926,85 @@ function openShipmentModal(existing){
   // Linked-PO choices follow the chosen supplier (all POs when none chosen)
   const fillPoOptions=()=>{
     const supId=$('ship-m-supplier').value;
-    const pos=DB.purchaseOrders.filter(p=>!p.cancelled && (!supId || supId==='__other' || p.supplierId===supId || p.id===sh.poId))
+    const pos=DB.purchaseOrders.filter(p=>!p.cancelled && (!supId || supId==='__other' || supId==='__newclient' || supId.startsWith('client:') || p.supplierId===supId || p.id===sh.poId))
       .slice().sort((a,b)=>(b.orderDate||'').localeCompare(a.orderDate||''));
     const cur=$('ship-m-po').value || sh.poId || '';
     $('ship-m-po').innerHTML='<option value="">None</option>'+pos.map(p=>'<option value="'+escAttr(p.id)+'"'+(p.id===cur?' selected':'')+'>'+escAttr((p.poNumber||'(no number)')+' · '+((supplierById(p.supplierId)||{}).name||'No supplier')+(p.orderDate?' · '+fmtDate(p.orderDate):''))+'</option>').join('');
   };
   fillPoOptions();
+  // ---- attached files (receipts, BOL, photos...) ----
+  const renderShipDocs=()=>{
+    const box=$('ship-m-docs'); if(!box) return;
+    box.innerHTML = shipDocs.length ? shipDocs.map((d,i)=>'<span class="ship-doc-wrap">'+docChips([d])+'<button type="button" class="ship-doc-x" data-i="'+i+'" title="Remove from this shipment (the file stays in Drive)">×</button></span>').join('') : '<span class="note">no files</span>';
+    box.querySelectorAll('.ship-doc-x').forEach(b=>b.addEventListener('click',e=>{ e.preventDefault(); shipDocs.splice(Number(b.dataset.i),1); renderShipDocs(); }));
+  };
+  const renderPoDocs=()=>{
+    const box=$('ship-m-po-docs'); if(!box) return;
+    const po=$('ship-m-po').value?poById($('ship-m-po').value):null;
+    if(!po){ box.innerHTML=''; return; }
+    const poDocs=(po.docs||[]);
+    const recDocs=(DB.receipts||[]).filter(r=>r.poId===po.id && !r.cancelled).reduce((a,r)=>a.concat(r.docs||[]),[]);
+    box.innerHTML = (poDocs.length||recDocs.length)
+      ? 'Files on linked PO '+escAttr(po.poNumber||'')+':<br>'+(poDocs.length?docChips(poDocs):'')+(recDocs.length?docChips(recDocs):'')
+      : 'Linked PO '+escAttr(po.poNumber||'')+' has no files attached.';
+  };
+  renderShipDocs(); renderPoDocs();
+  $('ship-m-po').addEventListener('change',renderPoDocs);
+  enableFileDrop($('ship-m-drop'), $('ship-m-file'));
+  $('ship-m-file').addEventListener('change', async e=>{
+    const files=[...(e.target.files||[])]; if(!files.length) return;
+    const supVal=$('ship-m-supplier').value;
+    const metaRec={supplierId: (supVal==='__other'||supVal==='__newclient'||supVal.startsWith('client:'))?'':supVal,
+      clientId: supVal.startsWith('client:')?supVal.slice(7):'',
+      companyName: (supVal==='__other'||supVal==='__newclient')?$('ship-m-company').value.trim():'',
+      shipDate:$('ship-m-shipDate').value, deliveredDate:$('ship-m-deliveredDate').value, expectedDate:$('ship-m-expectedDate').value,
+      tracking:$('ship-m-tracking').value.trim(), method:$('ship-m-method').value};
+    const box=$('ship-m-docs'); if(box) box.insertAdjacentHTML('beforeend','<span class="note ship-saving"> saving…</span>');
+    for(const f of files){ try{ shipDocs.push(await attachFileTo('shipments', metaRec, f)); }catch(err){ console.warn('[dragon-seats] shipment file attach failed', err); } }
+    e.target.value='';
+    renderShipDocs();
+  });
   // Picking a supplier fills contact, phone, email and address from the Suppliers list (still editable)
   $('ship-m-supplier').addEventListener('change',e=>{
     const val=e.target.value;
-    $('ship-m-company-wrap').classList.toggle('hidden', val!=='__other');
-    if(val==='__other'){ $('ship-m-company').focus(); }
-    const sup=(val && val!=='__other')?supplierById(val):null;
+    const typed = val==='__other' || val==='__newclient';
+    $('ship-m-company-wrap').classList.toggle('hidden', !typed);
+    $('ship-m-company-lbl').textContent = val==='__newclient' ? 'New client name' : 'Company name';
+    $('ship-m-company').placeholder = val==='__newclient' ? 'e.g. Smith Racing — saved to your clients list' : 'e.g. Local powder coater';
+    if(typed){ $('ship-m-company').focus(); }
+    const sup = val.startsWith('client:') ? clientById(val.slice(7)) : (val && !typed) ? supplierById(val) : null;
     if(sup){
       $('ship-m-contact').value=sup.contact||'';
       $('ship-m-phone').value=sup.phone||'';
       $('ship-m-email').value=sup.email||'';
       $('ship-m-address').value=sup.address||'';
     }
-    fillPoOptions();
+    fillPoOptions(); renderPoDocs();
   });
   // Entering a delivered date marks it delivered
   $('ship-m-deliveredDate').addEventListener('change',e=>{ if(e.target.value) $('ship-m-status').value='Delivered'; });
 
   const commit=()=>{
     const supVal=$('ship-m-supplier').value;
-    const companyName=supVal==='__other'?$('ship-m-company').value.trim():'';
-    if(!supVal || (supVal==='__other' && !companyName)){
+    const typedName=$('ship-m-company').value.trim();
+    const companyName=supVal==='__other'?typedName:'';
+    if(!supVal || ((supVal==='__other'||supVal==='__newclient') && !typedName)){
       const target= !supVal ? $('ship-m-supplier') : $('ship-m-company');
       target.focus(); target.style.borderColor='var(--red)';
       return;
+    }
+    const isClient = supVal==='__newclient' || supVal.startsWith('client:');
+    let clientId='';
+    if(supVal==='__newclient'){
+      // Reuse a client with the same name instead of making a duplicate
+      let cl=(DB.clients||[]).find(c=>(c.name||'').trim().toLowerCase()===typedName.toLowerCase());
+      if(!cl){ cl={id:uid(), name:typedName, contact:'', phone:'', email:'', address:'', createdAt:new Date().toISOString()}; DB.clients.push(cl); }
+      clientId=cl.id;
+    } else if(supVal.startsWith('client:')) clientId=supVal.slice(7);
+    // Remember contact details on the client record so they fill in next time
+    const cl=clientId?clientById(clientId):null;
+    if(cl){
+      [['contact','ship-m-contact'],['phone','ship-m-phone'],['email','ship-m-email'],['address','ship-m-address']].forEach(([k,id])=>{ const v=$(id).value.trim(); if(v) cl[k]=v; });
     }
     const priceRaw=$('ship-m-price').value.trim();
     const target=existing || {id:uid(), createdAt:new Date().toISOString()};
@@ -5757,7 +6012,8 @@ function openShipmentModal(existing){
       direction:(document.querySelector('input[name="ship-dir"]:checked')||{}).value||'inbound',
       method:$('ship-m-method').value,
       status:$('ship-m-status').value,
-      supplierId: supVal==='__other'?'':supVal,
+      supplierId: (supVal==='__other'||isClient)?'':supVal,
+      clientId,
       companyName,
       contact:$('ship-m-contact').value.trim(),
       phone:$('ship-m-phone').value.trim(),
@@ -5770,18 +6026,23 @@ function openShipmentModal(existing){
       price: priceRaw===''?null:round2(priceRaw),
       tracking:$('ship-m-tracking').value.trim(),
       poId:$('ship-m-po').value,
-      notes:$('ship-m-notes').value.trim()
+      notes:$('ship-m-notes').value.trim(),
+      receivedBy:$('ship-m-receivedBy').value.trim(),
+      condition:$('ship-m-condition').value,
+      packages:$('ship-m-packages').value.trim(),
+      weight:$('ship-m-weight').value.trim(),
+      docs:shipDocs.slice()
     });
     normalizeShipment(target);
     if(!existing) DB.shipments.unshift(target);
-    save(); closeModal(); renderShipments(); renderCounts();
+    save(); closeModal(); if(currentTab==='suppliers') renderSuppliers(); else renderShipments(); renderCounts();
   };
   $('ship-m-save').addEventListener('click',commit);
   $('ship-m-cancel').addEventListener('click',closeModal);
   const del=$('ship-m-delete');
   if(del) del.addEventListener('click',()=>{
     confirmModal('Delete this shipment'+(shipCompanyName(existing)?' ('+shipCompanyName(existing)+')':'')+'? This cannot be undone.',()=>{
-      DB.shipments=DB.shipments.filter(x=>x.id!==existing.id); save(); renderShipments(); renderCounts();
+      DB.shipments=DB.shipments.filter(x=>x.id!==existing.id); save(); if(currentTab==='suppliers') renderSuppliers(); else renderShipments(); renderCounts();
     });
   });
   if(!existing) $('ship-m-supplier').focus();
